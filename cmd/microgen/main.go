@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"github.com/microgen/util"
 )
 
 var (
@@ -23,5 +24,7 @@ func main() {
 	}
 
 	path := filepath.Join(currentDir, *flagFileName)
-	fmt.Println(path)
+
+	fs, err := util.ParseInterface(path, *flagIfaceName)
+	fmt.Println(*fs[0].Params[2], err)
 }
