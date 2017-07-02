@@ -1,30 +1,32 @@
-package util
+package parser
 
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 )
 
+// Basic field struct.
+// Used for tiny parameters and results representation.
 type FuncField struct {
 	Name string
 	Type string
 }
 
-type Func struct {
+// Func signature representation.
+type FuncSignature struct {
 	Name string
 	Params []*FuncField
 	Results []*FuncField
 }
 
-func ParseInterface(path, ifaceName string) ([]*Func, error) {
-	f, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+// Build list of function signatures by provided
+// AST of file and interface name.
+func GetInterfaceFuncSignatures(f *ast.File, ifaceName string) ([]*FuncSignature, error) {
+	typeSpec, err := getTypeSpecByName(f, ifaceName)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse file: %v", err)
+		return nil, fmt.Errorf("could not find type: %v", err)
 	}
-
-	typeSpec, err := findType(f, ifaceName)
 
 	ifaceSpec, ok := typeSpec.Type.(*ast.InterfaceType)
 	if !ok {
@@ -34,7 +36,8 @@ func ParseInterface(path, ifaceName string) ([]*Func, error) {
 	return parseInterfaceFieldList(ifaceSpec.Methods.List)
 }
 
-func findType(f *ast.File, name string) (*ast.TypeSpec, error) {
+// Returns type spec by name from provided AST of file.
+func getTypeSpecByName(f *ast.File, name string) (*ast.TypeSpec, error) {
 	for _, decl := range f.Decls {
 		decl, ok := decl.(*ast.GenDecl)
 		if !ok || decl.Tok != token.TYPE {
@@ -53,12 +56,17 @@ func findType(f *ast.File, name string) (*ast.TypeSpec, error) {
 	return nil, fmt.Errorf("type '%s' not found in %s", name, f.Name.Name)
 }
 
-func parseInterfaceFieldList(fields []*ast.Field) ([]*Func, error) {
-	var funcs []*Func
+// Returns function signature by provided method list.
+// Method list represents as array of pointers to ast.Field.
+func parseInterfaceFieldList(fields []*ast.Field) ([]*FuncSignature, error) {
+	var funcs []*FuncSignature
 	for _, field := range fields {
-		funcType := field.Type.(*ast.FuncType)
+		funcType, ok := field.Type.(*ast.FuncType)
+		if !ok {
+			return nil, fmt.Errorf("provided fields not implement ast.FuncType")
+		}
 
-		f := &Func{
+		f := &FuncSignature{
 			// TODO: resolve magic number
 			Name: field.Names[0].Name,
 		}

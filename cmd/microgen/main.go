@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"github.com/microgen/util"
+	"github.com/cv21/microgen/parser"
+	astparser "go/parser"
+	"go/token"
+	"github.com/cv21/microgen/generator"
 )
 
 var (
@@ -25,6 +28,12 @@ func main() {
 
 	path := filepath.Join(currentDir, *flagFileName)
 
-	fs, err := util.ParseInterface(path, *flagIfaceName)
-	fmt.Println(*fs[0].Params[2], err)
+	f, err := astparser.ParseFile(token.NewFileSet(), path, nil, 0)
+	if err != nil {
+		panic(fmt.Errorf("unable to parse file: %v", err))
+	}
+
+
+	fs, err := parser.GetInterfaceFuncSignatures(f, *flagIfaceName)
+	generator.GenerateRequestsFile(fs)
 }
