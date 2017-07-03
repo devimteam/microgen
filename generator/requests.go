@@ -4,7 +4,7 @@ import (
 	"github.com/cv21/microgen/parser"
 	"text/template"
 	"os"
-	"strings"
+	"github.com/cv21/microgen/util"
 	"fmt"
 )
 
@@ -12,18 +12,19 @@ const REQUEST_TEMPLATE =`
 {{range .}}
 	type {{.Name}}Request struct {
 		{{range .Params}}
-			{{.Name | ToUpper}} {{.Type}}
+			{{.Name | ToUpperFirst}} {{.Type}}
 		{{end}}
 	}
 {{end}}
 `
 
-func GenerateRequestsFile(fs []*parser.FuncSignature) {
+func GenerateRequestsFile(i *parser.Interface) {
 	fm := template.FuncMap{
-		"ToUpper": strings.ToUpper,
+		"ToUpperFirst": util.ToUpperFirst,
 	}
 	t := template.New("requests")
 	t.Funcs(fm)
 	t.Parse(REQUEST_TEMPLATE)
-	t.Execute(os.Stdout, fs)
+	err := t.Execute(os.Stdout, fs)
+	fmt.Println(err)
 }

@@ -6,6 +6,12 @@ import (
 	"go/token"
 )
 
+type Interface struct {
+	PackageName string
+	Comments []string
+	FuncSignatures []*FuncSignature
+}
+
 // Basic field struct.
 // Used for tiny parameters and results representation.
 type FuncField struct {
@@ -22,7 +28,7 @@ type FuncSignature struct {
 
 // Build list of function signatures by provided
 // AST of file and interface name.
-func GetInterfaceFuncSignatures(f *ast.File, ifaceName string) ([]*FuncSignature, error) {
+func ParseInterface(f *ast.File, ifaceName string) (*Interface, error) {
 	typeSpec, err := getTypeSpecByName(f, ifaceName)
 	if err != nil {
 		return nil, fmt.Errorf("could not find type: %v", err)
@@ -33,7 +39,16 @@ func GetInterfaceFuncSignatures(f *ast.File, ifaceName string) ([]*FuncSignature
 		return nil, fmt.Errorf("type '%s' is not interface", ifaceName)
 	}
 
-	return parseInterfaceFieldList(ifaceSpec.Methods.List)
+	funcSignatures, err := parseFuncSignatures(ifaceSpec.Methods.List)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Interface{
+		PackageName: getPackageName(f),
+		Comments: parseComments(typeSpec),
+		FuncSignatures: funcSignatures,
+	}, nil
 }
 
 // Returns type spec by name from provided AST of file.
@@ -56,9 +71,21 @@ func getTypeSpecByName(f *ast.File, name string) (*ast.TypeSpec, error) {
 	return nil, fmt.Errorf("type '%s' not found in %s", name, f.Name.Name)
 }
 
+func getPackageName(f *ast.File) string {
+	return f.Name.Name
+}
+
+func parseComments(ts *ast.TypeSpec) []string {
+	var res []string
+	for _, c := range ts.Comment.List {
+		res = append(res, c.Text)
+	}
+	return res
+}
+
 // Returns function signature by provided method list.
 // Method list represents as array of pointers to ast.Field.
-func parseInterfaceFieldList(fields []*ast.Field) ([]*FuncSignature, error) {
+func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
 	var funcs []*FuncSignature
 	for _, field := range fields {
 		funcType, ok := field.Type.(*ast.FuncType)

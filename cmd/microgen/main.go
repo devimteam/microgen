@@ -33,7 +33,6 @@ func main() {
 		panic(fmt.Errorf("unable to parse file: %v", err))
 	}
 
-
-	fs, err := parser.GetInterfaceFuncSignatures(f, *flagIfaceName)
+	fs, err := parser.ParseInterface(f, *flagIfaceName)
 	generator.GenerateRequestsFile(fs)
 }
