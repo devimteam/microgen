@@ -9,7 +9,7 @@ import (
 )
 
 const REQUEST_TEMPLATE =`
-{{range .}}
+{{range .FuncSignatures}}
 	type {{.Name}}Request struct {
 		{{range .Params}}
 			{{.Name | ToUpperFirst}} {{.Type}}
@@ -25,6 +25,6 @@ func GenerateRequestsFile(i *parser.Interface) {
 	t := template.New("requests")
 	t.Funcs(fm)
 	t.Parse(REQUEST_TEMPLATE)
-	err := t.Execute(os.Stdout, fs)
-	fmt.Println(err)
+	err := t.Execute(os.Stdout, i)
+	fmt.Println("Err:", err)
 }

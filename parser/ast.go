@@ -8,7 +8,7 @@ import (
 
 type Interface struct {
 	PackageName string
-	Comments []string
+	Doc []string
 	FuncSignatures []*FuncSignature
 }
 
@@ -29,7 +29,7 @@ type FuncSignature struct {
 // Build list of function signatures by provided
 // AST of file and interface name.
 func ParseInterface(f *ast.File, ifaceName string) (*Interface, error) {
-	typeSpec, err := getTypeSpecByName(f, ifaceName)
+	genDecl, typeSpec, err := findTypeByName(f, ifaceName)
 	if err != nil {
 		return nil, fmt.Errorf("could not find type: %v", err)
 	}
@@ -45,39 +45,45 @@ func ParseInterface(f *ast.File, ifaceName string) (*Interface, error) {
 	}
 
 	return &Interface{
-		PackageName: getPackageName(f),
-		Comments: parseComments(typeSpec),
+		PackageName:    getPackageName(f),
+		Doc:            parseDoc(genDecl),
 		FuncSignatures: funcSignatures,
 	}, nil
 }
 
 // Returns type spec by name from provided AST of file.
-func getTypeSpecByName(f *ast.File, name string) (*ast.TypeSpec, error) {
+func findTypeByName(f *ast.File, name string) (*ast.GenDecl, *ast.TypeSpec, error) {
 	for _, decl := range f.Decls {
 		decl, ok := decl.(*ast.GenDecl)
 		if !ok || decl.Tok != token.TYPE {
 			continue
 		}
+
 		for _, spec := range decl.Specs {
 			spec := spec.(*ast.TypeSpec)
 			if spec.Name.Name != name {
 				continue
 			}
 
-			return spec, nil
+			return decl, spec, nil
 		}
 	}
 
-	return nil, fmt.Errorf("type '%s' not found in %s", name, f.Name.Name)
+	return nil, nil, fmt.Errorf("type '%s' not found in %s", name, f.Name.Name)
 }
 
 func getPackageName(f *ast.File) string {
 	return f.Name.Name
 }
 
-func parseComments(ts *ast.TypeSpec) []string {
+// Parse doc of interface generic declaration.
+func parseDoc(d *ast.GenDecl) []string {
+	if d.Doc == nil {
+		return nil
+	}
+
 	var res []string
-	for _, c := range ts.Comment.List {
+	for _, c := range d.Doc.List {
 		res = append(res, c.Text)
 	}
 	return res

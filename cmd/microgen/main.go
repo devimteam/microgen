@@ -28,7 +28,7 @@ func main() {
 
 	path := filepath.Join(currentDir, *flagFileName)
 
-	f, err := astparser.ParseFile(token.NewFileSet(), path, nil, 0)
+	f, err := astparser.ParseFile(token.NewFileSet(), path, nil, astparser.ParseComments)
 	if err != nil {
 		panic(fmt.Errorf("unable to parse file: %v", err))
 	}
