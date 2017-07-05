@@ -6,7 +6,7 @@ package {{.PackageName}}
 // Request for {{.Name}} method.
 type {{.Name}}Request struct {
 	{{- range .Params}}
-	{{.Name | ToUpperFirst}} {{.Type}} `json:"{{.Name | ToSnakeCase}}`
+	{{.Name | ToUpperFirst}} {{.Type}} `json:"{{.Name | ToSnakeCase}}"`
 	{{- end}}
 }
 {{- end}}

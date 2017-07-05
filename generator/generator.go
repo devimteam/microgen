@@ -1,85 +1,81 @@
 package generator
 
 import (
-	"os"
-	"text/template"
-	"github.com/cv21/microgen/util"
+	"bytes"
 	"fmt"
+	"go/format"
 	"io/ioutil"
-)
+	"path/filepath"
+	"text/template"
 
-type Template interface {
-	Render(data interface{}) error
-}
+	"github.com/cv21/microgen/util"
+)
 
 type Generator interface {
 	Generate() error
 }
 
-type CommonTemplate struct {
-	Name string
-	FileName string
-	Template string
+type Template struct {
 	TemplatePath string
+	ResultPath   string
 }
 
 type generator struct {
-	templates []Template
-	data interface{}
+	templates []*Template
+	data      interface{}
 }
 
-func NewGenerator(ts []Template, data interface{}) Generator {
+func NewGenerator(ts []*Template, data interface{}) Generator {
 	return &generator{
 		templates: ts,
-		data: data,
+		data:      data,
 	}
-}
-
-func (t CommonTemplate) Render(data interface{}) error {
-	fm := template.FuncMap{
-		"ToUpperFirst": util.ToUpperFirst,
-		"ToSnakeCase": util.ToSnakeCase,
-	}
-
-	tmpl := template.New(t.Name).Funcs(fm)
-
-	if t.TemplatePath != "" {
-		b, err := ioutil.ReadFile(t.TemplatePath)
-		if err != nil {
-			return fmt.Errorf("error when load template file: %v", err)
-		}
-
-		tmpl, err = tmpl.Parse(string(b))
-		if err != nil {
-			return fmt.Errorf("error when parse template from file: %v", err)
-		}
-	} else {
-		var err error
-		tmpl, err = tmpl.Parse(t.Template)
-		if err != nil {
-			return fmt.Errorf("error when parse template: %v", err)
-		}
-	}
-
-	f, err := os.Create(t.FileName)
-	if err != nil {
-		return fmt.Errorf("error when create file for template: %v", err)
-	}
-
-	err = tmpl.Execute(f, data)
-	if err != nil {
-		return fmt.Errorf("error when execute template engine: %v", err)
-	}
-
-	return f.Close()
 }
 
 func (g *generator) Generate() error {
+	var templateFiles []string
+
 	for _, t := range g.templates {
-		err := t.Render(g.data)
+		templateFiles = append(templateFiles, t.TemplatePath)
+	}
+
+	fm := template.FuncMap{
+		"ToUpperFirst": util.ToUpperFirst,
+		"ToSnakeCase":  util.ToSnakeCase,
+	}
+
+	tpl, err := template.New("main").Funcs(fm).ParseFiles(templateFiles...)
+	if err != nil {
+		return fmt.Errorf("error when parse files: %v", err)
+	}
+
+	for _, t := range g.templates {
+		buf := bytes.NewBuffer(nil)
+
+		//f, err := os.Create(t.ResultPath)
+		//if err != nil {
+		//	return fmt.Errorf("error when create file for template: %v", err)
+		//}
+
+		err = tpl.ExecuteTemplate(buf, filepath.Base(t.TemplatePath), g.data)
 		if err != nil {
-			return fmt.Errorf("error when render template: %v", err)
+			return fmt.Errorf("error when execute template engine: %v", err)
 		}
+
+		fmtSrc, err := format.Source(buf.Bytes())
+		if err != nil {
+			return fmt.Errorf("error when fmt source: %v", err)
+		}
+
+		err = ioutil.WriteFile(t.ResultPath, fmtSrc, 0777)
+		if err != nil {
+			return fmt.Errorf("error when write file: %v", err)
+		}
+
+		//err = f.Close()
+		//if err != nil {
+		//	return fmt.Errorf("error when close result file: %v", err)
+		//}
 	}
 
 	return nil

@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
-	"github.com/cv21/microgen/parser"
 	astparser "go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
+
 	"github.com/cv21/microgen/generator"
+	"github.com/cv21/microgen/parser"
 )
 
 var (
@@ -35,10 +36,13 @@ func main() {
 
 	i, err := parser.ParseInterface(f, *flagIfaceName)
 
-	gen := generator.NewGenerator([]generator.Template{
-		generator.RequestsTemplate,
-		generator.ResponsesTemplate,
+	gen := generator.NewGenerator([]*generator.Template{
+		&generator.RequestsTemplate,
+		&generator.ResponsesTemplate,
+		&generator.EndpointTemplate,
 	}, i)
 
-	gen.Generate()
+	err = gen.Generate()
+
+	fmt.Println(err)
 }

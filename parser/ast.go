@@ -13,8 +13,8 @@ type Interface struct {
 }
 
 type FuncSignature struct {
-	Name string
-	Params []*FuncField
+	Name    string
+	Params  []*FuncField
 	Results []*FuncField
 }
 
@@ -24,7 +24,6 @@ type FuncField struct {
 	Name string
 	Type string
 }
-
 
 // Build list of function signatures by provided
 // AST of file and interface name.

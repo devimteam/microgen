@@ -6,7 +6,7 @@ package {{.PackageName}}
 // Response for {{.Name}} method.
 type {{.Name}}Response struct {
 	{{- range .Results}}
-	{{.Name | ToUpperFirst}} {{.Type}} `json:"{{.Name | ToSnakeCase}}`
+	{{.Name | ToUpperFirst}} {{.Type}} `json:"{{.Name | ToSnakeCase}}"`
 	{{- end}}
 }
 {{- end}}
