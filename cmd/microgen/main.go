@@ -33,6 +33,12 @@ func main() {
 		panic(fmt.Errorf("unable to parse file: %v", err))
 	}
 
-	fs, err := parser.ParseInterface(f, *flagIfaceName)
-	generator.GenerateRequestsFile(fs)
+	i, err := parser.ParseInterface(f, *flagIfaceName)
+
+	gen := generator.NewGenerator([]generator.Template{
+		generator.RequestsTemplate,
+		generator.ResponsesTemplate,
+	}, i)
+
+	gen.Generate()
 }

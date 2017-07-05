@@ -7,9 +7,15 @@ import (
 )
 
 type Interface struct {
-	PackageName string
-	Doc []string
+	PackageName    string
+	Docs           []string
 	FuncSignatures []*FuncSignature
+}
+
+type FuncSignature struct {
+	Name string
+	Params []*FuncField
+	Results []*FuncField
 }
 
 // Basic field struct.
@@ -19,12 +25,6 @@ type FuncField struct {
 	Type string
 }
 
-// Func signature representation.
-type FuncSignature struct {
-	Name string
-	Params []*FuncField
-	Results []*FuncField
-}
 
 // Build list of function signatures by provided
 // AST of file and interface name.
@@ -46,7 +46,7 @@ func ParseInterface(f *ast.File, ifaceName string) (*Interface, error) {
 
 	return &Interface{
 		PackageName:    getPackageName(f),
-		Doc:            parseDoc(genDecl),
+		Docs:           parseDocs(genDecl),
 		FuncSignatures: funcSignatures,
 	}, nil
 }
@@ -77,7 +77,7 @@ func getPackageName(f *ast.File) string {
 }
 
 // Parse doc of interface generic declaration.
-func parseDoc(d *ast.GenDecl) []string {
+func parseDocs(d *ast.GenDecl) []string {
 	if d.Doc == nil {
 		return nil
 	}
