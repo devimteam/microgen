@@ -105,7 +105,15 @@ func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
 
 		for _, param := range funcType.Params.List {
 			for _, paramName := range param.Names {
-				paramType := param.Type.(*ast.Ident).Name
+
+				var paramType string
+				switch t := param.Type.(type) {
+				case *ast.Ident:
+					paramType = t.Name
+				case *ast.SelectorExpr:
+					paramType = t.X.(*ast.Ident).Name + "." + t.Sel.Name
+				}
+
 				f.Params = append(f.Params, &FuncField{
 					Name: paramName.Name,
 					Type: paramType,
@@ -115,7 +123,15 @@ func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
 
 		for _, result := range funcType.Results.List {
 			for _, resultName := range result.Names {
-				resultType := result.Type.(*ast.Ident).Name
+
+				var resultType string
+				switch t := result.Type.(type) {
+				case *ast.Ident:
+					resultType = t.Name
+				case *ast.SelectorExpr:
+					resultType = t.X.(*ast.Ident).Name + "." + t.Sel.Name
+				}
+
 				f.Results = append(f.Results, &FuncField{
 					Name: resultName.Name,
 					Type: resultType,
