@@ -9,6 +9,7 @@ import (
 type Interface struct {
 	PackageName    string
 	Docs           []string
+	Imports        []*Import
 	FuncSignatures []*FuncSignature
 }
 
@@ -18,16 +19,28 @@ type FuncSignature struct {
 	Results []*FuncField
 }
 
+type Import struct {
+	Alias string
+	Path  string
+}
+
 // Basic field struct.
 // Used for tiny parameters and results representation.
 type FuncField struct {
-	Name string
-	Type string
+	Name         string
+	PackageAlias string
+	Type         string
+	IsPointer    bool
 }
 
 // Build list of function signatures by provided
 // AST of file and interface name.
 func ParseInterface(f *ast.File, ifaceName string) (*Interface, error) {
+	imports, err := fetchImports(f)
+	if err != nil {
+		return nil, fmt.Errorf("error when fetch imports: %v", err)
+	}
+
 	genDecl, typeSpec, err := findTypeByName(f, ifaceName)
 	if err != nil {
 		return nil, fmt.Errorf("could not find type: %v", err)
@@ -44,6 +57,7 @@ func ParseInterface(f *ast.File, ifaceName string) (*Interface, error) {
 	}
 
 	return &Interface{
+		Imports:        imports,
 		PackageName:    getPackageName(f),
 		Docs:           parseDocs(genDecl),
 		FuncSignatures: funcSignatures,
@@ -69,6 +83,37 @@ func findTypeByName(f *ast.File, name string) (*ast.GenDecl, *ast.TypeSpec, erro
 	}
 
 	return nil, nil, fmt.Errorf("type '%s' not found in %s", name, f.Name.Name)
+}
+
+func fetchImports(f *ast.File) ([]*Import, error) {
+	for _, decl := range f.Decls {
+		decl, ok := decl.(*ast.GenDecl)
+		if !ok || decl.Tok != token.IMPORT {
+			continue
+		}
+
+		var imports []*Import
+
+		for _, spec := range decl.Specs {
+			spec, ok := spec.(*ast.ImportSpec)
+			if !ok {
+				return nil, fmt.Errorf("could not parse import spec")
+			}
+
+			imp := Import{}
+
+			if spec.Name != nil {
+				imp.Alias = spec.Name.Name
+			}
+
+			imp.Path = spec.Path.Value
+			imports = append(imports, &imp)
+		}
+
+		return imports, nil
+	}
+
+	return nil, nil
 }
 
 func getPackageName(f *ast.File) string {
@@ -105,37 +150,37 @@ func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
 
 		for _, param := range funcType.Params.List {
 			for _, paramName := range param.Names {
+				ff := FuncField{Name: paramName.Name}
 
-				var paramType string
 				switch t := param.Type.(type) {
 				case *ast.Ident:
-					paramType = t.Name
+					ff.Type = t.Name
 				case *ast.SelectorExpr:
-					paramType = t.X.(*ast.Ident).Name + "." + t.Sel.Name
+					ff.PackageAlias = t.X.(*ast.Ident).Name
+					ff.Type = t.Sel.Name
+				case *ast.StarExpr:
+					ff.IsPointer = true
+					ff.PackageAlias = t.X.(*ast.SelectorExpr).X.(*ast.Ident).Name
+					ff.Type = t.X.(*ast.SelectorExpr).Sel.Name
 				}
 
-				f.Params = append(f.Params, &FuncField{
-					Name: paramName.Name,
-					Type: paramType,
-				})
+				f.Params = append(f.Params, &ff)
 			}
 		}
 
 		for _, result := range funcType.Results.List {
 			for _, resultName := range result.Names {
+				ff := FuncField{Name: resultName.Name}
 
-				var resultType string
 				switch t := result.Type.(type) {
 				case *ast.Ident:
-					resultType = t.Name
+					ff.Type = t.Name
 				case *ast.SelectorExpr:
-					resultType = t.X.(*ast.Ident).Name + "." + t.Sel.Name
+					ff.Type = t.Sel.Name
+					ff.PackageAlias = t.X.(*ast.Ident).Name
 				}
 
-				f.Results = append(f.Results, &FuncField{
-					Name: resultName.Name,
-					Type: resultType,
-				})
+				f.Params = append(f.Params, &ff)
 			}
 		}
 

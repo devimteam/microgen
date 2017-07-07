@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"go/ast"
+
 	"github.com/cv21/microgen/generator"
 	"github.com/cv21/microgen/parser"
 )
@@ -15,6 +17,7 @@ import (
 var (
 	flagFileName  = flag.String("f", "", "File name")
 	flagIfaceName = flag.String("i", "", "Interface name")
+	debug         = flag.Bool("d", false, "Debug mode")
 )
 
 func init() {
@@ -29,13 +32,17 @@ func main() {
 
 	path := filepath.Join(currentDir, *flagFileName)
 
-	f, err := astparser.ParseFile(token.NewFileSet(), path, nil, astparser.ParseComments)
+	fset := token.NewFileSet()
+	f, err := astparser.ParseFile(fset, path, nil, astparser.ParseComments)
 	if err != nil {
 		panic(fmt.Errorf("unable to parse file: %v", err))
 	}
 
-	i, err := parser.ParseInterface(f, *flagIfaceName)
+	if *debug {
+		ast.Print(fset, f)
+	}
 
+	i, err := parser.ParseInterface(f, *flagIfaceName)
 	gen := generator.NewGenerator([]*generator.Template{
 		&generator.RequestsTemplate,
 		&generator.ResponsesTemplate,
