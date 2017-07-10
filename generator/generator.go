@@ -23,12 +23,14 @@ type Template struct {
 type generator struct {
 	templates []*Template
 	data      interface{}
+	outputDir string
 }
 
-func NewGenerator(ts []*Template, data interface{}) Generator {
+func NewGenerator(ts []*Template, data interface{}, outputDir string) Generator {
 	return &generator{
 		templates: ts,
 		data:      data,
+		outputDir: outputDir,
 	}
 }
 
@@ -62,7 +64,7 @@ func (g *generator) Generate() error {
 			return fmt.Errorf("error when fmt source: %v, see code below \n %s", err, buf.Bytes())
 		}
 
-		err = ioutil.WriteFile(t.ResultPath, fmtSrc, 0777)
+		err = ioutil.WriteFile(filepath.Join(g.outputDir, t.ResultPath), fmtSrc, 0777)
 		if err != nil {
 			return fmt.Errorf("error when write file: %v", err)
 		}

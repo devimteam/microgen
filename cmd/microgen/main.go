@@ -17,6 +17,7 @@ import (
 var (
 	flagFileName  = flag.String("f", "", "File name")
 	flagIfaceName = flag.String("i", "", "Interface name")
+	outputDir     = flag.String("o", "", "Output directory")
 	debug         = flag.Bool("d", false, "Debug mode")
 )
 
@@ -47,7 +48,7 @@ func main() {
 		&generator.RequestsTemplate,
 		&generator.ResponsesTemplate,
 		&generator.EndpointTemplate,
-	}, i)
+	}, i, *outputDir)
 
 	err = gen.Generate()
 

@@ -176,11 +176,15 @@ func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
 				case *ast.Ident:
 					ff.Type = t.Name
 				case *ast.SelectorExpr:
-					ff.Type = t.Sel.Name
 					ff.PackageAlias = t.X.(*ast.Ident).Name
+					ff.Type = t.Sel.Name
+				case *ast.StarExpr:
+					ff.IsPointer = true
+					ff.PackageAlias = t.X.(*ast.SelectorExpr).X.(*ast.Ident).Name
+					ff.Type = t.X.(*ast.SelectorExpr).Sel.Name
 				}
 
-				f.Params = append(f.Params, &ff)
+				f.Results = append(f.Results, &ff)
 			}
 		}
 
