@@ -24,6 +24,7 @@ type generator struct {
 	templates []*Template
 	data      interface{}
 	outputDir string
+	pkgName   string
 }
 
 func NewGenerator(ts []*Template, data interface{}, outputDir string) Generator {

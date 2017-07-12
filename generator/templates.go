@@ -1,16 +1,28 @@
 package generator
 
-var RequestsTemplate = Template{
-	TemplatePath: "generator/templates/requests.go.tmpl",
-	ResultPath:   "requests.go",
+import "github.com/cv21/microgen/parser"
+
+type RenderData struct {
+	PackageFullName string
+	Interface       *parser.Interface
 }
 
-var ResponsesTemplate = Template{
-	TemplatePath: "generator/templates/responses.go.tmpl",
-	ResultPath:   "responses.go",
+var ExchangeTemplate = Template{
+	TemplatePath: "generator/templates/exchange.go.tmpl",
+	ResultPath:   "exchange.go",
 }
 
 var EndpointTemplate = Template{
 	TemplatePath: "generator/templates/endpoints.go.tmpl",
 	ResultPath:   "endpoints.go",
+}
+
+var ClientTemplate = Template{
+	TemplatePath: "generator/templates/client.go.tmpl",
+	ResultPath:   "client.go",
+}
+
+var LoggingMiddlewareTemplate = Template{
+	TemplatePath: "generator/templates/middleware/logging.go.tmpl",
+	ResultPath:   "middleware/endpoints.go",
 }

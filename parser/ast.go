@@ -9,6 +9,7 @@ import (
 type Interface struct {
 	PackageName    string
 	Docs           []string
+	Name           string
 	Imports        []*Import
 	FuncSignatures []*FuncSignature
 }
@@ -31,6 +32,7 @@ type FuncField struct {
 	PackageAlias string
 	Type         string
 	IsPointer    bool
+	IsArray      bool
 }
 
 // Build list of function signatures by provided
@@ -59,6 +61,7 @@ func ParseInterface(f *ast.File, ifaceName string) (*Interface, error) {
 	return &Interface{
 		Imports:        imports,
 		PackageName:    getPackageName(f),
+		Name:           ifaceName,
 		Docs:           parseDocs(genDecl),
 		FuncSignatures: funcSignatures,
 	}, nil
@@ -150,41 +153,17 @@ func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
 
 		for _, param := range funcType.Params.List {
 			for _, paramName := range param.Names {
-				ff := FuncField{Name: paramName.Name}
-
-				switch t := param.Type.(type) {
-				case *ast.Ident:
-					ff.Type = t.Name
-				case *ast.SelectorExpr:
-					ff.PackageAlias = t.X.(*ast.Ident).Name
-					ff.Type = t.Sel.Name
-				case *ast.StarExpr:
-					ff.IsPointer = true
-					ff.PackageAlias = t.X.(*ast.SelectorExpr).X.(*ast.Ident).Name
-					ff.Type = t.X.(*ast.SelectorExpr).Sel.Name
-				}
-
-				f.Params = append(f.Params, &ff)
+				ff := &FuncField{Name: paramName.Name}
+				parseField(ff, param.Type)
+				f.Params = append(f.Params, ff)
 			}
 		}
 
 		for _, result := range funcType.Results.List {
 			for _, resultName := range result.Names {
-				ff := FuncField{Name: resultName.Name}
-
-				switch t := result.Type.(type) {
-				case *ast.Ident:
-					ff.Type = t.Name
-				case *ast.SelectorExpr:
-					ff.PackageAlias = t.X.(*ast.Ident).Name
-					ff.Type = t.Sel.Name
-				case *ast.StarExpr:
-					ff.IsPointer = true
-					ff.PackageAlias = t.X.(*ast.SelectorExpr).X.(*ast.Ident).Name
-					ff.Type = t.X.(*ast.SelectorExpr).Sel.Name
-				}
-
-				f.Results = append(f.Results, &ff)
+				ff := &FuncField{Name: resultName.Name}
+				parseField(ff, result.Type)
+				f.Results = append(f.Results, ff)
 			}
 		}
 
@@ -192,4 +171,20 @@ func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
 	}
 
 	return funcs, nil
+}
+
+func parseField(ff *FuncField, flType interface{}) {
+	switch t := flType.(type) {
+	case *ast.Ident:
+		ff.Type = t.Name
+	case *ast.SelectorExpr:
+		ff.PackageAlias = t.X.(*ast.Ident).Name
+		ff.Type = t.Sel.Name
+	case *ast.StarExpr:
+		ff.IsPointer = true
+		parseField(ff, t.X)
+	case *ast.ArrayType:
+		ff.IsArray = true
+		parseField(ff, t.Elt)
+	}
 }

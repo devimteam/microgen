@@ -12,13 +12,15 @@ import (
 
 	"github.com/cv21/microgen/generator"
 	"github.com/cv21/microgen/parser"
+	"github.com/davecgh/go-spew/spew"
 )
 
 var (
-	flagFileName  = flag.String("f", "", "File name")
-	flagIfaceName = flag.String("i", "", "Interface name")
-	outputDir     = flag.String("o", "", "Output directory")
-	debug         = flag.Bool("d", false, "Debug mode")
+	flagFileName    = flag.String("f", "", "File name")
+	flagIfaceName   = flag.String("i", "", "Interface name")
+	flagOutputDir   = flag.String("o", "", "Output directory")
+	flagPkgFullName = flag.String("p", "", "Package full name")
+	debug           = flag.Bool("d", false, "Debug mode")
 )
 
 func init() {
@@ -38,19 +40,26 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("unable to parse file: %v", err))
 	}
+	i, err := parser.ParseInterface(f, *flagIfaceName)
 
 	if *debug {
 		ast.Print(fset, f)
+		spew.Dump(i)
 	}
 
-	i, err := parser.ParseInterface(f, *flagIfaceName)
 	gen := generator.NewGenerator([]*generator.Template{
-		&generator.RequestsTemplate,
-		&generator.ResponsesTemplate,
+		&generator.ExchangeTemplate,
 		&generator.EndpointTemplate,
-	}, i, *outputDir)
+		&generator.ClientTemplate,
+		&generator.LoggingMiddlewareTemplate,
+	}, generator.RenderData{
+		Interface:       i,
+		PackageFullName: *flagPkgFullName,
+	}, *flagOutputDir)
 
 	err = gen.Generate()
 
-	fmt.Println(err)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 }
