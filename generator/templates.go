@@ -1,6 +1,6 @@
 package generator
 
-import "github.com/cv21/microgen/parser"
+import "github.com/devimteam/microgen/parser"
 
 type RenderData struct {
 	PackageFullName string

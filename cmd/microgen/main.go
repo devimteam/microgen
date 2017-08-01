@@ -10,9 +10,9 @@ import (
 
 	"go/ast"
 
-	"github.com/cv21/microgen/generator"
-	"github.com/cv21/microgen/parser"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/devimteam/microgen/generator"
+	"github.com/devimteam/microgen/parser"
 )
 
 var (

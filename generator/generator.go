@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/cv21/microgen/util"
+	"github.com/devimteam/microgen/util"
 )
 
 type Generator interface {
