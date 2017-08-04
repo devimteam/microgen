@@ -24,3 +24,7 @@
 [[constraint]]
   name = "github.com/davecgh/go-spew"
   version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/dave/jennifer"
+  version = "^0.14.0"

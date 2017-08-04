@@ -1,9 +1,17 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
+	"path"
+	"strings"
+)
+
+var (
+	ErrCouldNotResolvePackage = errors.New("could not resolve package")
+	ErrUnexpectedFieldType    = errors.New("provided fields have unexpected type")
 )
 
 type Interface struct {
@@ -28,17 +36,36 @@ type Import struct {
 // Basic field struct.
 // Used for tiny parameters and results representation.
 type FuncField struct {
-	Name         string
-	PackageAlias string
-	Type         string
-	IsPointer    bool
-	IsArray      bool
+	Name      string
+	Package   *Import
+	Type      string
+	IsPointer bool
+	IsArray   bool
+}
+
+func resolveImportByAlias(imports []*Import, alias string) (*Import, error) {
+	// try to find by alias
+	for _, imp := range imports {
+		if imp.Alias == alias {
+			return imp, nil
+		}
+	}
+
+	// try to find by last package path
+	for _, imp := range imports {
+		_, pname := path.Split(imp.Path)
+		if alias == pname {
+			return imp, nil
+		}
+	}
+
+	return nil, ErrCouldNotResolvePackage
 }
 
 // Build list of function signatures by provided
 // AST of file and interface name.
 func ParseInterface(f *ast.File, ifaceName string) (*Interface, error) {
-	imports, err := fetchImports(f)
+	imports, err := parseImports(f)
 	if err != nil {
 		return nil, fmt.Errorf("error when fetch imports: %v", err)
 	}
@@ -50,17 +77,17 @@ func ParseInterface(f *ast.File, ifaceName string) (*Interface, error) {
 
 	ifaceSpec, ok := typeSpec.Type.(*ast.InterfaceType)
 	if !ok {
-		return nil, fmt.Errorf("type '%s' is not interface", ifaceName)
+		return nil, ErrUnexpectedFieldType
 	}
 
-	funcSignatures, err := parseFuncSignatures(ifaceSpec.Methods.List)
+	funcSignatures, err := parseFuncSignatures(ifaceSpec.Methods.List, imports)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error when parse func signatures: %v", funcSignatures)
 	}
 
 	return &Interface{
 		Imports:        imports,
-		PackageName:    getPackageName(f),
+		PackageName:    f.Name.Name,
 		Name:           ifaceName,
 		Docs:           parseDocs(genDecl),
 		FuncSignatures: funcSignatures,
@@ -88,7 +115,7 @@ func findTypeByName(f *ast.File, name string) (*ast.GenDecl, *ast.TypeSpec, erro
 	return nil, nil, fmt.Errorf("type '%s' not found in %s", name, f.Name.Name)
 }
 
-func fetchImports(f *ast.File) ([]*Import, error) {
+func parseImports(f *ast.File) ([]*Import, error) {
 	for _, decl := range f.Decls {
 		decl, ok := decl.(*ast.GenDecl)
 		if !ok || decl.Tok != token.IMPORT {
@@ -100,16 +127,19 @@ func fetchImports(f *ast.File) ([]*Import, error) {
 		for _, spec := range decl.Specs {
 			spec, ok := spec.(*ast.ImportSpec)
 			if !ok {
-				return nil, fmt.Errorf("could not parse import spec")
+				return nil, ErrUnexpectedFieldType
 			}
 
 			imp := Import{}
 
+			imp.Path = strings.Trim(spec.Path.Value, `"`)
+
 			if spec.Name != nil {
 				imp.Alias = spec.Name.Name
+			} else {
+				_, imp.Alias = path.Split(imp.Path)
 			}
 
-			imp.Path = spec.Path.Value
 			imports = append(imports, &imp)
 		}
 
@@ -117,10 +147,6 @@ func fetchImports(f *ast.File) ([]*Import, error) {
 	}
 
 	return nil, nil
-}
-
-func getPackageName(f *ast.File) string {
-	return f.Name.Name
 }
 
 // Parse doc of interface generic declaration.
@@ -138,12 +164,12 @@ func parseDocs(d *ast.GenDecl) []string {
 
 // Returns function signature by provided method list.
 // Method list represents as array of pointers to ast.Field.
-func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
+func parseFuncSignatures(fields []*ast.Field, imports []*Import) ([]*FuncSignature, error) {
 	var funcs []*FuncSignature
 	for _, field := range fields {
 		funcType, ok := field.Type.(*ast.FuncType)
 		if !ok {
-			return nil, fmt.Errorf("provided fields not implement ast.FuncType")
+			return nil, ErrUnexpectedFieldType
 		}
 
 		f := &FuncSignature{
@@ -154,7 +180,10 @@ func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
 		for _, param := range funcType.Params.List {
 			for _, paramName := range param.Names {
 				ff := &FuncField{Name: paramName.Name}
-				parseField(ff, param.Type)
+				err := parseField(ff, param.Type, imports)
+				if err != nil {
+					return nil, fmt.Errorf("could not parse field %s: %v", ff.Name, err)
+				}
 				f.Params = append(f.Params, ff)
 			}
 		}
@@ -162,7 +191,10 @@ func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
 		for _, result := range funcType.Results.List {
 			for _, resultName := range result.Names {
 				ff := &FuncField{Name: resultName.Name}
-				parseField(ff, result.Type)
+				err := parseField(ff, result.Type, imports)
+				if err != nil {
+					return nil, fmt.Errorf("could not parse field %s: %v", ff.Name, err)
+				}
 				f.Results = append(f.Results, ff)
 			}
 		}
@@ -173,18 +205,30 @@ func parseFuncSignatures(fields []*ast.Field) ([]*FuncSignature, error) {
 	return funcs, nil
 }
 
-func parseField(ff *FuncField, flType interface{}) {
+func parseField(ff *FuncField, flType interface{}, imports []*Import) error {
 	switch t := flType.(type) {
 	case *ast.Ident:
 		ff.Type = t.Name
 	case *ast.SelectorExpr:
-		ff.PackageAlias = t.X.(*ast.Ident).Name
+		var err error
 		ff.Type = t.Sel.Name
+		ff.Package, err = resolveImportByAlias(imports, t.X.(*ast.Ident).Name)
+		if err != nil {
+			return err
+		}
 	case *ast.StarExpr:
 		ff.IsPointer = true
-		parseField(ff, t.X)
+		err := parseField(ff, t.X, imports)
+		if err != nil {
+			return err
+		}
 	case *ast.ArrayType:
 		ff.IsArray = true
-		parseField(ff, t.Elt)
+		err := parseField(ff, t.Elt, imports)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
