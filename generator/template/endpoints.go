@@ -3,7 +3,10 @@ package template
 import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/parser"
+	"github.com/devimteam/microgen/util"
 )
+
+const PackageAliasGoKit = "github.com/go-kit/kit/endpoint"
 
 type EndpointsTemplate struct {
 }
@@ -50,12 +53,16 @@ func (EndpointsTemplate) Render(i *parser.Interface) *File {
 
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {
 		for _, signature := range i.FuncSignatures {
-			g.Id(signature.Name+"Endpoint").Qual("github.com/go-kit/kit/endpoint", "Endpoint")
+			g.Id(signature.Name+"Endpoint").Qual(PackageAliasGoKit, "Endpoint")
 		}
 	})
 
 	for _, signature := range i.FuncSignatures {
-		endpointFunc(signature)
+		f.Add(endpointFunc(signature))
+	}
+	f.Line()
+	for _, signature := range i.FuncSignatures {
+		f.Add(newEndpointFunc(signature, i))
 	}
 
 	return f
@@ -65,17 +72,47 @@ func (EndpointsTemplate) Path() string {
 	return "./endpoints.go"
 }
 
-func endpointFunc(signature *parser.FuncSignature) Code {
+func endpointFunc(signature *parser.FuncSignature) *Statement {
+	return methodDefinition("Endpoints", signature).
+		BlockFunc(endpointBody(signature))
+}
+
+func endpointBody(signature *parser.FuncSignature) func(g *Group) {
+	req := "req"
+	resp := "resp"
+	return func(g *Group) {
+		g.Id(req).Op(":=").Id(signature.Name + "Request").Values(mapInitByFuncFields(signature.Params))
+		g.List(Id(resp), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(signature.Name+"Endpoint").Call(Id(Context), Op("&").Id(req))
+		g.If(Err().Op("!=").Nil()).Block(
+			Return(),
+		)
+		g.ReturnFunc(func(group *Group) {
+			for _, field := range signature.Results {
+				group.Add(typeCasting("", resp, signature.Name+"Response")).Op(".").Add(structFieldName(field))
+			}
+		})
+	}
+}
+
+func newEndpointFuncBody(signature *parser.FuncSignature) *Statement {
+	return Return(Func().Params(
+		Id("ctx").Qual("context", "Context"),
+		Id("request").Interface(),
+	).Params(
+		Interface(),
+		Error(),
+	).BlockFunc(func(g *Group) {
+		g.Add(typeCasting("req", "request", signature.Name+"Request"))
+		g.Add(fullServiceMethodCall("svc", "req", signature))
+		g.Return(
+			Op("&").Id(signature.Name+"Response").Values(mapInitByFuncFields(signature.Results)),
+			Nil(),
+		)
+	}))
+}
+
+func newEndpointFunc(signature *parser.FuncSignature, svcInterface *parser.Interface) *Statement {
 	return Func().
-		Params(Id("e").Op("*").Id("Endpoints")).
-		Id(signature.Name).
-		Params(funcParams(signature.Params)).
-		Params(funcParams(signature.Results)).
-		BlockFunc(
-			func(g *Group) {
-				Return()
-				//g.Id("req").Op(":=").Id(signature.Name+"Request").StructFunc(func(g *Group) {
-				//
-				//})
-			})
+		Id(signature.Name + "Endpoint").Params(Id("svc").Id(svcInterface.Name)).Params(Qual(PackageAliasGoKit, "Endpoint")).
+		Block(newEndpointFuncBody(signature))
 }

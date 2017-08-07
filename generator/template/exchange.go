@@ -32,7 +32,7 @@ func (ExchangeTemplate) Render(i *parser.Interface) *File {
 
 	for _, signature := range i.FuncSignatures {
 		f.Add(exchange(signature.Name+"Request", signature.Params))
-		f.Add(exchange(signature.Name+"Response", signature.Params))
+		f.Add(exchange(signature.Name+"Response", signature.Results))
 	}
 
 	return f
