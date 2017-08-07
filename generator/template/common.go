@@ -25,7 +25,7 @@ func structField(field *parser.FuncField) Code {
 //  	visit *entity.Visit
 //
 func funcParams(fields []*parser.FuncField) Code {
-	c := Make()
+	c := &Statement{}
 
 	for _, field := range fields {
 		c.Id(field.Name).Add(fieldType(field))
@@ -39,7 +39,7 @@ func funcParams(fields []*parser.FuncField) Code {
 //  	*repository.Visit
 //
 func fieldType(field *parser.FuncField) Code {
-	c := Make()
+	c := &Statement{}
 
 	if field.IsArray {
 		c.Index()
