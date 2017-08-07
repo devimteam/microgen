@@ -61,7 +61,7 @@ func fieldType(field *parser.FuncField) *Statement {
 	return c
 }
 
-// Renders key/value pairs wrapped in Dict for provided fields
+// Renders key/value pairs wrapped in Dict for provided fields.
 //
 //		Err:    err,
 //		Result: result,
@@ -77,7 +77,7 @@ func mapInitByFuncFields(fields []*parser.FuncField) Dict {
 	})
 }
 
-// Renders func params for call.
+// Renders func params for function call.
 //
 //  	req.Visit, req.Err
 //
@@ -92,7 +92,11 @@ func funcCallParams(obj string, fields []*parser.FuncField) *Statement {
 	return List(list...)
 }
 
-func funcResivers(fields []*parser.FuncField) *Statement {
+// Render list of function receivers by signature.Result.
+//
+//		Ans1, ans2, AnS3 -> ans1, ans2, anS3
+//
+func funcReceivers(fields []*parser.FuncField) *Statement {
 	var list []Code
 	for _, field := range fields {
 		list = append(list, Id(util.ToLowerFirst(field.Name)))
@@ -100,21 +104,31 @@ func funcResivers(fields []*parser.FuncField) *Statement {
 	return List(list...)
 }
 
+// Add `ctx,` before Code.
 func withCtx(param Code) *Statement {
 	return List(Id(Context), param)
 }
 
+// Render method call with receivers and params.
+//
+//		count := svc.Count(ctx, req.Text, req.Symbol)
+//
 func fullServiceMethodCall(service, request string, signature *parser.FuncSignature) *Statement {
-	return funcResivers(signature.Results).Op(":=").Id(service).Dot(signature.Name).Call(withCtx(funcCallParams(request, signature.Params)))
+	return funcReceivers(signature.Results).Op(":=").Id(service).Dot(signature.Name).Call(withCtx(funcCallParams(request, signature.Params)))
 }
 
-func typeCasting(resiever, iface, to string) *Statement {
-	if resiever == "" {
-		return Id(iface).Assert(Op("*").Id(to))
-	}
-	return Id(resiever).Op(":=").Id(iface).Assert(Op("*").Id(to))
+// Render object typecasting from `iface` to `to`.
+//
+//		request.(*UppercaseRequest)
+//
+func typeCasting(iface, to string) *Statement {
+	return Id(iface).Assert(Op("*").Id(to))
 }
 
+// Render full method definition with receiver, method name, args and results
+//
+//		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int)
+//
 func methodDefinition(obj string, signature *parser.FuncSignature) *Statement {
 	return Func().
 		Params(Id(util.FirstLowerChar(obj)).Op("*").Id(obj)).
