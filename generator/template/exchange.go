@@ -10,24 +10,22 @@ const PackageAliasContext = "context"
 type ExchangeTemplate struct {
 }
 
-// Renders exchanges file
+// Renders exchanges file.
 //
-// package visitsvc
+//  package visitsvc
 //
-// import (
-//     "gitlab.devim.team/microservices/visitsvc/entity"
-// )
+//  import (
+//  	"gitlab.devim.team/microservices/visitsvc/entity"
+//  )
 //
-// // Request for CreateVisit method.
-// type CreateVisitRequest struct {
-// 	   Visit *entity.Visit `json:"visit"`
-// }
+//  type CreateVisitRequest struct {
+//  	Visit *entity.Visit `json:"visit"`
+//  }
 //
-// // Response for CreateVisit method.
-// type CreateVisitResponse struct {
-// 	   Res *entity.Visit `json:"res"`
-// 	   Err error         `json:"err"`
-// }
+//  type CreateVisitResponse struct {
+//  	Res *entity.Visit `json:"res"`
+//  	Err error         `json:"err"`
+//  }
 //
 func (ExchangeTemplate) Render(i *parser.Interface) *File {
 	f := NewFile(i.PackageName)
@@ -46,12 +44,12 @@ func (ExchangeTemplate) Path() string {
 
 // Renders exchanges that represents requests and responses
 //
-// type CreateVisitRequest struct {
-// 	  Visit *entity.Visit `json:"visit"`
-// }
+//  type CreateVisitRequest struct {
+//  	Visit *entity.Visit `json:"visit"`
+//  }
 //
 func exchange(name string, params []*parser.FuncField) Code {
-	return New().Type().Id(name).StructFunc(func(g *Group) {
+	return Type().Id(name).StructFunc(func(g *Group) {
 		for i, param := range params {
 
 			// skip "context" package entry if it is first arg

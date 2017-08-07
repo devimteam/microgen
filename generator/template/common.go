@@ -6,9 +6,9 @@ import (
 	"github.com/devimteam/microgen/util"
 )
 
-// Renders struct field
+// Renders struct field.
 //
-// Visit *entity.Visit `json:"visit"`
+//  	Visit *entity.Visit `json:"visit"`
 //
 func structField(field *parser.FuncField) Code {
 	s := Id(util.ToUpperFirst(field.Name))
@@ -20,9 +20,9 @@ func structField(field *parser.FuncField) Code {
 	return s
 }
 
-// Renders func params
+// Renders func params.
 //
-// visit *entity.Visit
+//  	visit *entity.Visit
 //
 func funcParams(fields []*parser.FuncField) Code {
 	c := Make()
@@ -34,9 +34,9 @@ func funcParams(fields []*parser.FuncField) Code {
 	return c
 }
 
-// Renders field type for given func field
+// Renders field type for given func field.
 //
-// *repository.Visit
+//  	*repository.Visit
 //
 func fieldType(field *parser.FuncField) Code {
 	c := Make()
