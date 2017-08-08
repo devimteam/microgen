@@ -1,9 +1,13 @@
 package visitsvc
 
 import (
-	"gitlab.devim.team/microservices/visitsvc/entity"
+	"context"
+
+	"google.golang.org/api/drive/v3"
 )
 
-type VisitService interface {
-	CreateVisit(visit *entity.Visit) (result *entity.Visit, err error)
+type StringService interface {
+	Uppercase(ctx context.Context, str string) (ans string, err error)
+	Count(ctx context.Context, text string) (count int)
+	TestCase(ctx context.Context, comments drive.Comment) (err error)
 }
