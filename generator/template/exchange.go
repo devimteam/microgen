@@ -10,6 +10,14 @@ const PackageAliasContext = "context"
 type ExchangeTemplate struct {
 }
 
+func request(str string) string {
+	return str + "Request"
+}
+
+func response(str string) string {
+	return str + "Response"
+}
+
 // Renders exchanges file.
 //
 //  package visitsvc
@@ -31,8 +39,8 @@ func (ExchangeTemplate) Render(i *parser.Interface) *File {
 	f := NewFile(i.PackageName)
 
 	for _, signature := range i.FuncSignatures {
-		f.Add(exchange(signature.Name+"Request", signature.Params))
-		f.Add(exchange(signature.Name+"Response", signature.Params))
+		f.Add(exchange(request(signature.Name), signature.Params))
+		f.Add(exchange(response(signature.Name), signature.Results))
 	}
 
 	return f
