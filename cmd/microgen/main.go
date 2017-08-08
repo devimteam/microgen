@@ -53,6 +53,8 @@ func main() {
 	gen := generator.NewGenerator([]generator.Template{
 		&template.ExchangeTemplate{},
 		&template.EndpointsTemplate{},
+		&template.MiddlewareTemplate{},
+		&template.LoggingTemplate{},
 	}, i, *flagOutputDir)
 
 	err = gen.Generate()

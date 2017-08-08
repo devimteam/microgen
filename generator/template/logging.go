@@ -1,8 +1,7 @@
-package middleware
+package template
 
 import (
 	. "github.com/dave/jennifer/jen"
-	. "github.com/devimteam/microgen/generator/template"
 	"github.com/devimteam/microgen/parser"
 	"github.com/devimteam/microgen/util"
 )
@@ -10,30 +9,28 @@ import (
 type LoggingTemplate struct {
 }
 
-func logging(str string) string {
-	return str + "Logging"
+func loggingStructName(iface *parser.Interface) string {
+	return iface.Name + "Logging"
 }
 
-var (
-	loggerFiled    = "logger"
-	loggerArg      = "logger"
-	nextField      = "next"
-	nextArg        = "next"
+const (
+	loggerVar      = "logger"
+	nextVar        = "next"
 	serviceLogging = "ServiceLogging"
 )
 
 func (LoggingTemplate) Render(i *parser.Interface) *File {
 	f := NewFile(i.PackageName)
 
-	f.Func().Id(serviceLogging).Params(Id(loggerArg).Qual(PackageAliasGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
+	f.Func().Id(serviceLogging).Params(Id(loggerVar).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(newLoggingBody(i))
 
 	f.Line()
 
 	// Render type logger
-	f.Type().Id(logging(i.Name)).Struct(
-		Id(loggerFiled).Qual(PackageAliasGoKitLog, "Logger"),
-		Id(nextField).Qual(i.PackageName, i.Name),
+	f.Type().Id(loggingStructName(i)).Struct(
+		Id(loggerVar).Qual(PackagePathGoKitLog, "Logger"),
+		Id(nextVar).Qual(i.PackageName, i.Name),
 	)
 
 	// Render functions
@@ -49,7 +46,7 @@ func (LoggingTemplate) Path() string {
 	return "./middleware/logging.go"
 }
 
-// Render body for new logging middleware
+// Render body for new logging middleware.
 //
 //		return func(next stringsvc.StringService) stringsvc.StringService {
 //			return StringServiceLogging{
@@ -60,21 +57,21 @@ func (LoggingTemplate) Path() string {
 //
 func newLoggingBody(i *parser.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextArg).Qual(i.PackageName, i.Name),
+		Id(nextVar).Qual(i.PackageName, i.Name),
 	).Params(
 		Qual(i.PackageName, i.Name),
 	).BlockFunc(func(g *Group) {
-		g.Return(Id(logging(i.Name)).Values(
+		g.Return(Id(loggingStructName(i)).Values(
 			Dict{
-				Id(loggerFiled): Id(loggerArg),
-				Id(nextField):   Id(nextArg),
+				Id(loggerVar): Id(loggerVar),
+				Id(nextVar):   Id(nextVar),
 			},
 		))
 	}))
 }
 
 func loggingFunc(signature *parser.FuncSignature, i *parser.Interface) *Statement {
-	return MethodDefinition(logging(i.Name), signature).
+	return methodDefinition(loggingStructName(i), signature).
 		BlockFunc(loggingFuncBody(signature))
 }
 
@@ -83,32 +80,30 @@ func loggingFuncBody(signature *parser.FuncSignature) func(g *Group) {
 	outputParamsDesc := "Service results"
 	method, begin, took := "method", "begin", "took"
 	return func(g *Group) {
-		g.Defer().Func().Params(Id(begin).Qual(PackageAliasTime, "Time")).Block(
-			Id(util.FirstLowerChar(serviceLogging)).Dot(loggerFiled).Dot("Log").Call(
+		g.Defer().Func().Params(Id(begin).Qual(PackagePathTime, "Time")).Block(
+			Id(util.FirstLowerChar(serviceLogging)).Dot(loggerVar).Dot("Log").Call(
 				Lit(method), Lit(signature.Name),
 				Line().Comment(inputParamsDesc).
 					Line().Add(paramsNameAndValue(signature.Params)),
 				Line().Comment(outputParamsDesc).
 					Line().Add(paramsNameAndValue(signature.Results)),
-				Line().Lit(took), Qual(PackageAliasTime, "Since").Call(Id(begin)),
+				Line().Lit(took), Qual(PackagePathTime, "Since").Call(Id(begin)),
 			),
-		).Call(Qual(PackageAliasTime, "Now").Call())
+		).Call(Qual(PackagePathTime, "Now").Call())
 	}
 }
 
 // Renders key/value pairs wrapped in Dict for provided fields.
 //
-//		Err:    err,
-//		Result: result,
+//		"err", err, "result", result,
 //
 func paramsNameAndValue(fields []*parser.FuncField) *Statement {
 	return ListFunc(func(g *Group) {
 		for i, field := range fields {
-			if field.Package != nil && field.Package.Path == PackageAliasContext && i == 0 {
+			if i == 0 && checkFieldIsContext(field) {
 				continue
 			}
 			g.List(Lit(field.Name), Id(field.Name))
-			//d[structFieldName(field)] = Id(util.ToLowerFirst(field.Name))
 		}
 	})
 }

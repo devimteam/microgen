@@ -1,14 +1,14 @@
 package template
 
 import (
-	"go/parser"
+	goparser "go/parser"
 	"go/token"
 	"testing"
 
 	"bytes"
 
 	"github.com/devimteam/microgen/generator"
-	parser2 "github.com/devimteam/microgen/parser"
+	parser "github.com/devimteam/microgen/parser"
 )
 
 func TestExchangeForCountSvc(t *testing.T) {
@@ -38,11 +38,11 @@ type CountResponse struct {
 }
 ` // Blank line!
 	// `+"` is a trick from https://stackoverflow.com/questions/21198980/golang-how-to-escape-back-ticks
-	f, err := parser.ParseFile(token.NewFileSet(), "", src, 0)
+	f, err := goparser.ParseFile(token.NewFileSet(), "", src, 0)
 	if err != nil {
 		t.Errorf("unable to parse file: %v", err)
 	}
-	fs, err := parser2.ParseInterface(f, "StringService")
+	fs, err := parser.ParseInterface(f, "StringService")
 	if err != nil {
 		t.Errorf("could not get interface func signatures: %v", err)
 	}

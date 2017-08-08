@@ -1,4 +1,4 @@
-package middleware
+package template
 
 import (
 	. "github.com/dave/jennifer/jen"
@@ -6,10 +6,6 @@ import (
 )
 
 const (
-	PackageAliasGoKitEndpoint = "github.com/go-kit/kit/endpoint"
-	PackageAliasGoKitLog      = "github.com/go-kit/kit/log"
-	PackageAliasTime          = "time"
-
 	MiddlewareTypeName = "Middleware"
 )
 
@@ -18,7 +14,7 @@ type MiddlewareTemplate struct {
 
 func (MiddlewareTemplate) Render(i *parser.Interface) *File {
 	f := NewFile(i.PackageName)
-	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(PackageAliasGoKitEndpoint, "Endpoint")).Qual(PackageAliasGoKitEndpoint, "Endpoint")
+	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(PackagePathGoKitEndpoint, "Endpoint")).Qual(PackagePathGoKitEndpoint, "Endpoint")
 	return f
 }
 

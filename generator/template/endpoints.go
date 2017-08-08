@@ -6,15 +6,12 @@ import (
 	"github.com/devimteam/microgen/util"
 )
 
-const PackageAliasGoKit = "github.com/go-kit/kit/endpoint"
-
 type EndpointsTemplate struct {
 }
 
-func endpoint(str string) string {
+func endpointStructName(str string) string {
 	return str + "Endpoint"
 }
-
 
 // Renders endpoints file.
 //
@@ -56,18 +53,16 @@ func (EndpointsTemplate) Render(i *parser.Interface) *File {
 
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {
 		for _, signature := range i.FuncSignatures {
-			g.Id(endpoint(signature.Name)).Qual(PackageAliasGoKit, "Endpoint")
+			g.Id(endpointStructName(signature.Name)).Qual(PackagePathGoKitEndpoint, "Endpoint")
 		}
 	})
 
 	for _, signature := range i.FuncSignatures {
-		f.Add(endpointFunc(signature))
-		f.Line()
+		f.Add(serviceEndpointMethod(signature)).Line() // .Line() means \n
 	}
-	f.Line()
+	f.Line() // Blank line
 	for _, signature := range i.FuncSignatures {
-		f.Add(newEndpointFunc(signature, i))
-		f.Line()
+		f.Add(createEndpoint(signature, i)).Line() // .Line() means \n
 	}
 
 	return f
@@ -77,7 +72,7 @@ func (EndpointsTemplate) Path() string {
 	return "./endpoints.go"
 }
 
-// Render full endpoints method
+// Render full endpoints method.
 //
 //		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int) {
 //			req := CountRequest{
@@ -91,12 +86,12 @@ func (EndpointsTemplate) Path() string {
 //			return resp.(*CountResponse).Count
 //		}
 //
-func endpointFunc(signature *parser.FuncSignature) *Statement {
-	return MethodDefinition("Endpoints", signature).
-		BlockFunc(endpointBody(signature))
+func serviceEndpointMethod(signature *parser.FuncSignature) *Statement {
+	return methodDefinition("Endpoints", signature).
+		BlockFunc(serviceEndpointMethodBody(signature))
 }
 
-// Render interface method body
+// Render interface method body.
 //
 //		req := CountRequest{
 //			Symbol: symbol,
@@ -108,24 +103,38 @@ func endpointFunc(signature *parser.FuncSignature) *Statement {
 //		}
 //		return resp.(*CountResponse).Count
 //
-func endpointBody(signature *parser.FuncSignature) func(g *Group) {
+func serviceEndpointMethodBody(signature *parser.FuncSignature) func(g *Group) {
 	req := "req"
 	resp := "resp"
 	return func(g *Group) {
-		g.Id(req).Op(":=").Id(request(signature.Name)).Values(MapInitByFuncFields(signature.Params))
-		g.List(Id(resp), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpoint(signature.Name)).Call(Id(Context), Op("&").Id(req))
+		//	req := CountRequest{
+		//		Symbol: symbol,
+		//		Text:   text,
+		//	}
+		g.Id(req).Op(":=").Id(requestStructName(signature)).Values(dictByFuncFields(signature.Params))
+		//  resp, err := e.CountEndpoint(ctx, &req)
+		g.List(Id(resp), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id(req))
+		//  if err != nil {
+		//	    return
+		//  }
 		g.If(Err().Op("!=").Nil()).Block(
 			Return(),
 		)
+		//  return resp.(*CountResponse).Count, ...
 		g.ReturnFunc(func(group *Group) {
 			for _, field := range signature.Results {
-				group.Add(typeCasting(resp, response(signature.Name))).Op(".").Add(structFieldName(field))
+				group.Id(resp).Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(field))
 			}
 		})
 	}
 }
 
-// Render new Endpoint body
+// For custom ctx in service interface (e.g. context or ctxxx).
+func firstArgName(signature *parser.FuncSignature) string {
+	return util.FirstLowerChar(signature.Params[0].Name)
+}
+
+// Render new Endpoint body.
 //
 //		return func(ctx context.Context, request interface{}) (interface{}, error) {
 //			req := request.(*CountRequest)
@@ -133,24 +142,24 @@ func endpointBody(signature *parser.FuncSignature) func(g *Group) {
 //			return &CountResponse{Count: count}, nil
 //		}
 //
-func newEndpointFuncBody(signature *parser.FuncSignature) *Statement {
+func createEndpointBody(signature *parser.FuncSignature) *Statement {
 	return Return(Func().Params(
-		Id("ctx").Qual("context", "Context"),
+		Id(firstArgName(signature)).Qual("context", "Context"),
 		Id("request").Interface(),
 	).Params(
 		Interface(),
 		Error(),
 	).BlockFunc(func(g *Group) {
-		g.Id("req").Op(":=").Add(typeCasting("request", request(signature.Name)))
-		g.Add(FullServiceMethodCall("svc", "req", signature))
+		g.Id("req").Op(":=").Id("request").Assert(Op("*").Id(requestStructName(signature)))
+		g.Add(serviceMethodCallWithReceivers("svc", "req", signature))
 		g.Return(
-			Op("&").Id(response(signature.Name)).Values(MapInitByFuncFields(signature.Results)),
+			Op("&").Id(responseStructName(signature)).Values(dictByFuncFields(signature.Results)),
 			Nil(),
 		)
 	}))
 }
 
-// Render full new Endpoint function
+// Render full new Endpoint function.
 //
 //		func CountEndpoint(svc StringService) endpoint.Endpoint {
 //			return func(ctx context.Context, request interface{}) (interface{}, error) {
@@ -160,8 +169,8 @@ func newEndpointFuncBody(signature *parser.FuncSignature) *Statement {
 //			}
 //		}
 //
-func newEndpointFunc(signature *parser.FuncSignature, svcInterface *parser.Interface) *Statement {
+func createEndpoint(signature *parser.FuncSignature, svcInterface *parser.Interface) *Statement {
 	return Func().
-		Id(endpoint(signature.Name)).Params(Id("svc").Id(svcInterface.Name)).Params(Qual(PackageAliasGoKit, "Endpoint")).
-		Block(newEndpointFuncBody(signature))
+		Id(endpointStructName(signature.Name)).Params(Id("svc").Id(svcInterface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
+		Block(createEndpointBody(signature))
 }

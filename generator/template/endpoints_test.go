@@ -1,14 +1,14 @@
 package template
 
 import (
-	"go/parser"
+	goparser "go/parser"
 	"go/token"
 	"testing"
 
 	"bytes"
 
 	"github.com/devimteam/microgen/generator"
-	parser2 "github.com/devimteam/microgen/parser"
+	parser "github.com/devimteam/microgen/parser"
 )
 
 func TestEndpointsForCountSvc(t *testing.T) {
@@ -57,11 +57,11 @@ func CountEndpoint(svc StringService) endpoint.Endpoint {
 	}
 }
 ` // Blank line!
-	f, err := parser.ParseFile(token.NewFileSet(), "", src, 0)
+	f, err := goparser.ParseFile(token.NewFileSet(), "", src, 0)
 	if err != nil {
 		t.Errorf("unable to parse file: %v", err)
 	}
-	fs, err := parser2.ParseInterface(f, "StringService")
+	fs, err := parser.ParseInterface(f, "StringService")
 	if err != nil {
 		t.Errorf("could not get interface func signatures: %v", err)
 	}

@@ -6,10 +6,22 @@ import (
 	"github.com/devimteam/microgen/util"
 )
 
-const Context = "ctx"
+const (
+	PackagePathGoKitEndpoint = "github.com/go-kit/kit/endpoint"
+	PackagePathContext       = "context"
+	PackagePathGoKitLog      = "github.com/go-kit/kit/log"
+	PackagePathTime          = "time"
+)
 
 func structFieldName(field *parser.FuncField) *Statement {
 	return Id(util.ToUpperFirst(field.Name))
+}
+
+func checkFieldIsContext(field *parser.FuncField) bool {
+	if field.Package != nil && field.Package.Path == PackagePathContext {
+		return true
+	}
+	return false
 }
 
 // Renders struct field.
@@ -66,10 +78,10 @@ func fieldType(field *parser.FuncField) *Statement {
 //		Err:    err,
 //		Result: result,
 //
-func MapInitByFuncFields(fields []*parser.FuncField) Dict {
+func dictByFuncFields(fields []*parser.FuncField) Dict {
 	return DictFunc(func(d Dict) {
 		for i, field := range fields {
-			if field.Package != nil && field.Package.Path == PackageAliasContext && i == 0 {
+			if i == 0 && checkFieldIsContext(field) {
 				continue
 			}
 			d[structFieldName(field)] = Id(util.ToLowerFirst(field.Name))
@@ -83,10 +95,7 @@ func MapInitByFuncFields(fields []*parser.FuncField) Dict {
 //
 func funcCallParams(obj string, fields []*parser.FuncField) *Statement {
 	var list []Code
-	for i, field := range fields {
-		if field.Package != nil && field.Package.Path == PackageAliasContext && i == 0 {
-			continue
-		}
+	for _, field := range fields {
 		list = append(list, Id(obj).Dot(util.ToUpperFirst(field.Name)))
 	}
 	return List(list...)
@@ -104,32 +113,19 @@ func funcReceivers(fields []*parser.FuncField) *Statement {
 	return List(list...)
 }
 
-// Add `ctx,` before Code.
-func withCtx(param Code) *Statement {
-	return List(Id(Context), param)
-}
-
 // Render method call with receivers and params.
 //
 //		count := svc.Count(ctx, req.Text, req.Symbol)
 //
-func FullServiceMethodCall(service, request string, signature *parser.FuncSignature) *Statement {
-	return funcReceivers(signature.Results).Op(":=").Id(service).Dot(signature.Name).Call(withCtx(funcCallParams(request, signature.Params)))
+func serviceMethodCallWithReceivers(service, request string, signature *parser.FuncSignature) *Statement {
+	return funcReceivers(signature.Results).Op(":=").Id(service).Dot(signature.Name).Call(funcCallParams(request, signature.Params))
 }
 
-// Render object typecasting from `iface` to `to`.
-//
-//		request.(*UppercaseRequest)
-//
-func typeCasting(iface, to string) *Statement {
-	return Id(iface).Assert(Op("*").Id(to))
-}
-
-// Render full method definition with receiver, method name, args and results
+// Render full method definition with receiver, method name, args and results.
 //
 //		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int)
 //
-func MethodDefinition(obj string, signature *parser.FuncSignature) *Statement {
+func methodDefinition(obj string, signature *parser.FuncSignature) *Statement {
 	return Func().
 		Params(Id(util.FirstLowerChar(obj)).Op("*").Id(obj)).
 		Id(signature.Name).
