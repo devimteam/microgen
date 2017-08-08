@@ -92,7 +92,7 @@ func (EndpointsTemplate) Path() string {
 //		}
 //
 func endpointFunc(signature *parser.FuncSignature) *Statement {
-	return methodDefinition("Endpoints", signature).
+	return MethodDefinition("Endpoints", signature).
 		BlockFunc(endpointBody(signature))
 }
 
@@ -112,7 +112,7 @@ func endpointBody(signature *parser.FuncSignature) func(g *Group) {
 	req := "req"
 	resp := "resp"
 	return func(g *Group) {
-		g.Id(req).Op(":=").Id(request(signature.Name)).Values(mapInitByFuncFields(signature.Params))
+		g.Id(req).Op(":=").Id(request(signature.Name)).Values(MapInitByFuncFields(signature.Params))
 		g.List(Id(resp), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpoint(signature.Name)).Call(Id(Context), Op("&").Id(req))
 		g.If(Err().Op("!=").Nil()).Block(
 			Return(),
@@ -142,9 +142,9 @@ func newEndpointFuncBody(signature *parser.FuncSignature) *Statement {
 		Error(),
 	).BlockFunc(func(g *Group) {
 		g.Id("req").Op(":=").Add(typeCasting("request", request(signature.Name)))
-		g.Add(fullServiceMethodCall("svc", "req", signature))
+		g.Add(FullServiceMethodCall("svc", "req", signature))
 		g.Return(
-			Op("&").Id(response(signature.Name)).Values(mapInitByFuncFields(signature.Results)),
+			Op("&").Id(response(signature.Name)).Values(MapInitByFuncFields(signature.Results)),
 			Nil(),
 		)
 	}))

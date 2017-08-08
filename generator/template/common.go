@@ -66,7 +66,7 @@ func fieldType(field *parser.FuncField) *Statement {
 //		Err:    err,
 //		Result: result,
 //
-func mapInitByFuncFields(fields []*parser.FuncField) Dict {
+func MapInitByFuncFields(fields []*parser.FuncField) Dict {
 	return DictFunc(func(d Dict) {
 		for i, field := range fields {
 			if field.Package != nil && field.Package.Path == PackageAliasContext && i == 0 {
@@ -113,7 +113,7 @@ func withCtx(param Code) *Statement {
 //
 //		count := svc.Count(ctx, req.Text, req.Symbol)
 //
-func fullServiceMethodCall(service, request string, signature *parser.FuncSignature) *Statement {
+func FullServiceMethodCall(service, request string, signature *parser.FuncSignature) *Statement {
 	return funcReceivers(signature.Results).Op(":=").Id(service).Dot(signature.Name).Call(withCtx(funcCallParams(request, signature.Params)))
 }
 
@@ -129,7 +129,7 @@ func typeCasting(iface, to string) *Statement {
 //
 //		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int)
 //
-func methodDefinition(obj string, signature *parser.FuncSignature) *Statement {
+func MethodDefinition(obj string, signature *parser.FuncSignature) *Statement {
 	return Func().
 		Params(Id(util.FirstLowerChar(obj)).Op("*").Id(obj)).
 		Id(signature.Name).
