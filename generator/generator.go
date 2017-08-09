@@ -2,11 +2,6 @@ package generator
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-
-	"path"
 
 	"github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/parser"
@@ -14,6 +9,10 @@ import (
 
 type Generator interface {
 	Generate() error
+}
+
+type Strategy interface {
+	Write(*jen.File, Template) error
 }
 
 type generator struct {
@@ -42,55 +41,4 @@ func (g *generator) Generate() error {
 	}
 
 	return nil
-}
-
-type Strategy interface {
-	Write(*jen.File, Template) error
-}
-
-type toFileStrategy struct {
-	outputDir string
-}
-
-func (s toFileStrategy) Write(f *jen.File, t Template) error {
-	outpath, err := filepath.Abs(filepath.Join(s.outputDir, t.Path()))
-	if err != nil {
-		return fmt.Errorf("unable to resolve path: %v", err)
-	}
-	dir := path.Dir(outpath)
-	if !isPathExists(dir) {
-		err = os.MkdirAll(dir, 0640)
-		if err != nil {
-			return fmt.Errorf("unable to create directory %s: %v", outpath, err)
-		}
-	}
-	err = f.Save(outpath)
-	if err != nil {
-		return fmt.Errorf("error when save file: %v", err)
-	}
-	return nil
-}
-
-func FileStrategy(dir string) Strategy {
-	return toFileStrategy{
-		outputDir: dir,
-	}
-}
-
-type toWriterStrategy struct {
-	writer io.Writer
-}
-
-func (s toWriterStrategy) Write(f *jen.File, t Template) error {
-	err := f.Render(s.writer)
-	if err != nil {
-		return fmt.Errorf("render error: %v", err)
-	}
-	return nil
-}
-
-func WriterStrategy(writer io.Writer) Strategy {
-	return toWriterStrategy{
-		writer: writer,
-	}
 }

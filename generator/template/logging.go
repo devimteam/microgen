@@ -7,18 +7,13 @@ import (
 )
 
 const (
-	loggerVar      = "logger"
-	nextVar        = "next"
-	serviceLogging = "ServiceLogging"
+	loggerVarName            = "logger"
+	nextVarName              = "next"
+	serviceLoggingStructName = "serviceLogging"
 )
 
 type LoggingTemplate struct {
 	PackagePath string
-}
-
-// Returns logging structure name by service interface.
-func loggingStructName(iface *parser.Interface) string {
-	return iface.Name + "LoggingMiddleware"
 }
 
 // Render all logging.go file.
@@ -36,19 +31,19 @@ func loggingStructName(iface *parser.Interface) string {
 //
 //		func ServiceLogging(logger log.Logger) Middleware {
 //			return func(next svc.StringService) svc.StringService {
-//				return StringServiceLoggingMiddleware{
+//				return stringServiceLoggingMiddleware{
 //					logger: logger,
 //					next:   next,
 //				}
 //			}
 //		}
 //
-//		type StringServiceLoggingMiddleware struct {
+//		type stringServiceLoggingMiddleware struct {
 //			logger log.Logger
 //			next   svc.StringService
 //		}
 //
-//		func (s *StringServiceLoggingMiddleware) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
+//		func (s *stringServiceLoggingMiddleware) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
 //			defer func(begin time.Time) {
 //				s.logger.Log(
 //					"method", "Count",
@@ -62,15 +57,15 @@ func loggingStructName(iface *parser.Interface) string {
 func (t LoggingTemplate) Render(i *parser.Interface) *File {
 	f := NewFile(i.PackageName)
 
-	f.Func().Id(serviceLogging).Params(Id(loggerVar).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
+	f.Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newLoggingBody(i))
 
 	f.Line()
 
 	// Render type logger
-	f.Type().Id(loggingStructName(i)).Struct(
-		Id(loggerVar).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVar).Qual(t.PackagePath, i.Name),
+	f.Type().Id(serviceLoggingStructName).Struct(
+		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
+		Id(nextVarName).Qual(t.PackagePath, i.Name),
 	)
 
 	// Render functions
@@ -88,25 +83,23 @@ func (LoggingTemplate) Path() string {
 
 // Render body for new logging middleware.
 //
-//		func ServiceLogging(logger log.Logger) Middleware {
-//			return func(next svc.StringService) svc.StringService {
-//				return StringServiceLoggingMiddleware{
-//					logger: logger,
-//					next:   next,
-//				}
+//		return func(next svc.StringService) svc.StringService {
+//			return StringServiceLoggingMiddleware{
+//				logger: logger,
+//				next:   next,
 //			}
 //		}
 //
 func (t LoggingTemplate) newLoggingBody(i *parser.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVar).Qual(t.PackagePath, i.Name),
+		Id(nextVarName).Qual(t.PackagePath, i.Name),
 	).Params(
 		Qual(t.PackagePath, i.Name),
 	).BlockFunc(func(g *Group) {
-		g.Return(Id(loggingStructName(i)).Values(
+		g.Return(Op("&").Id(serviceLoggingStructName).Values(
 			Dict{
-				Id(loggerVar): Id(loggerVar),
-				Id(nextVar):   Id(nextVar),
+				Id(loggerVarName): Id(loggerVarName),
+				Id(nextVarName):   Id(nextVarName),
 			},
 		))
 	}))
@@ -125,20 +118,8 @@ func (t LoggingTemplate) newLoggingBody(i *parser.Interface) *Statement {
 //		}
 //
 func loggingFunc(signature *parser.FuncSignature, i *parser.Interface) *Statement {
-	return methodDefinition(loggingStructName(i), signature).
+	return methodDefinition(serviceLoggingStructName, signature).
 		BlockFunc(loggingFuncBody(signature))
-}
-
-// Render parameters for function call.
-//
-//		ctx, text, symbol
-//
-func funcCallParamsByFields(fields []*parser.FuncField) *Statement {
-	var list []Code
-	for _, field := range fields {
-		list = append(list, Id(util.ToLowerFirst(field.Name)))
-	}
-	return List(list...)
 }
 
 // Render logging function body with request/response and time tracking.
@@ -152,18 +133,17 @@ func funcCallParamsByFields(fields []*parser.FuncField) *Statement {
 //		return s.next.Count(ctx, text, symbol)
 //
 func loggingFuncBody(signature *parser.FuncSignature) func(g *Group) {
-	method, begin, took := "method", "begin", "took"
 	return func(g *Group) {
-		g.Defer().Func().Params(Id(begin).Qual(PackagePathTime, "Time")).Block( // defer func(begin time.Time) {
-			Id(util.FirstLowerChar(serviceLogging)).Dot(loggerVar).Dot("Log").Call( // s.logger.Log(
-				Line().Lit(method), Lit(signature.Name), // Method name
-				Line().Add(paramsNameAndValue(signature.Params)),                 // Log request params
-				Line().Add(paramsNameAndValue(signature.Results)),                // Log response params
-				Line().Lit(took), Qual(PackagePathTime, "Since").Call(Id(begin)), // Track request duration
-			), // )
-		).Call(Qual(PackagePathTime, "Now").Call()) // }(time.Now())
-		// return s.next.Count(ctx, text, symbol)
-		g.Return().Id(util.FirstLowerChar(serviceLogging)).Dot(nextVar).Dot(signature.Name).Call(funcCallParamsByFields(signature.Params))
+		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
+			Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
+				Line().Lit("method"), Lit(signature.Name),
+				Line().Add(paramsNameAndValue(signature.Params)),
+				Line().Add(paramsNameAndValue(signature.Results)),
+				Line().Lit("took"), Qual(PackagePathTime, "Since").Call(Id("begin")),
+			),
+		).Call(Qual(PackagePathTime, "Now").Call())
+
+		g.Return().Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Params))
 	}
 }
 
@@ -174,7 +154,7 @@ func loggingFuncBody(signature *parser.FuncSignature) func(g *Group) {
 func paramsNameAndValue(fields []*parser.FuncField) *Statement {
 	return ListFunc(func(g *Group) {
 		for i, field := range fields {
-			if i == 0 && checkFieldIsContext(field) {
+			if i == 0 && isContext(field) {
 				continue
 			}
 			g.List(Lit(field.Name), Id(field.Name))

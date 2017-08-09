@@ -59,7 +59,7 @@ func exchange(name string, params []*parser.FuncField) Code {
 		for i, param := range params {
 
 			// skip "context" package entry if it is first arg
-			if param.Package != nil && param.Package.Path == PackagePathContext && i == 0 {
+			if i == 0 && isContext(param) {
 				continue
 			}
 

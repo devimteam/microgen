@@ -51,9 +51,9 @@ func main() {
 
 	var strategy generator.Strategy
 	if *flagOutputDir == "" {
-		strategy = generator.WriterStrategy(os.Stdout)
+		strategy = generator.NewWriterStrategy(os.Stdout)
 	} else {
-		strategy = generator.FileStrategy(*flagOutputDir)
+		strategy = generator.NewFileStrategy(*flagOutputDir)
 	}
 
 	gen := generator.NewGenerator([]generator.Template{
