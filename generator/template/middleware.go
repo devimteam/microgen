@@ -10,11 +10,16 @@ const (
 )
 
 type MiddlewareTemplate struct {
+	PackagePath string
 }
 
-func (MiddlewareTemplate) Render(i *parser.Interface) *File {
+// Render middleware decorator
+//
+//		type Middleware func(svc.StringService) svc.StringService
+//
+func (t MiddlewareTemplate) Render(i *parser.Interface) *File {
 	f := NewFile(i.PackageName)
-	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(PackagePathGoKitEndpoint, "Endpoint")).Qual(PackagePathGoKitEndpoint, "Endpoint")
+	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.PackagePath, i.Name)).Qual(t.PackagePath, i.Name)
 	return f
 }
 

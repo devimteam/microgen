@@ -17,10 +17,11 @@ import (
 )
 
 var (
-	flagFileName  = flag.String("file", "", "File name")
-	flagIfaceName = flag.String("interface", "", "Interface name")
-	flagOutputDir = flag.String("out", "", "Output directory")
-	debug         = flag.Bool("debug", false, "Debug mode")
+	flagFileName    = flag.String("file", "", "File name")
+	flagIfaceName   = flag.String("interface", "", "Interface name")
+	flagOutputDir   = flag.String("out", "", "Output directory")
+	flagPackagePath = flag.String("package", "", "Service package path for out")
+	debug           = flag.Bool("debug", false, "Debug mode")
 )
 
 func init() {
@@ -32,9 +33,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	path := filepath.Join(currentDir, *flagFileName)
-
 	fset := token.NewFileSet()
 	f, err := astparser.ParseFile(fset, path, nil, astparser.ParseComments)
 	if err != nil {
@@ -50,12 +49,19 @@ func main() {
 		spew.Dump(i)
 	}
 
+	var strategy generator.Strategy
+	if *flagOutputDir == "" {
+		strategy = generator.WriterStrategy(os.Stdout)
+	} else {
+		strategy = generator.FileStrategy(*flagOutputDir)
+	}
+
 	gen := generator.NewGenerator([]generator.Template{
 		&template.ExchangeTemplate{},
 		&template.EndpointsTemplate{},
-		&template.MiddlewareTemplate{},
-		&template.LoggingTemplate{},
-	}, i, *flagOutputDir)
+		&template.MiddlewareTemplate{PackagePath: *flagPackagePath},
+		&template.LoggingTemplate{PackagePath: *flagPackagePath},
+	}, i, strategy)
 
 	err = gen.Generate()
 

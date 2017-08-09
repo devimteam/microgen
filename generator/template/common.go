@@ -17,6 +17,7 @@ func structFieldName(field *parser.FuncField) *Statement {
 	return Id(util.ToUpperFirst(field.Name))
 }
 
+// Check if function field type of context.Context
 func checkFieldIsContext(field *parser.FuncField) bool {
 	if field.Package != nil && field.Package.Path == PackagePathContext {
 		return true
