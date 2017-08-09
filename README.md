@@ -12,7 +12,7 @@ microgen [OPTIONS]
 |:------------|:--------|:------------------------------------------------------------------------------|
 | -file*      |         | Relative path to source file with service interface                           |
 | -interface* |         | Service interface name in source file                                         |
-| -out*       |         | Relative or absolute path to directory, where you want to see generated files |
+| -out        | writes to stdout        | Relative or absolute path to directory, where you want to see generated files |
 | -package*   |         | Package path of your service interface source file                            |
 | -debug      | false   | Display some debug information                                                |
 
