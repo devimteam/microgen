@@ -2,12 +2,11 @@ package templates_test
 
 import (
 	"bytes"
+	"fmt"
 	goparser "go/parser"
 	"go/token"
 	"io/ioutil"
 	"testing"
-
-	"fmt"
 
 	"github.com/devimteam/microgen/generator"
 	"github.com/devimteam/microgen/generator/template"
@@ -45,6 +44,11 @@ func TestTemplates(t *testing.T) {
 			TestName:    "Exchange",
 			Template:    &template.ExchangeTemplate{},
 			OutFilePath: "exchange.go.txt",
+		},
+		{
+			TestName:    "Client",
+			Template:    &template.ClientTemplate{},
+			OutFilePath: "client.go.txt",
 		},
 		{
 			TestName:    "Middleware",
