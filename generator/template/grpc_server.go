@@ -45,7 +45,7 @@ func serverStructName(iface *parser.Interface) string {
 //			return resp.(*stringsvc.CountResponse), nil
 //		}
 //
-func (t GRPCServerTemplate) Render(i *parser.Interface) *File {
+func (GRPCServerTemplate) Render(i *parser.Interface) *File {
 	f := NewFile("transportgrpc")
 
 	f.Type().Id("server").Struct(
@@ -53,8 +53,8 @@ func (t GRPCServerTemplate) Render(i *parser.Interface) *File {
 	)
 
 	f.Func().Id("NewServer").
-		Call(Id("endpoints").Index().
-			Qual(PackagePathTransportLayer, "Endpoint")).Qual(protobufPath(i), serverStructName(i)).
+		Call(Id("endpoints").
+		Index().Qual(PackagePathTransportLayer, "Endpoint")).Qual(protobufPath(i), serverStructName(i)).
 		Block(
 			Return().Op("&").Id("server").Values(
 				Qual(PackagePathTransportLayer, "NewServer").Call(Id("endpoints")),
