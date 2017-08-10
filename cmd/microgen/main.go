@@ -59,6 +59,7 @@ func main() {
 	gen := generator.NewGenerator([]generator.Template{
 		&template.ExchangeTemplate{},
 		&template.EndpointsTemplate{},
+		&template.ClientTemplate{},
 		&template.MiddlewareTemplate{PackagePath: *flagPackagePath},
 		&template.LoggingTemplate{PackagePath: *flagPackagePath},
 	}, i, strategy)

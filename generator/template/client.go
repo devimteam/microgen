@@ -17,34 +17,27 @@ type ClientTemplate struct {
 //
 //		import (
 //			context "context"
-//			endpoint "github.com/go-kit/kit/endpoint"
+//			transportlayer "github.com/devimteam/go-kit/transportlayer"
 //		)
 //
-//		type Endpoints struct {
-//			CountEndpoint endpoint.Endpoint
+//		type client struct {
+//			tc transportlayer.Client
 //		}
 //
-//		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
+//		func NewClient(tc transportlayer.Client) StringService {
+//			return &client{tc}
+//		}
+//
+//		func (c *client) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
 //			req := CountRequest{
 //				Symbol: symbol,
 //				Text:   text,
 //			}
-//			resp, err := e.CountEndpoint(ctx, &req)
+//			resp, err := c.tc.Call(ctx, &req)
 //			if err != nil {
 //				return
 //			}
 //			return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
-//		}
-//
-//		func CountEndpoint(svc StringService) endpoint.Endpoint {
-//			return func(ctx context.Context, request interface{}) (interface{}, error) {
-//				req := request.(*CountRequest)
-//				count, positions := svc.Count(ctx, req.Text, req.Symbol)
-//				return &CountResponse{
-//					Count:     count,
-//					Positions: positions,
-//				}, nil
-//			}
 //		}
 //
 func (ClientTemplate) Render(i *parser.Interface) *File {
@@ -59,7 +52,7 @@ func (ClientTemplate) Render(i *parser.Interface) *File {
 			Id("tc"),
 		),
 	)
-
+	f.Line()
 	for _, signature := range i.FuncSignatures {
 		f.Add(clientMethod(signature)).Line()
 	}
@@ -73,12 +66,12 @@ func (ClientTemplate) Path() string {
 
 // Render full endpoints method.
 //
-//		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
+//		func (c *client) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
 //			req := CountRequest{
 //				Symbol: symbol,
 //				Text:   text,
 //			}
-//			resp, err := e.CountEndpoint(ctx, &req)
+//			resp, err := c.tc.Call(ctx, &req)
 //			if err != nil {
 //				return
 //			}
@@ -96,18 +89,19 @@ func clientMethod(signature *parser.FuncSignature) *Statement {
 //			Symbol: symbol,
 //			Text:   text,
 //		}
-//		resp, err := e.CountEndpoint(ctx, &req)
+//		resp, err := c.tc.Call(ctx, &req)
 //		if err != nil {
 //			return
 //		}
 //		return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //
 func clientMethodBody(signature *parser.FuncSignature) func(g *Group) {
+	errName := getFirstErrorFieldName(signature.Results)
 	return func(g *Group) {
 		g.Id("req").Op(":=").Id(requestStructName(signature)).Values(dictByFuncFields(removeContextIfFirst(signature.Params)))
-		g.List(Id("resp"), Err()).Op(":=").Id(util.FirstLowerChar("client")).Dot("tc").Dot("Call").Call(Id(firstArgName(signature)), Op("&").Id("req"))
-		g.If(Err().Op("!=").Nil()).Block(
-			Return().List(Nil(), Err()),
+		g.List(Id("resp"), Id(errName)).Op(":=").Id(util.FirstLowerChar("client")).Dot("tc").Dot("Call").Call(Id(firstArgName(signature)), Op("&").Id("req"))
+		g.If(Id(errName).Op("!=").Nil()).Block(
+			Return(),
 		)
 		g.ReturnFunc(func(group *Group) {
 			for _, field := range signature.Results {
@@ -115,4 +109,15 @@ func clientMethodBody(signature *parser.FuncSignature) func(g *Group) {
 			}
 		})
 	}
+}
+
+// Get from function field slice
+// If field with error type not found, it return `err`
+func getFirstErrorFieldName(fields []*parser.FuncField) string {
+	for _, field := range fields {
+		if field.Type == "error" {
+			return field.Name
+		}
+	}
+	return "err"
 }
