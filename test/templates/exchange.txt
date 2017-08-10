@@ -3,10 +3,11 @@
 package stringsvc
 
 type CountRequest struct {
-	Text   string `json:\"text\"`
-	Symbol string `json:\"symbol\"`
+	Text   string `json:"text"`
+	Symbol string `json:"symbol"`
 }
 
 type CountResponse struct {
-	Count int `json:\"count\"`
+	Count     int   `json:"count"`
+	Positions []int `json:"positions"`
 }

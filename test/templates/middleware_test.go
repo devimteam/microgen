@@ -39,7 +39,7 @@ func TestMiddlewareForCountSvc(t *testing.T) {
 	if err != nil {
 		t.Errorf("unable to generate: %v", err)
 	}
-	if bytes.Equal(buf.Bytes(), out) {
-		t.Errorf("Got:\n\n%v", buf.String())
+	if buf.String() != string(out[:]) {
+		t.Errorf("Got:\n\n%s\n\nExpected:\n\n%s", buf.String(), string(out[:]))
 	}
 }

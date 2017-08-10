@@ -1,4 +1,4 @@
-package source
+package stringsvc
 
 import (
 	"context"
