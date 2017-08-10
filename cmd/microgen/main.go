@@ -60,6 +60,7 @@ func main() {
 		&template.ExchangeTemplate{},
 		&template.EndpointsTemplate{},
 		&template.ClientTemplate{},
+		&template.GRPCServerTemplate{},
 		&template.MiddlewareTemplate{PackagePath: *flagPackagePath},
 		&template.LoggingTemplate{PackagePath: *flagPackagePath},
 	}, i, strategy)
