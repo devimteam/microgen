@@ -31,19 +31,19 @@ type LoggingTemplate struct {
 //
 //		func ServiceLogging(logger log.Logger) Middleware {
 //			return func(next svc.StringService) svc.StringService {
-//				return stringServiceLoggingMiddleware{
+//				return &serviceLogging{
 //					logger: logger,
 //					next:   next,
 //				}
 //			}
 //		}
 //
-//		type stringServiceLoggingMiddleware struct {
+//		type serviceLogging struct {
 //			logger log.Logger
 //			next   svc.StringService
 //		}
 //
-//		func (s *stringServiceLoggingMiddleware) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
+//		func (s *serviceLogging) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
 //			defer func(begin time.Time) {
 //				s.logger.Log(
 //					"method", "Count",
@@ -71,7 +71,7 @@ func (t LoggingTemplate) Render(i *parser.Interface) *File {
 	// Render functions
 	for _, signature := range i.FuncSignatures {
 		f.Line()
-		f.Add(loggingFunc(signature, i))
+		f.Add(loggingFunc(signature))
 	}
 
 	return f
@@ -84,7 +84,7 @@ func (LoggingTemplate) Path() string {
 // Render body for new logging middleware.
 //
 //		return func(next svc.StringService) svc.StringService {
-//			return StringServiceLoggingMiddleware{
+//			return &serviceLogging{
 //				logger: logger,
 //				next:   next,
 //			}
@@ -107,9 +107,10 @@ func (t LoggingTemplate) newLoggingBody(i *parser.Interface) *Statement {
 
 // Render logging middleware for interface method.
 //
-//		func (s *StringServiceLogging) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
+//		func (s *serviceLogging) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
 //			defer func(begin time.Time) {
-//				s.logger.Log("method", "Count",
+//				s.logger.Log(
+//					"method", "Count",
 //					"text", text, "symbol", symbol,
 //					"count", count, "positions", positions,
 //					"took", time.Since(begin))
@@ -117,7 +118,7 @@ func (t LoggingTemplate) newLoggingBody(i *parser.Interface) *Statement {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func loggingFunc(signature *parser.FuncSignature, i *parser.Interface) *Statement {
+func loggingFunc(signature *parser.FuncSignature) *Statement {
 	return methodDefinition(serviceLoggingStructName, signature).
 		BlockFunc(loggingFuncBody(signature))
 }
@@ -125,7 +126,8 @@ func loggingFunc(signature *parser.FuncSignature, i *parser.Interface) *Statemen
 // Render logging function body with request/response and time tracking.
 //
 //		defer func(begin time.Time) {
-//			s.logger.Log("method", "Count",
+//			s.logger.Log(
+//				"method", "Count",
 //				"text", text, "symbol", symbol,
 //				"count", count, "positions", positions,
 //				"took", time.Since(begin))

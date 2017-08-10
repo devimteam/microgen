@@ -28,7 +28,7 @@ func endpointStructName(str string) string {
 //			CountEndpoint endpoint.Endpoint
 //		}
 //
-//		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int) {
+//		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
 //			req := CountRequest{
 //				Symbol: symbol,
 //				Text:   text,
@@ -37,14 +37,17 @@ func endpointStructName(str string) string {
 //			if err != nil {
 //				return
 //			}
-//			return resp.(*CountResponse).Count
+//			return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //		}
 //
 //		func CountEndpoint(svc StringService) endpoint.Endpoint {
 //			return func(ctx context.Context, request interface{}) (interface{}, error) {
 //				req := request.(*CountRequest)
-//				count := svc.Count(ctx, req.Text, req.Symbol)
-//				return &CountResponse{Count: count}, nil
+//				count, positions := svc.Count(ctx, req.Text, req.Symbol)
+//				return &CountResponse{
+//					Count:     count,
+//					Positions: positions,
+//				}, nil
 //			}
 //		}
 //
@@ -74,7 +77,7 @@ func (EndpointsTemplate) Path() string {
 
 // Render full endpoints method.
 //
-//		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int) {
+//		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
 //			req := CountRequest{
 //				Symbol: symbol,
 //				Text:   text,
@@ -83,7 +86,7 @@ func (EndpointsTemplate) Path() string {
 //			if err != nil {
 //				return
 //			}
-//			return resp.(*CountResponse).Count
+//			return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //		}
 //
 func serviceEndpointMethod(signature *parser.FuncSignature) *Statement {
@@ -101,7 +104,7 @@ func serviceEndpointMethod(signature *parser.FuncSignature) *Statement {
 //		if err != nil {
 //			return
 //		}
-//		return resp.(*CountResponse).Count
+//		return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //
 func serviceEndpointMethodBody(signature *parser.FuncSignature) func(g *Group) {
 	return func(g *Group) {
@@ -127,8 +130,11 @@ func firstArgName(signature *parser.FuncSignature) string {
 //
 //		return func(ctx context.Context, request interface{}) (interface{}, error) {
 //			req := request.(*CountRequest)
-//			count := svc.Count(ctx, req.Text, req.Symbol)
-//			return &CountResponse{Count: count}, nil
+//			count, positions := svc.Count(ctx, req.Text, req.Symbol)
+//			return &CountResponse{
+//				Count:     count,
+//				Positions: positions,
+//			}, nil
 //		}
 //
 func createEndpointBody(signature *parser.FuncSignature) *Statement {
@@ -166,8 +172,11 @@ func createEndpointBody(signature *parser.FuncSignature) *Statement {
 //		func CountEndpoint(svc StringService) endpoint.Endpoint {
 //			return func(ctx context.Context, request interface{}) (interface{}, error) {
 //				req := request.(*CountRequest)
-//				count := svc.Count(ctx, req.Text, req.Symbol)
-//				return &CountResponse{Count: count}, nil
+//				count, positions := svc.Count(ctx, req.Text, req.Symbol)
+//				return &CountResponse{
+//					Count:     count,
+//					Positions: positions,
+//				}, nil
 //			}
 //		}
 //
