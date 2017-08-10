@@ -56,13 +56,7 @@ func (ExchangeTemplate) Path() string {
 //
 func exchange(name string, params []*parser.FuncField) Code {
 	return Type().Id(name).StructFunc(func(g *Group) {
-		for i, param := range params {
-
-			// skip "context" package entry if it is first arg
-			if i == 0 && isContext(param) {
-				continue
-			}
-
+		for _, param := range removeContextIfFirst(params) {
 			g.Add(structField(param))
 		}
 	}).Line()

@@ -47,8 +47,10 @@ type LoggingTemplate struct {
 //			defer func(begin time.Time) {
 //				s.logger.Log(
 //					"method", "Count",
-//					"text", text, "symbol", symbol,
-//					"count", count, "positions", positions,
+//					"text", text,
+// 					"symbol", symbol,
+//					"count", count,
+// 					"positions", positions,
 //					"took", time.Since(begin))
 //			}(time.Now())
 //			return s.next.Count(ctx, text, symbol)
@@ -139,8 +141,8 @@ func loggingFuncBody(signature *parser.FuncSignature) func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
 			Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
 				Line().Lit("method"), Lit(signature.Name),
-				Line().Add(paramsNameAndValue(signature.Params)),
-				Line().Add(paramsNameAndValue(signature.Results)),
+				Add(paramsNameAndValue(removeContextIfFirst(signature.Params))),
+				Add(paramsNameAndValue(removeContextIfFirst(signature.Results))),
 				Line().Lit("took"), Qual(PackagePathTime, "Since").Call(Id("begin")),
 			),
 		).Call(Qual(PackagePathTime, "Now").Call())
@@ -151,15 +153,14 @@ func loggingFuncBody(signature *parser.FuncSignature) func(g *Group) {
 
 // Renders key/value pairs wrapped in Dict for provided fields.
 //
-//		"err", err, "result", result,
+//		"err", err,
+// 		"result", result,
+//		"count", count,
 //
 func paramsNameAndValue(fields []*parser.FuncField) *Statement {
 	return ListFunc(func(g *Group) {
-		for i, field := range fields {
-			if i == 0 && isContext(field) {
-				continue
-			}
-			g.List(Lit(field.Name), Id(field.Name))
+		for _, field := range fields {
+			g.Line().List(Lit(field.Name), Id(field.Name))
 		}
 	})
 }

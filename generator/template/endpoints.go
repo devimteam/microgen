@@ -108,7 +108,7 @@ func serviceEndpointMethod(signature *parser.FuncSignature) *Statement {
 //
 func serviceEndpointMethodBody(signature *parser.FuncSignature) func(g *Group) {
 	return func(g *Group) {
-		g.Id("req").Op(":=").Id(requestStructName(signature)).Values(dictByFuncFields(signature.Params))
+		g.Id("req").Op(":=").Id(requestStructName(signature)).Values(dictByFuncFields(removeContextIfFirst(signature.Params)))
 		g.List(Id("resp"), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id("req"))
 		g.If(Err().Op("!=").Nil()).Block(
 			Return(),
@@ -153,15 +153,13 @@ func createEndpointBody(signature *parser.FuncSignature) *Statement {
 			Dot(signature.Name).
 			CallFunc(func(g *Group) {
 				g.Add(Id(firstArgName(signature)))
-				for _, field := range signature.Params {
-					if !isContext(field) {
-						g.Add(Id("req").Dot(util.ToUpperFirst(field.Name)))
-					}
+				for _, field := range removeContextIfFirst(signature.Params) {
+					g.Add(Id("req").Dot(util.ToUpperFirst(field.Name)))
 				}
 			}))
 
 		g.Return(
-			Op("&").Id(responseStructName(signature)).Values(dictByFuncFields(signature.Results)),
+			Op("&").Id(responseStructName(signature)).Values(dictByFuncFields(removeContextIfFirst(signature.Results))),
 			Nil(),
 		)
 	}))
