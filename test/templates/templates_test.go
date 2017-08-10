@@ -61,9 +61,14 @@ func TestTemplates(t *testing.T) {
 			OutFilePath: "logging.go.txt",
 		},
 		{
-			TestName:    "Logging",
+			TestName:    "GRPC Server",
 			Template:    &template.GRPCServerTemplate{},
 			OutFilePath: "grpc_server.go.txt",
+		},
+		{
+			TestName:    "GRPC Client",
+			Template:    &template.GRPCClientTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
+			OutFilePath: "grpc_client.go.txt",
 		},
 	}
 	for _, test := range allTemplateTests {

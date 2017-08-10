@@ -7,11 +7,13 @@ import (
 )
 
 const (
-	PackagePathGoKitEndpoint  = "github.com/go-kit/kit/endpoint"
-	PackagePathContext        = "context"
-	PackagePathGoKitLog       = "github.com/go-kit/kit/log"
-	PackagePathTime           = "time"
-	PackagePathTransportLayer = "github.com/devimteam/go-kit/transportlayer"
+	PackagePathGoKitEndpoint      = "github.com/go-kit/kit/endpoint"
+	PackagePathContext            = "context"
+	PackagePathGoKitLog           = "github.com/go-kit/kit/log"
+	PackagePathTime               = "time"
+	PackagePathTransportLayer     = "github.com/devimteam/go-kit/transportlayer"
+	PackagePathTransportLayerGRPC = "github.com/devimteam/go-kit/transportlayer/grpc"
+	PackagePathGoogleGRPC         = "google.golang.org/grpc"
 )
 
 func structFieldName(field *parser.FuncField) *Statement {
