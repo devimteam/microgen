@@ -17,12 +17,12 @@ func structFieldName(field *parser.FuncField) *Statement {
 	return Id(util.ToUpperFirst(field.Name))
 }
 
-// Check if function field type of context.Context.
-func isContext(field *parser.FuncField) bool {
-	if field.Package != nil && field.Package.Path == PackagePathContext {
-		return true
+// Remove from function fields context if it is first in slice
+func removeContextIfFirst(fields []*parser.FuncField) []*parser.FuncField {
+	if len(fields) > 0 && fields[0].Package != nil && fields[0].Package.Path == PackagePathContext {
+		return fields[1:]
 	}
-	return false
+	return fields
 }
 
 // Renders struct field.
@@ -81,25 +81,10 @@ func fieldType(field *parser.FuncField) *Statement {
 //
 func dictByFuncFields(fields []*parser.FuncField) Dict {
 	return DictFunc(func(d Dict) {
-		for i, field := range fields {
-			if i == 0 && isContext(field) {
-				continue
-			}
+		for _, field := range fields {
 			d[structFieldName(field)] = Id(util.ToLowerFirst(field.Name))
 		}
 	})
-}
-
-// Renders func params for function call.
-//
-//  	req.Visit, req.Err
-//
-func funcCallParams(obj string, fields []*parser.FuncField) *Statement {
-	var list []Code
-	for _, field := range fields {
-		list = append(list, Id(obj).Dot(util.ToUpperFirst(field.Name)))
-	}
-	return List(list...)
 }
 
 // Render list of function receivers by signature.Result.

@@ -51,8 +51,10 @@ func (s *serviceLogging) Count(ctx context.Context, text string, symbol string) 
 	defer func(begin time.Time) {
 		s.logger.Log(
 			"method", "Count",
-			"text", text, "symbol", symbol,
-			"count", count, "positions", positions,
+			"text", text,
+			"symbol", symbol,
+			"count", count,
+			"positions", positions,
 			"took", time.Since(begin))
 	}(time.Now())
 	return s.next.Count(ctx, text, symbol)
