@@ -54,7 +54,7 @@ func (t GRPCClientTemplate) Render(i *parser.Interface) *File {
 					group.Line().Qual(PackagePathTransportLayer, "NewEndpoint").Call(
 						Line().Lit(signature.Name),
 						Line().Nil(),
-						Line().Qual(PackagePathTransportLayer, "WithConverter").Call(Qual(t.PackagePath+"/transport/converter/protobuf", signature.Name+"Converter")),
+						Line().Qual(PackagePathTransportLayer, "WithConverter").Call(Qual(t.converterPackagePath(), converterStructName(signature))),
 						Line(),
 					)
 				}
@@ -62,7 +62,7 @@ func (t GRPCClientTemplate) Render(i *parser.Interface) *File {
 			})
 			g.Return().Qual(t.PackagePath, "NewClient").Call(
 				Line().Qual(PackagePathTransportLayerGRPC, "NewClient").Call(
-					Line().Lit("devim."+strings.ToLower(cutService(i.Name))+".protobuf."+i.Name),
+					Line().Lit("devim."+strings.ToLower(strings.TrimSuffix(i.Name, "Service"))+".protobuf."+i.Name),
 					Line().Id("conn"),
 					Line().Id("endpoints"),
 					Line(),
@@ -73,13 +73,10 @@ func (t GRPCClientTemplate) Render(i *parser.Interface) *File {
 	return f
 }
 
-func cutService(str string) string {
-	if strings.HasSuffix(str, "Service") {
-		return str[:len(str)-7] // 7 == len("Service")
-	}
-	return str
-}
-
 func (GRPCClientTemplate) Path() string {
 	return "./transport/grpc/client.go"
+}
+
+func (t GRPCClientTemplate) converterPackagePath() string {
+	return t.PackagePath + "/transport/converter/protobuf"
 }

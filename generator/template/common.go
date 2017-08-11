@@ -14,10 +14,15 @@ const (
 	PackagePathTransportLayer     = "github.com/devimteam/go-kit/transportlayer"
 	PackagePathTransportLayerGRPC = "github.com/devimteam/go-kit/transportlayer/grpc"
 	PackagePathGoogleGRPC         = "google.golang.org/grpc"
+	PackagePathNetContext         = "golang.org/x/net/context"
 )
 
 func structFieldName(field *parser.FuncField) *Statement {
 	return Id(util.ToUpperFirst(field.Name))
+}
+
+func converterStructName(signature *parser.FuncSignature) string {
+	return signature.Name + "Converter"
 }
 
 // Remove from function fields context if it is first in slice
