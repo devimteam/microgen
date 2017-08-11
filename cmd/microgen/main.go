@@ -62,6 +62,7 @@ func main() {
 		&template.ClientTemplate{},
 		&template.GRPCServerTemplate{},
 		&template.GRPCClientTemplate{PackagePath: *flagPackagePath},
+		&template.GRPCConverterTemplate{PackagePath: *flagPackagePath},
 		&template.MiddlewareTemplate{PackagePath: *flagPackagePath},
 		&template.LoggingTemplate{PackagePath: *flagPackagePath},
 	}, i, strategy)
