@@ -76,7 +76,3 @@ func (t GRPCClientTemplate) Render(i *parser.Interface) *File {
 func (GRPCClientTemplate) Path() string {
 	return "./transport/grpc/client.go"
 }
-
-func (t GRPCClientTemplate) converterPackagePath() string {
-	return t.PackagePath + "/transport/converter/protobuf"
-}
