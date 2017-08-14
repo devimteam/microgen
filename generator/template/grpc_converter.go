@@ -112,12 +112,11 @@ func (GRPCConverterTemplate) Path() string {
 //		int(resp.Count)
 // or nothing
 func defaultGolangTypeToProto(structName string, field *parser.FuncField) (*Statement, bool) {
-	if isDefaultProtoField(field) {
-		return Id(structName).Dot(util.ToUpperFirst(field.Name)), false
-	} else if field.IsArray || field.IsPointer {
+	if field.IsArray || field.IsPointer {
 		return Add(), true
-	}
-	if newType, ok := goToProtoTypesMap[field.Type]; ok {
+	} else if isDefaultProtoField(field) {
+		return Id(structName).Dot(util.ToUpperFirst(field.Name)), false
+	} else if newType, ok := goToProtoTypesMap[field.Type]; ok {
 		newField := &parser.FuncField{
 			Type:      newType,
 			Name:      field.Name,
@@ -134,27 +133,19 @@ func defaultGolangTypeToProto(structName string, field *parser.FuncField) (*Stat
 // 		int(resp.Count)
 // or nothing
 func defaultProtoTypeToGolang(object string, field *parser.FuncField) (*Statement, bool) {
-	if isDefaultGolangField(field) {
+	if field.IsArray || field.IsPointer {
+		return Add(), true
+	} else if isDefaultGolangField(field) {
 		return fieldType(field).Call(Id(object).Dot(util.ToUpperFirst(field.Name))), false
 	}
 	return Add(), true
 }
 
 func isDefaultProtoField(field *parser.FuncField) bool {
-	if field.Type == "byte" && field.IsArray {
-		return true
-	} else if field.IsArray || field.IsPointer {
-		return false
-	}
 	return util.IsInStringSlice(field.Type, defaultProtoTypes)
 }
 
 func isDefaultGolangField(field *parser.FuncField) bool {
-	if field.Type == "byte" && field.IsArray {
-		return true
-	} else if field.IsArray || field.IsPointer {
-		return false
-	}
 	return util.IsInStringSlice(field.Type, defaultGolangTypes)
 }
 
