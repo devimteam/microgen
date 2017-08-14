@@ -92,12 +92,12 @@ func (t GRPCConverterTemplate) Render(i *parser.Interface) *File {
 	return f
 }
 
-// Returns ProtoToName.
+// Returns NameToProto.
 func nameToProto(name string) string {
 	return name + "ToProto"
 }
 
-// Returns NameToProto.
+// Returns ProtoToName.
 func protoToName(name string) string {
 	return "ProtoTo" + name
 }
