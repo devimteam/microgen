@@ -118,3 +118,7 @@ func methodDefinition(obj string, signature *parser.FuncSignature) *Statement {
 		Params(funcDefinitionParams(signature.Params)).
 		Params(funcDefinitionParams(signature.Results))
 }
+
+func protobufPath(iface *parser.Interface) string {
+	return "gitlab.devim.team/protobuf/" + iface.PackageName
+}
