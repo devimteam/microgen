@@ -25,3 +25,12 @@ func ToLowerFirst(s string) string {
 func FirstLowerChar(s string) string {
 	return strings.ToLower(string(s[0]))
 }
+
+func IsInStringSlice(what string, where []string) bool {
+	for _, item := range where {
+		if item == what {
+			return true
+		}
+	}
+	return false
+}

@@ -21,6 +21,7 @@ var (
 	flagIfaceName   = flag.String("interface", "", "Interface name")
 	flagOutputDir   = flag.String("out", "", "Output directory")
 	flagPackagePath = flag.String("package", "", "Service package path for out")
+	flagGRPC        = flag.Bool("grpc", false, "Render gRPC transport")
 	debug           = flag.Bool("debug", false, "Debug mode")
 )
 
@@ -56,17 +57,22 @@ func main() {
 		strategy = generator.NewFileStrategy(*flagOutputDir)
 	}
 
-	gen := generator.NewGenerator([]generator.Template{
+	templates := []generator.Template{
 		&template.ExchangeTemplate{},
 		&template.EndpointsTemplate{},
 		&template.ClientTemplate{},
-		&template.GRPCServerTemplate{},
-		&template.GRPCClientTemplate{PackagePath: *flagPackagePath},
-		&template.GRPCConverterTemplate{PackagePath: *flagPackagePath},
 		&template.MiddlewareTemplate{PackagePath: *flagPackagePath},
 		&template.LoggingTemplate{PackagePath: *flagPackagePath},
-	}, i, strategy)
+	}
+	if *flagGRPC {
+		templates = append(templates,
+			&template.GRPCServerTemplate{},
+			&template.GRPCClientTemplate{PackagePath: *flagPackagePath},
+			&template.GRPCConverterTemplate{PackagePath: *flagPackagePath},
+		)
+	}
 
+	gen := generator.NewGenerator(templates, i, strategy)
 	err = gen.Generate()
 
 	if err != nil {
