@@ -36,3 +36,7 @@ request
 resp
 response
 ```
+
+### Misc
+
+Microgen uses __1.2.*__ version of [devimteam/go-kit](https://github.com/devimteam/go-kit)
