@@ -45,7 +45,7 @@ func (GRPCServerTemplate) Render(i *parser.Interface) *File {
 	f := NewFile("transportgrpc")
 
 	f.Type().Id("server").Struct(
-		Id("ts").Op("*").Qual(PackagePathTransportLayerGRPC, "Server"),
+		Id("ts").Qual(PackagePathTransportLayer, "Server"),
 	)
 
 	f.Func().Id("NewServer").

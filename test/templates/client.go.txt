@@ -4,14 +4,14 @@ package stringsvc
 
 import (
 	context "context"
-	grpc "github.com/devimteam/go-kit/transportlayer/grpc"
+	transportlayer "github.com/devimteam/go-kit/transportlayer"
 )
 
 type client struct {
-	tc *grpc.Client
+	tc transportlayer.Client
 }
 
-func NewClient(tc *grpc.Client) StringService {
+func NewClient(tc transportlayer.Client) StringService {
 	return &client{tc}
 }
 
