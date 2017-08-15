@@ -17,7 +17,7 @@ type ClientTemplate struct {
 //
 //		import (
 //			context "context"
-//			transportlayer "github.com/devimteam/go-kit/transportlayer"
+//			transportlayer "github.com/devimteam/go-kit/transportlayer/grpc"
 //		)
 //
 //		type client struct {
@@ -44,10 +44,10 @@ func (ClientTemplate) Render(i *parser.Interface) *File {
 	f := NewFile(i.PackageName)
 
 	f.Type().Id("client").Struct(
-		Id("tc").Qual(PackagePathTransportLayer, "Client"),
+		Id("tc").Op("*").Qual(PackagePathTransportLayerGRPC, "Client"),
 	)
 
-	f.Func().Id("NewClient").Call(Id("tc").Qual(PackagePathTransportLayer, "Client")).Id(i.Name).Block(
+	f.Func().Id("NewClient").Call(Id("tc").Op("*").Qual(PackagePathTransportLayerGRPC, "Client")).Id(i.Name).Block(
 		Return().Op("&").Id("client").Values(
 			Id("tc"),
 		),

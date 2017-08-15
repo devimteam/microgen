@@ -74,7 +74,7 @@ func (t GRPCClientTemplate) converterPackagePath() string {
 //		}
 //
 func (t GRPCConverterTemplate) Render(i *parser.Interface) *File {
-	f := NewFile("transportgrpc")
+	f := NewFile("protobuf")
 
 	for _, signature := range i.FuncSignatures {
 		f.Var().Id(converterStructName(signature)).Op("=").Op("&").Qual(PackagePathTransportLayerGRPC, "EndpointConverter").
@@ -103,7 +103,7 @@ func protoToName(name string) string {
 }
 
 func (GRPCConverterTemplate) Path() string {
-	return "./transport/grpc/converter.go"
+	return "./transport/converter/protobuf/converters.go"
 }
 
 // Renders type conversion (if need) to default protobuf types.
@@ -111,11 +111,11 @@ func (GRPCConverterTemplate) Path() string {
 // or
 //		int(resp.Count)
 // or nothing
-func defaultGolangTypeToProto(structName string, field *parser.FuncField) (*Statement, bool) {
+func defaultGolangTypeToProto(structName string, field *parser.FuncField) *Statement {
 	if field.IsArray || field.IsPointer {
-		return Add(), true
+		return Id(util.ToLowerFirst(field.Name))
 	} else if isDefaultProtoField(field) {
-		return Id(structName).Dot(util.ToUpperFirst(field.Name)), false
+		return Id(structName).Dot(util.ToUpperFirst(field.Name))
 	} else if newType, ok := goToProtoTypesMap[field.Type]; ok {
 		newField := &parser.FuncField{
 			Type:      newType,
@@ -124,21 +124,43 @@ func defaultGolangTypeToProto(structName string, field *parser.FuncField) (*Stat
 			Package:   field.Package,
 			IsPointer: field.IsPointer,
 		}
-		return fieldType(newField).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), false
+		return fieldType(newField).Call(Id(structName).Dot(util.ToUpperFirst(field.Name)))
 	}
-	return Add(), true
+	return Id(util.ToLowerFirst(field.Name))
+}
+
+func canConvertGolangToProto(field *parser.FuncField) bool {
+	if field.IsArray || field.IsPointer {
+		return false
+	}
+	if isDefaultProtoField(field) {
+		return true
+	}
+	if _, ok := goToProtoTypesMap[field.Type]; ok {
+		return true
+	}
+	return false
 }
 
 // Renders type conversion to default golang types.
 // 		int(resp.Count)
 // or nothing
-func defaultProtoTypeToGolang(object string, field *parser.FuncField) (*Statement, bool) {
+func defaultProtoTypeToGolang(object string, field *parser.FuncField) *Statement {
 	if field.IsArray || field.IsPointer {
-		return Add(), true
+		return Id(util.ToLowerFirst(field.Name))
 	} else if isDefaultGolangField(field) {
-		return fieldType(field).Call(Id(object).Dot(util.ToUpperFirst(field.Name))), false
+		return fieldType(field).Call(Id(object).Dot(util.ToUpperFirst(field.Name)))
 	}
-	return Add(), true
+	return Id(util.ToLowerFirst(field.Name))
+}
+
+func canConvertProtoToGolang(field *parser.FuncField) bool {
+	if field.IsArray || field.IsPointer {
+		return false
+	} else if isDefaultGolangField(field) {
+		return true
+	}
+	return false
 }
 
 func isDefaultProtoField(field *parser.FuncField) bool {
@@ -165,18 +187,31 @@ func (t GRPCConverterTemplate) encodeRequest(signature *parser.FuncSignature, i 
 		func(group *Group) {
 			if len(methodParams) > 0 {
 				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.PackagePath, requestStructName(signature)))
-			}
-			group.Return().List(Op("&").Qual(protobufPath(i), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodParams {
-					code, isCustom := defaultGolangTypeToProto("req", field)
-					if isCustom {
+					if !canConvertGolangToProto(field) {
+						code := &Statement{}
 						if field.Type == "error" {
-							code = Qual(utilPackagePath(t.PackagePath), "ErrorToString").Call(Id("req").Dot(util.ToUpperFirst(field.Name)))
+							continue
 						} else {
 							code = Qual(utilPackagePath(t.PackagePath), nameToProto(util.ToUpperFirst(field.Name))).
 								Call(Id("req").
 									Dot(util.ToUpperFirst(field.Name)))
 						}
+						group.List(Id(util.ToLowerFirst(field.Name)), Err()).
+							Op(":=").Add(code)
+						group.If(Err().Op("!=").Nil()).Block(
+							Return().List(Nil(), Err()),
+						)
+					}
+				}
+			}
+			group.Return().List(Op("&").Qual(protobufPath(i), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
+				for _, field := range methodParams {
+					code := &Statement{}
+					if field.Type == "error" {
+						code.Qual(utilPackagePath(t.PackagePath), "ErrorToString").Call(Id("req").Dot(util.ToUpperFirst(field.Name)))
+					} else {
+						code.Add(defaultGolangTypeToProto("req", field))
 					}
 					dict[structFieldName(field)] = Line().Add(code)
 				}
@@ -201,18 +236,31 @@ func (t GRPCConverterTemplate) encodeResponse(signature *parser.FuncSignature, i
 		func(group *Group) {
 			if len(methodResults) > 0 {
 				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.PackagePath, responseStructName(signature)))
-			}
-			group.Return().List(Op("&").Qual(protobufPath(i), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodResults {
-					code, isCustom := defaultGolangTypeToProto("resp", field)
-					if isCustom {
+					if !canConvertGolangToProto(field) {
+						code := &Statement{}
 						if field.Type == "error" {
-							code = Qual(utilPackagePath(t.PackagePath), "ErrorToString").Call(Id("resp").Dot(util.ToUpperFirst(field.Name)))
+							continue
 						} else {
-							code = Qual(utilPackagePath(t.PackagePath), nameToProto(util.ToUpperFirst(field.Name))).
+							code.Qual(utilPackagePath(t.PackagePath), nameToProto(util.ToUpperFirst(field.Name))).
 								Call(Id("resp").
 									Dot(util.ToUpperFirst(field.Name)))
 						}
+						group.List(Id(util.ToLowerFirst(field.Name)), Err()).
+							Op(":=").Add(code)
+						group.If(Err().Op("!=").Nil()).Block(
+							Return().List(Nil(), Err()),
+						)
+					}
+				}
+			}
+			group.Return().List(Op("&").Qual(protobufPath(i), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
+				for _, field := range methodResults {
+					code := &Statement{}
+					if field.Type == "error" {
+						code.Qual(utilPackagePath(t.PackagePath), "ErrorToString").Call(Id("resp").Dot(util.ToUpperFirst(field.Name)))
+					} else {
+						code.Add(defaultGolangTypeToProto("resp", field))
 					}
 					dict[structFieldName(field)] = Line().Add(code)
 				}
@@ -237,18 +285,31 @@ func (t GRPCConverterTemplate) decodeRequest(signature *parser.FuncSignature, i 
 		func(group *Group) {
 			if len(methodParams) > 0 {
 				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(i), requestStructName(signature)))
-			}
-			group.Return().List(Op("&").Qual(t.PackagePath, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodParams {
-					code, isCustom := defaultProtoTypeToGolang("req", field)
-					if isCustom {
+					if !canConvertProtoToGolang(field) {
+						code := &Statement{}
 						if field.Type == "error" {
-							code = Qual(utilPackagePath(t.PackagePath), "StringToError").Call(Id("req").Dot(util.ToUpperFirst(field.Name)))
+							continue
 						} else {
-							code = Qual(utilPackagePath(t.PackagePath), protoToName(util.ToUpperFirst(field.Name))).
+							code.Qual(utilPackagePath(t.PackagePath), protoToName(util.ToUpperFirst(field.Name))).
 								Call(Id("req").
 									Dot(util.ToUpperFirst(field.Name)))
 						}
+						group.List(Id(util.ToLowerFirst(field.Name)), Err()).
+							Op(":=").Add(code)
+						group.If(Err().Op("!=").Nil()).Block(
+							Return().List(Nil(), Err()),
+						)
+					}
+				}
+			}
+			group.Return().List(Op("&").Qual(t.PackagePath, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
+				for _, field := range methodParams {
+					code := &Statement{}
+					if field.Type == "error" {
+						code.Qual(utilPackagePath(t.PackagePath), "StringToError").Call(Id("req").Dot(util.ToUpperFirst(field.Name)))
+					} else {
+						code.Add(defaultProtoTypeToGolang("req", field))
 					}
 					dict[structFieldName(field)] = Line().Add(code)
 				}
@@ -273,18 +334,31 @@ func (t GRPCConverterTemplate) decodeResponse(signature *parser.FuncSignature, i
 		func(group *Group) {
 			if len(methodResults) > 0 {
 				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(i), responseStructName(signature)))
-			}
-			group.Return().List(Op("&").Qual(t.PackagePath, responseStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodResults {
-					code, isCustom := defaultProtoTypeToGolang("resp", field)
-					if isCustom {
+					code := &Statement{}
+					if !canConvertProtoToGolang(field) {
 						if field.Type == "error" {
-							code = Qual(utilPackagePath(t.PackagePath), "StringToError").Call(Id("resp").Dot(util.ToUpperFirst(field.Name)))
+							continue
 						} else {
-							code = Qual(utilPackagePath(t.PackagePath), protoToName(util.ToUpperFirst(field.Name))).
+							code.Qual(utilPackagePath(t.PackagePath), protoToName(util.ToUpperFirst(field.Name))).
 								Call(Id("resp").
 									Dot(util.ToUpperFirst(field.Name)))
 						}
+						group.List(Id(util.ToLowerFirst(field.Name)), Err()).
+							Op(":=").Add(code)
+						group.If(Err().Op("!=").Nil()).Block(
+							Return().List(Nil(), Err()),
+						)
+					}
+				}
+			}
+			group.Return().List(Op("&").Qual(t.PackagePath, responseStructName(signature)).Values(DictFunc(func(dict Dict) {
+				for _, field := range methodResults {
+					code := &Statement{}
+					if field.Type == "error" {
+						code.Qual(utilPackagePath(t.PackagePath), "StringToError").Call(Id("resp").Dot(util.ToUpperFirst(field.Name)))
+					} else {
+						code.Add(defaultProtoTypeToGolang("resp", field))
 					}
 					dict[structFieldName(field)] = Line().Add(code)
 				}

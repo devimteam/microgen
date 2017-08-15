@@ -20,7 +20,7 @@ func serverStructName(iface *parser.Interface) string {
 //		package transportgrpc
 //
 //		import (
-//			transportlayer "github.com/devimteam/go-kit/transportlayer"
+//			transportlayer "github.com/devimteam/go-kit/transportlayer/grpc"
 //			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //			context "golang.org/x/net/context"
 //		)
@@ -45,7 +45,7 @@ func (GRPCServerTemplate) Render(i *parser.Interface) *File {
 	f := NewFile("transportgrpc")
 
 	f.Type().Id("server").Struct(
-		Id("ts").Qual(PackagePathTransportLayer, "Server"),
+		Id("ts").Op("*").Qual(PackagePathTransportLayerGRPC, "Server"),
 	)
 
 	f.Func().Id("NewServer").
@@ -53,7 +53,7 @@ func (GRPCServerTemplate) Render(i *parser.Interface) *File {
 			Index().Qual(PackagePathTransportLayer, "Endpoint")).Qual(protobufPath(i), serverStructName(i)).
 		Block(
 			Return().Op("&").Id("server").Values(
-				Qual(PackagePathTransportLayer, "NewServer").Call(Id("endpoints")),
+				Qual(PackagePathTransportLayerGRPC, "NewServer").Call(Id("endpoints")),
 			),
 		)
 	f.Line()
