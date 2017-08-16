@@ -17,12 +17,13 @@ import (
 )
 
 var (
-	flagFileName    = flag.String("file", "", "File name")
+	flagFileName    = flag.String("file", "", "Name of file where described interface definition")
 	flagIfaceName   = flag.String("interface", "", "Interface name")
 	flagOutputDir   = flag.String("out", "", "Output directory")
-	flagPackagePath = flag.String("package", "", "Service package path for out")
+	flagPackagePath = flag.String("package", "", "Service package path")
 	flagGRPC        = flag.Bool("grpc", false, "Render gRPC transport")
-	debug           = flag.Bool("debug", false, "Debug mode")
+	flagDebug       = flag.Bool("debug", false, "Debug mode")
+	flagHelp        = flag.Bool("help", false, "Show help")
 )
 
 func init() {
@@ -30,6 +31,11 @@ func init() {
 }
 
 func main() {
+	if *flagHelp || *flagFileName == "" || *flagIfaceName == "" || *flagPackagePath == "" {
+		flag.Usage()
+		os.Exit(0)
+	}
+
 	currentDir, err := os.Getwd()
 	if err != nil {
 		panic(err)
@@ -45,7 +51,7 @@ func main() {
 		panic(fmt.Errorf("error when parse interface from file : %v", err))
 	}
 
-	if *debug {
+	if *flagDebug {
 		ast.Print(fset, f)
 		spew.Dump(i)
 	}
