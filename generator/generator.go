@@ -39,6 +39,6 @@ func (g *generator) Generate() error {
 			return fmt.Errorf("write error: %v", err)
 		}
 	}
-
+	fmt.Println("All files successfully generated")
 	return nil
 }

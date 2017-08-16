@@ -37,6 +37,7 @@ func (s fileStrategy) Write(f *jen.File, t Template) error {
 	if err != nil {
 		return fmt.Errorf("error when save file: %v", err)
 	}
+	fmt.Println(filepath.Join(s.outputDir, t.Path()))
 	return nil
 }
 
