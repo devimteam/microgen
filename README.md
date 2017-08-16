@@ -22,10 +22,9 @@ microgen [OPTIONS]
 ### Interface declaration rules
 For correct generation, please, follow rules below.
 
-* All interface arguments and results should be named.
-* First argument should be of type `context.Context` (from [standard library](https://golang.org/pkg/context/)).
-* Result arguments should contain at least one variable of `error` type.
-* Argument's and result's names should be different (name duplicating unacceptable).
+* All interface method's arguments and results should be named and should be different (name duplicating unacceptable).
+* First argument of each method should be of type `context.Context` (from [standard library](https://golang.org/pkg/context/)).
+* Method results should contain at least one variable of `error` type.
 * [Some names](#not-allowed-names) are not allowed to be an argument or result.
 * Field names in _protobuf_ messages should be the same, as in interface methods (_protobuf_ - snake_case, interface - camelCase).
 
