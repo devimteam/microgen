@@ -17,7 +17,7 @@ type ClientTemplate struct {
 //
 //		import (
 //			context "context"
-//			transportlayer "github.com/devimteam/go-kit/transportlayer"
+//			transportlayer "github.com/devimteam/go-kit/transportlayer/grpc"
 //		)
 //
 //		type client struct {

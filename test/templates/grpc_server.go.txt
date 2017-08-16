@@ -4,6 +4,7 @@ package transportgrpc
 
 import (
 	transportlayer "github.com/devimteam/go-kit/transportlayer"
+	grpc "github.com/devimteam/go-kit/transportlayer/grpc"
 	stringsvc "gitlab.devim.team/protobuf/stringsvc"
 	context "golang.org/x/net/context"
 )
@@ -13,7 +14,7 @@ type server struct {
 }
 
 func NewServer(endpoints []transportlayer.Endpoint) stringsvc.StringServiceServer {
-	return &server{transportlayer.NewServer(endpoints)}
+	return &server{grpc.NewServer(endpoints)}
 }
 
 func (s *server) Count(ctx context.Context, req *stringsvc.CountRequest) (*stringsvc.CountResponse, error) {

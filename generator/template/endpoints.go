@@ -145,7 +145,10 @@ func createEndpointBody(signature *parser.FuncSignature) *Statement {
 		Interface(),
 		Error(),
 	).BlockFunc(func(g *Group) {
-		g.Id("req").Op(":=").Id("request").Assert(Op("*").Id(requestStructName(signature)))
+		methodParams := removeContextIfFirst(signature.Params)
+		if len(methodParams) > 0 {
+			g.Id("req").Op(":=").Id("request").Assert(Op("*").Id(requestStructName(signature)))
+		}
 
 		g.Add(paramNames(signature.Results).
 			Op(":=").
@@ -153,7 +156,7 @@ func createEndpointBody(signature *parser.FuncSignature) *Statement {
 			Dot(signature.Name).
 			CallFunc(func(g *Group) {
 				g.Add(Id(firstArgName(signature)))
-				for _, field := range removeContextIfFirst(signature.Params) {
+				for _, field := range methodParams {
 					g.Add(Id("req").Dot(util.ToUpperFirst(field.Name)))
 				}
 			}))

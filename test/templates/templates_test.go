@@ -73,7 +73,7 @@ func TestTemplates(t *testing.T) {
 		{
 			TestName:    "GRPC Converter",
 			Template:    &template.GRPCConverterTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
-			OutFilePath: "grpc_converter.go.txt",
+			OutFilePath: "grpc_converters.go.txt",
 		},
 	}
 	for _, test := range allTemplateTests {
