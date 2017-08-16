@@ -102,26 +102,26 @@ func (t GRPCConverterTemplate) Render(i *parser.Interface) *File {
 
 // Returns FieldTypeToProto.
 func typeToProto(field *parser.FuncField) string {
-	ptr, list := "", ""
+	methodName := util.ToUpperFirst(field.Type)
 	if field.IsPointer {
-		ptr = "Ptr"
+		methodName += "Ptr"
 	}
 	if field.IsArray {
-		list = "List"
+		methodName += "List"
 	}
-	return util.ToUpperFirst(field.Type) + ptr + list + "ToProto"
+	return methodName + "ToProto"
 }
 
 // Returns ProtoToFieldType.
 func protoToType(field *parser.FuncField) string {
-	ptr, list := "", ""
+	methodName := "ProtoTo" + util.ToUpperFirst(field.Type)
 	if field.IsPointer {
-		ptr = "Ptr"
+		methodName += "Ptr"
 	}
 	if field.IsArray {
-		list = "List"
+		methodName += "List"
 	}
-	return "ProtoTo" + util.ToUpperFirst(field.Type) + ptr + list
+	return methodName
 }
 
 func (GRPCConverterTemplate) Path() string {
