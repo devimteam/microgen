@@ -291,7 +291,7 @@ func (t GRPCConverterTemplate) encodeResponse(signature *parser.FuncSignature, i
 //				Symbol: string(req.Symbol),
 //				Text:   string(req.Text),
 //			}, nil
-//		},
+//		}
 //
 func (t GRPCConverterTemplate) decodeRequest(signature *parser.FuncSignature, i *parser.Interface) *Statement {
 	methodParams := removeContextIfFirst(signature.Params)
