@@ -20,13 +20,13 @@ var CountConverter = &grpc.EndpointConverter{
 	},
 	func(_ context.Context, response interface{}) (interface{}, error) {
 		resp := response.(*svc.CountResponse)
-		positions, err := util.PositionsToProto(resp.Positions)
+		respPositions, err := util.IntListToProto(resp.Positions)
 		if err != nil {
 			return nil, err
 		}
 		return &stringsvc.CountResponse{
 			Count:     int64(resp.Count),
-			Positions: positions,
+			Positions: respPositions,
 		}, nil
 	},
 	func(_ context.Context, request interface{}) (interface{}, error) {
@@ -38,13 +38,13 @@ var CountConverter = &grpc.EndpointConverter{
 	},
 	func(_ context.Context, response interface{}) (interface{}, error) {
 		resp := response.(*stringsvc.CountResponse)
-		positions, err := util.ProtoToPositions(resp.Positions)
+		respPositions, err := util.ProtoToIntList(resp.Positions)
 		if err != nil {
 			return nil, err
 		}
 		return &svc.CountResponse{
 			Count:     int(resp.Count),
-			Positions: positions,
+			Positions: respPositions,
 		}, nil
 	},
 	stringsvc.CountResponse{},
