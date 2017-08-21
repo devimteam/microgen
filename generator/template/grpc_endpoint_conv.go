@@ -15,15 +15,11 @@ var (
 	defaultGolangTypes = []string{"string", "bool", "int", "uint", "byte", "int64", "uint64", "float64", "int32", "uint32", "float32"}
 )
 
-type GRPCConverterTemplate struct {
+type GRPCEndpointConverterTemplate struct {
 	PackagePath string
 }
 
-func utilPackagePath(path string) string {
-	return path + "/util"
-}
-
-func (t GRPCClientTemplate) converterPackagePath() string {
+func (t GRPCClientTemplate) grpcConverterPackagePath() string {
 	return t.PackagePath + "/transport/converter/protobuf"
 }
 
@@ -81,7 +77,7 @@ func (t GRPCClientTemplate) converterPackagePath() string {
 //			stringsvc.CountResponse{},
 //		}
 //
-func (t GRPCConverterTemplate) Render(i *parser.Interface) *File {
+func (t GRPCEndpointConverterTemplate) Render(i *parser.Interface) *File {
 	f := NewFile("protobuf")
 
 	for _, signature := range i.FuncSignatures {
@@ -124,8 +120,8 @@ func protoToType(field *parser.FuncField) string {
 	return methodName
 }
 
-func (GRPCConverterTemplate) Path() string {
-	return "./transport/converter/protobuf/converters.go"
+func (GRPCEndpointConverterTemplate) Path() string {
+	return "./transport/converter/protobuf/endpoint_converters.go"
 }
 
 // Renders type conversion (if need) to default protobuf types.
@@ -204,11 +200,11 @@ func isDefaultGolangField(field *parser.FuncField) bool {
 //			return nil, err
 //		}
 //
-func (t GRPCConverterTemplate) convertCustomType(structName, converterName string, field *parser.FuncField) *Statement {
+func (t GRPCEndpointConverterTemplate) convertCustomType(structName, converterName string, field *parser.FuncField) *Statement {
 	return List(Id(structName+util.ToUpperFirst(field.Name)), Err()).
 		Op(":=").
 		Add(
-			Qual(utilPackagePath(t.PackagePath), converterName).
+			Id(converterName).
 				Call(Id(structName).
 					Dot(util.ToUpperFirst(field.Name))),
 		).
@@ -227,7 +223,7 @@ func (t GRPCConverterTemplate) convertCustomType(structName, converterName strin
 //			}, nil
 //		}
 //
-func (t GRPCConverterTemplate) encodeRequest(signature *parser.FuncSignature, i *parser.Interface) *Statement {
+func (t GRPCEndpointConverterTemplate) encodeRequest(signature *parser.FuncSignature, i *parser.Interface) *Statement {
 	methodParams := removeContextIfFirst(signature.Params)
 	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
@@ -262,7 +258,7 @@ func (t GRPCConverterTemplate) encodeRequest(signature *parser.FuncSignature, i 
 //			}, nil
 //		}
 //
-func (t GRPCConverterTemplate) encodeResponse(signature *parser.FuncSignature, i *parser.Interface) *Statement {
+func (t GRPCEndpointConverterTemplate) encodeResponse(signature *parser.FuncSignature, i *parser.Interface) *Statement {
 	methodResults := removeContextIfFirst(signature.Results)
 	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
@@ -293,7 +289,7 @@ func (t GRPCConverterTemplate) encodeResponse(signature *parser.FuncSignature, i
 //			}, nil
 //		}
 //
-func (t GRPCConverterTemplate) decodeRequest(signature *parser.FuncSignature, i *parser.Interface) *Statement {
+func (t GRPCEndpointConverterTemplate) decodeRequest(signature *parser.FuncSignature, i *parser.Interface) *Statement {
 	methodParams := removeContextIfFirst(signature.Params)
 	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
@@ -328,7 +324,7 @@ func (t GRPCConverterTemplate) decodeRequest(signature *parser.FuncSignature, i 
 //			}, nil
 //		}
 //
-func (t GRPCConverterTemplate) decodeResponse(signature *parser.FuncSignature, i *parser.Interface) *Statement {
+func (t GRPCEndpointConverterTemplate) decodeResponse(signature *parser.FuncSignature, i *parser.Interface) *Statement {
 	methodResults := removeContextIfFirst(signature.Results)
 	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
@@ -351,6 +347,6 @@ func (t GRPCConverterTemplate) decodeResponse(signature *parser.FuncSignature, i
 
 // Renders reply type argument
 // 		stringsvc.CountResponse{}
-func (t GRPCConverterTemplate) replyType(signature *parser.FuncSignature, i *parser.Interface) *Statement {
+func (t GRPCEndpointConverterTemplate) replyType(signature *parser.FuncSignature, i *parser.Interface) *Statement {
 	return Line().Qual(protobufPath(i), responseStructName(signature)).Values()
 }

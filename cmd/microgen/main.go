@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go/ast"
 	astparser "go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
-
-	"go/ast"
+	"strings"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/devimteam/microgen/generator"
@@ -17,13 +17,13 @@ import (
 )
 
 var (
-	flagFileName    = flag.String("file", "", "Name of file where described interface definition")
-	flagIfaceName   = flag.String("interface", "", "Interface name")
-	flagOutputDir   = flag.String("out", "", "Output directory")
-	flagPackagePath = flag.String("package", "", "Service package path")
-	flagGRPC        = flag.Bool("grpc", false, "Render gRPC transport")
-	flagDebug       = flag.Bool("debug", false, "Debug mode")
-	flagHelp        = flag.Bool("help", false, "Show help")
+	flagFileName  = flag.String("file", "", "Name of file where described interface definition")
+	flagIfaceName = flag.String("interface", "", "Interface name")
+	flagOutputDir = flag.String("out", "", "Output directory")
+	flagGRPC      = flag.Bool("grpc", false, "Render gRPC transport")
+	flagDebug     = flag.Bool("debug", false, "Debug mode")
+	flagHelp      = flag.Bool("help", false, "Show help")
+	flagInit      = flag.Bool("init", false, "With flag `-grpc` generate stub methods for converters")
 )
 
 func init() {
@@ -31,7 +31,7 @@ func init() {
 }
 
 func main() {
-	if *flagHelp || *flagFileName == "" || *flagIfaceName == "" || *flagPackagePath == "" {
+	if *flagHelp || *flagFileName == "" || *flagIfaceName == "" {
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -63,25 +63,52 @@ func main() {
 		strategy = generator.NewFileStrategy(*flagOutputDir)
 	}
 
+	packagePath := resolvePackagePath(*flagOutputDir)
 	templates := []generator.Template{
 		&template.ExchangeTemplate{},
 		&template.EndpointsTemplate{},
 		&template.ClientTemplate{},
-		&template.MiddlewareTemplate{PackagePath: *flagPackagePath},
-		&template.LoggingTemplate{PackagePath: *flagPackagePath},
+		&template.MiddlewareTemplate{PackagePath: packagePath},
+		&template.LoggingTemplate{PackagePath: packagePath},
 	}
 	if *flagGRPC {
 		templates = append(templates,
 			&template.GRPCServerTemplate{},
-			&template.GRPCClientTemplate{PackagePath: *flagPackagePath},
-			&template.GRPCConverterTemplate{PackagePath: *flagPackagePath},
+			&template.GRPCClientTemplate{PackagePath: packagePath},
+			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath},
 		)
+	}
+
+	if *flagInit {
+		if *flagGRPC {
+			templates = append(templates,
+				&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath},
+			)
+		}
 	}
 
 	gen := generator.NewGenerator(templates, i, strategy)
 	err = gen.Generate()
-
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+}
+
+func resolvePackagePath(outPath string) string {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		panic(fmt.Errorf("GOPATH is empty"))
+	}
+
+	absOutPath, err := filepath.Abs(outPath)
+	if err != nil {
+		panic(err)
+	}
+
+	gopathSrc := filepath.Join(gopath, "src")
+	if !strings.HasPrefix(absOutPath, gopathSrc) {
+		panic(fmt.Errorf("-out not in GOPATH"))
+	}
+
+	return absOutPath[len(gopathSrc)+1:]
 }

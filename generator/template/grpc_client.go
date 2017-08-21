@@ -54,7 +54,7 @@ func (t GRPCClientTemplate) Render(i *parser.Interface) *File {
 					group.Line().Qual(PackagePathTransportLayer, "NewEndpoint").Call(
 						Line().Lit(signature.Name),
 						Line().Nil(),
-						Line().Qual(PackagePathTransportLayer, "WithConverter").Call(Qual(t.converterPackagePath(), converterStructName(signature))),
+						Line().Qual(PackagePathTransportLayer, "WithConverter").Call(Qual(t.grpcConverterPackagePath(), converterStructName(signature))),
 						Line(),
 					)
 				}
