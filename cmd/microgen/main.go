@@ -79,12 +79,10 @@ func main() {
 		)
 	}
 
-	if *flagInit {
-		if *flagGRPC {
-			templates = append(templates,
-				&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath},
-			)
-		}
+	if *flagInit && *flagGRPC {
+		templates = append(templates,
+			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath},
+		)
 	}
 
 	gen := generator.NewGenerator(templates, i, strategy)

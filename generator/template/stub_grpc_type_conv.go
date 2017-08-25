@@ -29,25 +29,12 @@ func (t StubGRPCTypeConverterTemplate) Render(i *parser.Interface) *File {
 	f := NewFile("protobuf")
 
 	for _, signature := range i.FuncSignatures {
-		for _, field := range removeContextIfFirst(signature.Params) {
-			if !canConvertGolangToProto(field) && !util.IsInStringSlice(typeToProto(field), t.alreadyRenderedConverters) {
+		args := append(removeContextIfFirst(signature.Params), removeContextIfFirst(signature.Results)...)
+		for _, field := range args {
+			if _, ok := golangTypeToProto("", field); !ok && !util.IsInStringSlice(typeToProto(field), t.alreadyRenderedConverters) {
 				f.Add(t.stubConverterToProto(field, i))
 				f.Line()
 				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, typeToProto(field))
-			}
-			if !canConvertProtoToGolang(field) && !util.IsInStringSlice(protoToType(field), t.alreadyRenderedConverters) {
-				f.Add(t.stubConverterProtoTo(field, i))
-				f.Line()
-				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, protoToType(field))
-			}
-		}
-		for _, field := range removeContextIfFirst(signature.Results) {
-			if !canConvertGolangToProto(field) && !util.IsInStringSlice(typeToProto(field), t.alreadyRenderedConverters) {
-				f.Add(t.stubConverterToProto(field, i))
-				f.Line()
-				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, typeToProto(field))
-			}
-			if !canConvertProtoToGolang(field) && !util.IsInStringSlice(protoToType(field), t.alreadyRenderedConverters) {
 				f.Add(t.stubConverterProtoTo(field, i))
 				f.Line()
 				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, protoToType(field))
