@@ -98,9 +98,16 @@ func (t StubGRPCTypeConverterTemplate) protoFieldType(field *parser.FuncField, i
 	if tmp, ok := goToProtoTypesMap[field.Type]; ok {
 		protoType = tmp
 	}
-
+	// Special condition for error converting
+	if field.Type == "error" {
+		protoType = "string"
+	}
 	if field.Package != nil {
-		c.Qual(protobufPath(iface), protoType)
+		if field.Package.Path == "time" && field.Type == "Time" {
+			c.Qual(PackagePathProtoTimestamp, "Timestamp")
+		} else {
+			c.Qual(protobufPath(iface), protoType)
+		}
 	} else {
 		c.Id(protoType)
 	}

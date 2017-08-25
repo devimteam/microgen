@@ -131,6 +131,7 @@ func (GRPCEndpointConverterTemplate) Path() string {
 // or
 //		structNamePositions
 // based on field type
+// Second result means can field converts to default protobuf type.
 func golangTypeToProto(structName string, field *parser.FuncField) (*Statement, bool) {
 	if field.IsArray || field.IsPointer {
 		return Id(structName + util.ToUpperFirst(field.Name)), false
@@ -149,24 +150,12 @@ func golangTypeToProto(structName string, field *parser.FuncField) (*Statement, 
 	return Id(structName + util.ToUpperFirst(field.Name)), false
 }
 
-/*func canConvertGolangToProto(field *parser.FuncField) bool {
-	if field.IsArray || field.IsPointer {
-		return false
-	}
-	if isDefaultProtoField(field) {
-		return true
-	}
-	if _, ok := goToProtoTypesMap[field.Type]; ok {
-		return true
-	}
-	return false
-}*/
-
 // Renders type conversion to default golang types.
 // 		int(resp.Count)
 // or
 // 		structNamePositions
 // based on field type
+// Second result means can field converts to golang type.
 func protoTypeToGolang(structName string, field *parser.FuncField) (*Statement, bool) {
 	if field.IsArray || field.IsPointer {
 		return Id(structName + util.ToUpperFirst(field.Name)), false
@@ -175,15 +164,6 @@ func protoTypeToGolang(structName string, field *parser.FuncField) (*Statement, 
 	}
 	return Id(structName + util.ToUpperFirst(field.Name)), false
 }
-
-/*func canConvertProtoToGolang(field *parser.FuncField) bool {
-	if field.IsArray || field.IsPointer {
-		return false
-	} else if isDefaultGolangField(field) {
-		return true
-	}
-	return false
-}*/
 
 func isDefaultProtoField(field *parser.FuncField) bool {
 	return util.IsInStringSlice(field.Type, defaultProtoTypes)
