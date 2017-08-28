@@ -98,10 +98,6 @@ func (t StubGRPCTypeConverterTemplate) protoFieldType(field *parser.FuncField, i
 	if tmp, ok := goToProtoTypesMap[field.Type]; ok {
 		protoType = tmp
 	}
-	// Special condition for error converting
-	if field.Type == "error" {
-		protoType = "string"
-	}
 	if field.Package != nil {
 		if field.Package.Path == "time" && field.Type == "Time" {
 			c.Qual(PackagePathProtoTimestamp, "Timestamp")
@@ -109,6 +105,10 @@ func (t StubGRPCTypeConverterTemplate) protoFieldType(field *parser.FuncField, i
 			c.Qual(protobufPath(iface), protoType)
 		}
 	} else {
+		// Special condition for error converting
+		if field.Type == "error" {
+			protoType = "string"
+		}
 		c.Id(protoType)
 	}
 
