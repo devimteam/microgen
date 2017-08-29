@@ -77,12 +77,11 @@ func main() {
 			&template.GRPCClientTemplate{PackagePath: packagePath},
 			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath},
 		)
-	}
-
-	if *flagInit && *flagGRPC {
-		templates = append(templates,
-			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath},
-		)
+		if *flagInit {
+			templates = append(templates,
+				&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath},
+			)
+		}
 	}
 
 	gen := generator.NewGenerator(templates, i, strategy)
