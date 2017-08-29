@@ -3,9 +3,10 @@
 Tool to generate microservices, based on [go-kit](https://gokit.io/), by specified service interface.
 
 ## Install
-1. `go get github.com/devimteam/microgen`
-2. Go to `$GOPATH/src/devimteam/microgen/cmd/microgen`.
-3. `go install`
+```
+go get -u github.com/devimteam/microgen/cmd/microgen
+```
+
 
 ## Example
 Follow this short guide to try microgen tool.
