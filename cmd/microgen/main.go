@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	flagFileName  = flag.String("file", "", "Name of file where described interface definition")
+	flagFileName  = flag.String("file", "service.go", "Name of file where described interface definition")
 	flagIfaceName = flag.String("interface", "", "Interface name")
 	flagOutputDir = flag.String("out", "", "Output directory")
 	flagGRPC      = flag.Bool("grpc", false, "Render gRPC transport")
@@ -38,17 +38,21 @@ func main() {
 
 	currentDir, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
+
 	path := filepath.Join(currentDir, *flagFileName)
 	fset := token.NewFileSet()
 	f, err := astparser.ParseFile(fset, path, nil, astparser.ParseComments)
 	if err != nil {
-		panic(fmt.Errorf("error when parse file: %v", err))
+		fmt.Printf("error when parse file: %v\n", err)
+		os.Exit(1)
 	}
 	i, err := parser.ParseInterface(f, *flagIfaceName)
 	if err != nil {
-		panic(fmt.Errorf("error when parse interface from file : %v", err))
+		fmt.Printf("error when parse interface from file : %v\n", err)
+		os.Exit(1)
 	}
 
 	if *flagDebug {
@@ -94,17 +98,20 @@ func main() {
 func resolvePackagePath(outPath string) string {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
-		panic(fmt.Errorf("GOPATH is empty"))
+		fmt.Println("GOPATH is empty")
+		os.Exit(1)
 	}
 
 	absOutPath, err := filepath.Abs(outPath)
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 
 	gopathSrc := filepath.Join(gopath, "src")
 	if !strings.HasPrefix(absOutPath, gopathSrc) {
-		panic(fmt.Errorf("-out not in GOPATH"))
+		fmt.Println("-out not in GOPATH")
+		os.Exit(1)
 	}
 
 	return absOutPath[len(gopathSrc)+1:]
