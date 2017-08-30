@@ -15,6 +15,7 @@ const (
 	PackagePathTransportLayerGRPC = "github.com/devimteam/go-kit/transportlayer/grpc"
 	PackagePathGoogleGRPC         = "google.golang.org/grpc"
 	PackagePathNetContext         = "golang.org/x/net/context"
+	PackagePathProtoTimestamp     = "github.com/golang/protobuf/ptypes/timestamp"
 )
 
 func structFieldName(field *parser.FuncField) *Statement {

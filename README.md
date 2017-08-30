@@ -2,10 +2,56 @@
 
 Tool to generate microservices, based on [go-kit](https://gokit.io/), by specified service interface.
 
+## Install
+```
+go get -u github.com/devimteam/microgen/cmd/microgen
+```
+
+
+## Example
+Follow this short guide to try microgen tool.
+
+1. Create file `service.go` inside GOPATH and add code below.
+``` golang
+package stringsvc
+
+import (
+	"context"
+
+	drive "google.golang.org/api/drive/v3"
+)
+
+type StringService interface {
+	Uppercase(ctx context.Context, str string) (ans string, err error)
+	Count(ctx context.Context, text string, symbol string) (count int, positions []int)
+	TestCase(ctx context.Context, comments []*drive.Comment) (err error)
+}
+```
+2. Open command line next to your `service.go`.
+3. Enter `microgen -file ./service.go -interface StringService -out . -grpc -init`. __*__
+4. You should see something like that:
+```
+exchanges.go
+endpoints.go
+client.go
+middleware/middleware.go
+middleware/logging.go
+transport/grpc/server.go
+transport/grpc/client.go
+transport/converter/protobuf/endpoint_converters.go
+transport/converter/protobuf/type_converters.go
+All files successfully generated
+```
+5. Now, add and generate protobuf file, write converters from protobuf to golang and _vise versa_.
+6. Use endpoints and converters in your `package main` or wherever you want.
+
+__*__ `GOPATH/bin` should be in your PATH.
+
 ## Usage
 ``` sh
 microgen [OPTIONS]
 ```
+microgen is stable, so you can generate without flag `-init` any time your interface changed (e.g. added new method)
 ### Options
 
 | Name        | Default          | Description                                                                   |
@@ -16,6 +62,7 @@ microgen [OPTIONS]
 | -package*   |                  | Package path of your service interface source file                            |
 | -debug      | false            | Display some debug information                                                |
 | -grpc       | false            | Render client, server and converters for gRPC protocol                        |
+| -init       | false            | With flag `-grpc` generate stub methods for converters                        |
 
 \* __Required option__
 

@@ -6,7 +6,6 @@ import (
 	context "context"
 	grpc "github.com/devimteam/go-kit/transportlayer/grpc"
 	svc "github.com/devimteam/microgen/test/svc"
-	util "github.com/devimteam/microgen/test/svc/util"
 	stringsvc "gitlab.devim.team/protobuf/stringsvc"
 )
 
@@ -20,7 +19,7 @@ var CountConverter = &grpc.EndpointConverter{
 	},
 	func(_ context.Context, response interface{}) (interface{}, error) {
 		resp := response.(*svc.CountResponse)
-		respPositions, err := util.IntListToProto(resp.Positions)
+		respPositions, err := IntListToProto(resp.Positions)
 		if err != nil {
 			return nil, err
 		}
@@ -38,7 +37,7 @@ var CountConverter = &grpc.EndpointConverter{
 	},
 	func(_ context.Context, response interface{}) (interface{}, error) {
 		resp := response.(*stringsvc.CountResponse)
-		respPositions, err := util.ProtoToIntList(resp.Positions)
+		respPositions, err := ProtoToIntList(resp.Positions)
 		if err != nil {
 			return nil, err
 		}
