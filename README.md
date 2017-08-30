@@ -7,6 +7,24 @@ Tool to generate microservices, based on [go-kit](https://gokit.io/), by specifi
 go get -u github.com/devimteam/microgen/cmd/microgen
 ```
 
+## Usage
+``` sh
+microgen [OPTIONS]
+```
+microgen is stable, so you can generate without flag `-init` any time your interface changed (e.g. added new method)
+### Options
+
+| Name        | Default          | Description                                                                   |
+|:------------|:-----------------|:------------------------------------------------------------------------------|
+| -file*      |                  | Relative path to source file with service interface                           |
+| -interface* |                  | Service interface name in source file                                         |
+| -out        | writes to stdout | Relative or absolute path to directory, where you want to see generated files |
+| -package*   |                  | Package path of your service interface source file                            |
+| -debug      | false            | Display some debug information                                                |
+| -grpc       | false            | Render client, server and converters for gRPC protocol                        |
+| -init       | false            | With flag `-grpc` generate stub methods for converters                        |
+
+\* __Required option__
 
 ## Example
 Follow this short guide to try microgen tool.
@@ -46,25 +64,6 @@ All files successfully generated
 6. Use endpoints and converters in your `package main` or wherever you want.
 
 __*__ `GOPATH/bin` should be in your PATH.
-
-## Usage
-``` sh
-microgen [OPTIONS]
-```
-microgen is stable, so you can generate without flag `-init` any time your interface changed (e.g. added new method)
-### Options
-
-| Name        | Default          | Description                                                                   |
-|:------------|:-----------------|:------------------------------------------------------------------------------|
-| -file*      |                  | Relative path to source file with service interface                           |
-| -interface* |                  | Service interface name in source file                                         |
-| -out        | writes to stdout | Relative or absolute path to directory, where you want to see generated files |
-| -package*   |                  | Package path of your service interface source file                            |
-| -debug      | false            | Display some debug information                                                |
-| -grpc       | false            | Render client, server and converters for gRPC protocol                        |
-| -init       | false            | With flag `-grpc` generate stub methods for converters                        |
-
-\* __Required option__
 
 ### Interface declaration rules
 For correct generation, please, follow rules below.
