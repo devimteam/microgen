@@ -16,7 +16,7 @@ microgen is stable, so you can generate without flag `-init` any time your inter
 
 | Name        | Default          | Description                                                                   |
 |:------------|:-----------------|:------------------------------------------------------------------------------|
-| -file*      |                  | Relative path to source file with service interface                           |
+| -file       | service.go       | Relative path to source file with service interface                           |
 | -interface* |                  | Service interface name in source file                                         |
 | -out        | writes to stdout | Relative or absolute path to directory, where you want to see generated files |
 | -package*   |                  | Package path of your service interface source file                            |
