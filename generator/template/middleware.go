@@ -1,8 +1,8 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
+	"github.com/vetcher/godecl/types"
+	. "github.com/vetcher/jennifer/jen"
 )
 
 const (
@@ -10,6 +10,7 @@ const (
 )
 
 type MiddlewareTemplate struct {
+	packageName string
 	PackagePath string
 }
 
@@ -23,12 +24,17 @@ type MiddlewareTemplate struct {
 //
 //		type Middleware func(svc.StringService) svc.StringService
 //
-func (t MiddlewareTemplate) Render(i *parser.Interface) *File {
-	f := NewFile("middleware")
+func (t *MiddlewareTemplate) Render(i *types.Interface) *Statement {
+	t.packageName = "middleware"
+	f := Statement{}
 	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.PackagePath, i.Name)).Qual(t.PackagePath, i.Name)
-	return f
+	return &f
 }
 
 func (MiddlewareTemplate) Path() string {
 	return "./middleware/middleware.go"
+}
+
+func (t *MiddlewareTemplate) PackageName() string {
+	return t.packageName
 }

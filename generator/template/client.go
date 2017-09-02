@@ -1,12 +1,13 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
+	. "github.com/vetcher/jennifer/jen"
 )
 
 type ClientTemplate struct {
+	packageName string
 }
 
 // Renders whole client file.
@@ -40,12 +41,13 @@ type ClientTemplate struct {
 //			return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //		}
 //
-func (ClientTemplate) Render(i *parser.Interface) *File {
-	f := NewFile(i.PackageName)
+func (t *ClientTemplate) Render(i *types.Interface) *Statement {
+	t.packageName = i.Name
+	f := Statement{}
 
 	f.Type().Id("client").Struct(
 		Id("tc").Qual(PackagePathTransportLayer, "Client"),
-	)
+	).Line()
 
 	f.Func().Id("NewClient").Call(Id("tc").Qual(PackagePathTransportLayer, "Client")).Id(i.Name).Block(
 		Return().Op("&").Id("client").Values(
@@ -53,15 +55,19 @@ func (ClientTemplate) Render(i *parser.Interface) *File {
 		),
 	)
 	f.Line()
-	for _, signature := range i.FuncSignatures {
+	for _, signature := range i.Methods {
 		f.Add(clientMethod(signature)).Line()
 	}
 
-	return f
+	return &f
 }
 
 func (ClientTemplate) Path() string {
 	return "./client.go"
+}
+
+func (t *ClientTemplate) PackageName() string {
+	return t.packageName
 }
 
 // Render full client method.
@@ -78,7 +84,7 @@ func (ClientTemplate) Path() string {
 //			return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //		}
 //
-func clientMethod(signature *parser.FuncSignature) *Statement {
+func clientMethod(signature *types.Function) *Statement {
 	return methodDefinition("client", signature).
 		BlockFunc(clientMethodBody(signature))
 }
@@ -95,17 +101,17 @@ func clientMethod(signature *parser.FuncSignature) *Statement {
 //		}
 //		return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //
-func clientMethodBody(signature *parser.FuncSignature) func(g *Group) {
+func clientMethodBody(signature *types.Function) func(g *Group) {
 	errName := getFirstErrorFieldName(signature.Results)
 	return func(g *Group) {
-		g.Id("req").Op(":=").Id(requestStructName(signature)).Values(dictByFuncFields(removeContextIfFirst(signature.Params)))
+		g.Id("req").Op(":=").Id(requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))
 		g.List(Id("resp"), Id(errName)).Op(":=").Id(util.FirstLowerChar("client")).Dot("tc").Dot("Call").Call(Id(firstArgName(signature)), Op("&").Id("req"))
 		g.If(Id(errName).Op("!=").Nil()).Block(
 			Return(),
 		)
 		g.ReturnFunc(func(group *Group) {
 			for _, field := range signature.Results {
-				group.Id("resp").Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(field))
+				group.Id("resp").Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(&field))
 			}
 		})
 	}
@@ -113,9 +119,9 @@ func clientMethodBody(signature *parser.FuncSignature) func(g *Group) {
 
 // Get from function field slice
 // If field with error type not found, it return `err`
-func getFirstErrorFieldName(fields []*parser.FuncField) string {
+func getFirstErrorFieldName(fields []types.Variable) string {
 	for _, field := range fields {
-		if field.Type == "error" {
+		if field.Type.Name == "error" {
 			return field.Name
 		}
 	}

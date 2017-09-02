@@ -3,15 +3,16 @@ package template
 import (
 	"strings"
 
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
+	"github.com/vetcher/godecl/types"
+	. "github.com/vetcher/jennifer/jen"
 )
 
 type GRPCClientTemplate struct {
+	packageName string
 	PackagePath string
 }
 
-func (t GRPCClientTemplate) grpcConverterPackagePath() string {
+func (t *GRPCClientTemplate) grpcConverterPackagePath() string {
 	return t.PackagePath + "/transport/converter/protobuf"
 }
 
@@ -46,15 +47,16 @@ func (t GRPCClientTemplate) grpcConverterPackagePath() string {
 // 			)
 //		}
 //
-func (t GRPCClientTemplate) Render(i *parser.Interface) *File {
-	f := NewFile("transportgrpc")
+func (t *GRPCClientTemplate) Render(i *types.Interface) *Statement {
+	t.packageName = "transportgrpc"
+	f := Statement{}
 
 	f.Func().Id("NewClient").
 		Call(Id("conn").
 			Op("*").Qual(PackagePathGoogleGRPC, "ClientConn")).Qual(t.PackagePath, i.Name).
 		BlockFunc(func(g *Group) {
 			g.Id("endpoints").Op(":=").Index().Qual(PackagePathTransportLayer, "Endpoint").ValuesFunc(func(group *Group) {
-				for _, signature := range i.FuncSignatures {
+				for _, signature := range i.Methods {
 					group.Line().Qual(PackagePathTransportLayer, "NewEndpoint").Call(
 						Line().Lit(signature.Name),
 						Line().Nil(),
@@ -74,9 +76,13 @@ func (t GRPCClientTemplate) Render(i *parser.Interface) *File {
 				Line(),
 			)
 		})
-	return f
+	return &f
 }
 
 func (GRPCClientTemplate) Path() string {
 	return "./transport/grpc/client.go"
+}
+
+func (t *GRPCClientTemplate) PackageName() string {
+	return t.packageName
 }

@@ -1,15 +1,16 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
+	. "github.com/vetcher/jennifer/jen"
 )
 
 type GRPCServerTemplate struct {
+	packageName string
 }
 
-func serverStructName(iface *parser.Interface) string {
+func serverStructName(iface *types.Interface) string {
 	return iface.Name + "Server"
 }
 
@@ -41,12 +42,13 @@ func serverStructName(iface *parser.Interface) string {
 //			return resp.(*stringsvc.CountResponse), nil
 //		}
 //
-func (GRPCServerTemplate) Render(i *parser.Interface) *File {
-	f := NewFile("transportgrpc")
+func (t *GRPCServerTemplate) Render(i *types.Interface) *Statement {
+	t.packageName = "transportgrpc"
+	f := Statement{}
 
 	f.Type().Id("server").Struct(
 		Id("ts").Qual(PackagePathTransportLayer, "Server"),
-	)
+	).Line()
 
 	f.Func().Id("NewServer").
 		Call(Id("endpoints").
@@ -58,16 +60,20 @@ func (GRPCServerTemplate) Render(i *parser.Interface) *File {
 		)
 	f.Line()
 
-	for _, signature := range i.FuncSignatures {
+	for _, signature := range i.Methods {
 		f.Line()
 		f.Add(grpcServerFunc(signature, i))
 	}
 
-	return f
+	return &f
 }
 
 func (GRPCServerTemplate) Path() string {
 	return "./transport/grpc/server.go"
+}
+
+func (t *GRPCServerTemplate) PackageName() string {
+	return t.packageName
 }
 
 // Render service interface method for grpc server.
@@ -80,7 +86,7 @@ func (GRPCServerTemplate) Path() string {
 //			return resp.(*stringsvc.CountResponse), nil
 //		}
 //
-func grpcServerFunc(signature *parser.FuncSignature, i *parser.Interface) *Statement {
+func grpcServerFunc(signature *types.Function, i *types.Interface) *Statement {
 	return Func().
 		Params(Id(util.FirstLowerChar("server")).Op("*").Id("server")).
 		Id(signature.Name).
@@ -97,7 +103,7 @@ func grpcServerFunc(signature *parser.FuncSignature, i *parser.Interface) *State
 //		}
 //		return resp.(*stringsvc.CountResponse), nil
 //
-func grpcServerFuncBody(signature *parser.FuncSignature, i *parser.Interface) func(g *Group) {
+func grpcServerFuncBody(signature *types.Function, i *types.Interface) func(g *Group) {
 	return func(g *Group) {
 		g.List(Id("_"), Id("resp"), Err()).
 			Op(":=").

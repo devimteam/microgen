@@ -3,17 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"go/ast"
-	astparser "go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/devimteam/microgen/generator"
-	"github.com/devimteam/microgen/generator/template"
-	"github.com/devimteam/microgen/parser"
+	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
 )
 
 var (
@@ -36,39 +32,26 @@ func main() {
 		os.Exit(0)
 	}
 
-	currentDir, err := os.Getwd()
+	info, err := util.ParseFile(*flagFileName)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	path := filepath.Join(currentDir, *flagFileName)
-	fset := token.NewFileSet()
-	f, err := astparser.ParseFile(fset, path, nil, astparser.ParseComments)
-	if err != nil {
-		fmt.Printf("error when parse file: %v\n", err)
-		os.Exit(1)
-	}
-	i, err := parser.ParseInterface(f, *flagIfaceName)
-	if err != nil {
-		fmt.Printf("error when parse interface from file : %v\n", err)
-		os.Exit(1)
-	}
-
-	if *flagDebug {
-		ast.Print(fset, f)
-		spew.Dump(i)
+	i := findInterface(info, *flagIfaceName)
+	if i == nil {
+		fmt.Printf("could not find %s interface", *flagIfaceName)
 	}
 
 	var strategy generator.Strategy
 	if *flagOutputDir == "" {
-		strategy = generator.NewWriterStrategy(os.Stdout)
+		strategy = generator.WriterStrategy(os.Stdout)
 	} else {
 		strategy = generator.NewFileStrategy(*flagOutputDir)
 	}
 
 	packagePath := resolvePackagePath(*flagOutputDir)
-	templates := []generator.Template{
+	/*templates := []generator.Template{
 		&template.ExchangeTemplate{},
 		&template.EndpointsTemplate{},
 		&template.ClientTemplate{},
@@ -86,9 +69,10 @@ func main() {
 				&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath},
 			)
 		}
-	}
+	}*/
+	templates, err := generator.Decide(i, true, packagePath)
 
-	gen := generator.NewGenerator(templates, i, strategy)
+	gen := generator.NewForceGenerator(templates, i, strategy)
 	err = gen.Generate()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -115,4 +99,13 @@ func resolvePackagePath(outPath string) string {
 	}
 
 	return absOutPath[len(gopathSrc)+1:]
+}
+
+func findInterface(file *types.File, ifaceName string) *types.Interface {
+	for i := range file.Interfaces {
+		if file.Interfaces[i].Name == ifaceName {
+			return &file.Interfaces[i]
+		}
+	}
+	return nil
 }
