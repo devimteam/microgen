@@ -17,9 +17,9 @@ func Decide(p *types.Interface, force bool, packageName, packagePath string) ([]
 	}
 
 	tmpls := []Template{
-		&template.ExchangeTemplate{PkgName: packageName},
-		&template.EndpointsTemplate{PkgName: packageName},
-		&template.ClientTemplate{PkgName: packageName},
+		&template.ExchangeTemplate{ServicePackageName: packageName},
+		&template.EndpointsTemplate{ServicePackageName: packageName},
+		&template.ClientTemplate{ServicePackageName: packageName},
 	}
 
 	for _, tag := range genTags {
@@ -42,6 +42,8 @@ func tagToTemplate(tag string, methods []*types.Function, packagePath string, fo
 		return []Template{
 			&template.GRPCClientTemplate{PackagePath: packagePath},
 			&template.GRPCServerTemplate{},
+			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath},
+			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, Methods: methods},
 		}
 	case "grpc-client":
 		return []Template{&template.GRPCClientTemplate{PackagePath: packagePath}}

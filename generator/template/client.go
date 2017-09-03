@@ -7,7 +7,7 @@ import (
 )
 
 type ClientTemplate struct {
-	PkgName string
+	ServicePackageName string
 }
 
 // Renders whole client file.
@@ -46,13 +46,13 @@ func (t *ClientTemplate) Render(i *types.Interface) *Statement {
 
 	f.Type().Id("client").Struct(
 		Id("tc").Qual(PackagePathTransportLayer, "Client"),
-	).Line()
+	).Line().Line()
 
 	f.Func().Id("NewClient").Call(Id("tc").Qual(PackagePathTransportLayer, "Client")).Id(i.Name).Block(
 		Return().Op("&").Id("client").Values(
 			Id("tc"),
 		),
-	)
+	).Line()
 	f.Line()
 	for _, signature := range i.Methods {
 		f.Add(clientMethod(signature)).Line()
@@ -66,7 +66,7 @@ func (ClientTemplate) Path() string {
 }
 
 func (t *ClientTemplate) PackageName() string {
-	return t.PkgName
+	return t.ServicePackageName
 }
 
 // Render full client method.

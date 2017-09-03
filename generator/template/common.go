@@ -125,6 +125,6 @@ func methodDefinition(obj string, signature *types.Function) *Statement {
 }
 
 // TODO: Resolve this hardcoded path
-func protobufPath(iface *types.Interface) string {
-	return "gitlab.devim.team/protobuf/" + iface.Name
+func protobufPath(svcName string) string {
+	return "gitlab.devim.team/protobuf/" + svcName
 }

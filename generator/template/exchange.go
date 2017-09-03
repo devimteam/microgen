@@ -6,7 +6,7 @@ import (
 )
 
 type ExchangeTemplate struct {
-	PkgName string
+	ServicePackageName string
 }
 
 func requestStructName(signature *types.Function) string {
@@ -50,7 +50,7 @@ func (ExchangeTemplate) Path() string {
 }
 
 func (t *ExchangeTemplate) PackageName() string {
-	return t.PkgName
+	return t.ServicePackageName
 }
 
 // Renders exchanges that represents requests and responses.

@@ -7,7 +7,7 @@ import (
 )
 
 type EndpointsTemplate struct {
-	PkgName string
+	ServicePackageName string
 }
 
 func endpointStructName(str string) string {
@@ -77,7 +77,7 @@ func (EndpointsTemplate) Path() string {
 }
 
 func (t *EndpointsTemplate) PackageName() string {
-	return t.PkgName
+	return t.ServicePackageName
 }
 
 // Render full endpoints method.

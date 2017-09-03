@@ -16,8 +16,9 @@ var (
 )
 
 type GRPCEndpointConverterTemplate struct {
-	packageName string
-	PackagePath string
+	packageName        string
+	PackagePath        string
+	ServicePackageName string
 }
 
 // Renders converter file.
@@ -81,11 +82,11 @@ func (t *GRPCEndpointConverterTemplate) Render(i *types.Interface) *Statement {
 	for _, signature := range i.Methods {
 		f.Var().Id(converterStructName(signature)).Op("=").Op("&").Qual(PackagePathTransportLayerGRPC, "EndpointConverter").
 			ValuesFunc(func(g *Group) {
-				g.Add(t.encodeRequest(signature, i))
-				g.Add(t.encodeResponse(signature, i))
-				g.Add(t.decodeRequest(signature, i))
-				g.Add(t.decodeResponse(signature, i))
-				g.Add(t.replyType(signature, i))
+				g.Add(t.encodeRequest(signature))
+				g.Add(t.encodeResponse(signature))
+				g.Add(t.decodeRequest(signature))
+				g.Add(t.decodeResponse(signature))
+				g.Add(t.replyType(signature))
 				g.Line()
 			})
 		f.Line()
@@ -217,7 +218,7 @@ func (t *GRPCEndpointConverterTemplate) convertCustomType(structName, converterN
 //			}, nil
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) encodeRequest(signature *types.Function, i *types.Interface) *Statement {
+func (t *GRPCEndpointConverterTemplate) encodeRequest(signature *types.Function) *Statement {
 	methodParams := removeContextIfFirst(signature.Args)
 	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
@@ -229,7 +230,7 @@ func (t *GRPCEndpointConverterTemplate) encodeRequest(signature *types.Function,
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(protobufPath(i), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(protobufPath(t.ServicePackageName), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodParams {
 					req, _ := golangTypeToProto("req", &field)
 					dict[structFieldName(&field)] = Line().Add(req)
@@ -253,7 +254,7 @@ func (t *GRPCEndpointConverterTemplate) encodeRequest(signature *types.Function,
 //			}, nil
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) encodeResponse(signature *types.Function, i *types.Interface) *Statement {
+func (t *GRPCEndpointConverterTemplate) encodeResponse(signature *types.Function) *Statement {
 	methodResults := removeContextIfFirst(signature.Results)
 	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
@@ -265,7 +266,7 @@ func (t *GRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(protobufPath(i), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(protobufPath(t.ServicePackageName), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodResults {
 					resp, _ := golangTypeToProto("resp", &field)
 					dict[structFieldName(&field)] = Line().Add(resp)
@@ -285,12 +286,12 @@ func (t *GRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 //			}, nil
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) decodeRequest(signature *types.Function, i *types.Interface) *Statement {
+func (t *GRPCEndpointConverterTemplate) decodeRequest(signature *types.Function) *Statement {
 	methodParams := removeContextIfFirst(signature.Args)
 	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
-				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(i), requestStructName(signature)))
+				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(t.ServicePackageName), requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := protoTypeToGolang("", &field); !ok {
 						group.Add(t.convertCustomType("req", protoToType(&field.Type), &field))
@@ -321,12 +322,12 @@ func (t *GRPCEndpointConverterTemplate) decodeRequest(signature *types.Function,
 //			}, nil
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) decodeResponse(signature *types.Function, i *types.Interface) *Statement {
+func (t *GRPCEndpointConverterTemplate) decodeResponse(signature *types.Function) *Statement {
 	methodResults := removeContextIfFirst(signature.Results)
 	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
-				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(i), responseStructName(signature)))
+				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(t.ServicePackageName), responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := protoTypeToGolang("", &field); !ok {
 						group.Add(t.convertCustomType("resp", protoToType(&field.Type), &field))
@@ -345,6 +346,6 @@ func (t *GRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 
 // Renders reply type argument
 // 		stringsvc.CountResponse{}
-func (t *GRPCEndpointConverterTemplate) replyType(signature *types.Function, i *types.Interface) *Statement {
-	return Line().Qual(protobufPath(i), responseStructName(signature)).Values()
+func (t *GRPCEndpointConverterTemplate) replyType(signature *types.Function) *Statement {
+	return Line().Qual(protobufPath(t.ServicePackageName), responseStructName(signature)).Values()
 }
