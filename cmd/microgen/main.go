@@ -70,7 +70,7 @@ func main() {
 			)
 		}
 	}*/
-	templates, err := generator.Decide(i, true, packagePath)
+	templates, err := generator.Decide(i, true, info.Name, packagePath)
 
 	gen := generator.NewForceGenerator(templates, i, strategy)
 	err = gen.Generate()

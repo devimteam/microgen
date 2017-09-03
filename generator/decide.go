@@ -1,15 +1,14 @@
 package generator
 
 import (
-	"strings"
-
 	"fmt"
+	"strings"
 
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/vetcher/godecl/types"
 )
 
-func Decide(p *types.Interface, force bool, packagePath string) ([]Template, error) {
+func Decide(p *types.Interface, force bool, packageName, packagePath string) ([]Template, error) {
 	var genTags []string
 	for _, comment := range p.Docs {
 		if strings.HasPrefix(comment, "//@") {
@@ -17,7 +16,11 @@ func Decide(p *types.Interface, force bool, packagePath string) ([]Template, err
 		}
 	}
 
-	var tmpls []Template
+	tmpls := []Template{
+		&template.ExchangeTemplate{PkgName: packageName},
+		&template.EndpointsTemplate{PkgName: packageName},
+		&template.ClientTemplate{PkgName: packageName},
+	}
 
 	for _, tag := range genTags {
 		t := tagToTemplate(tag, p.Methods, packagePath, force)

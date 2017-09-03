@@ -6,7 +6,7 @@ import (
 )
 
 type ExchangeTemplate struct {
-	packageName string
+	PkgName string
 }
 
 func requestStructName(signature *types.Function) string {
@@ -35,12 +35,11 @@ func responseStructName(signature *types.Function) string {
 //  }
 //
 func (t *ExchangeTemplate) Render(i *types.Interface) *Statement {
-	t.packageName = i.Name
 	f := Statement{}
 
 	for _, signature := range i.Methods {
-		f.Add(exchange(requestStructName(signature), signature.Args))
-		f.Add(exchange(responseStructName(signature), signature.Results))
+		f.Add(exchange(requestStructName(signature), signature.Args)).Line()
+		f.Add(exchange(responseStructName(signature), signature.Results)).Line()
 	}
 
 	return &f
@@ -51,7 +50,7 @@ func (ExchangeTemplate) Path() string {
 }
 
 func (t *ExchangeTemplate) PackageName() string {
-	return t.packageName
+	return t.PkgName
 }
 
 // Renders exchanges that represents requests and responses.

@@ -51,17 +51,17 @@ func TestTemplates(t *testing.T) {
 	}{
 		{
 			TestName:    "Endpoints",
-			Template:    &template.EndpointsTemplate{},
+			Template:    &template.EndpointsTemplate{PkgName: "stringsvc"},
 			OutFilePath: "endpoints.go.txt",
 		},
 		{
 			TestName:    "Exchange",
-			Template:    &template.ExchangeTemplate{},
+			Template:    &template.ExchangeTemplate{PkgName: "stringsvc"},
 			OutFilePath: "exchange.go.txt",
 		},
 		{
 			TestName:    "Client",
-			Template:    &template.ClientTemplate{},
+			Template:    &template.ClientTemplate{PkgName: "stringsvc"},
 			OutFilePath: "client.go.txt",
 		},
 		{

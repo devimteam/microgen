@@ -7,7 +7,7 @@ import (
 )
 
 type EndpointsTemplate struct {
-	packageName string
+	PkgName string
 }
 
 func endpointStructName(str string) string {
@@ -53,7 +53,6 @@ func endpointStructName(str string) string {
 //		}
 //
 func (t *EndpointsTemplate) Render(i *types.Interface) *Statement {
-	t.packageName = i.Name
 	f := Statement{}
 
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {
@@ -78,7 +77,7 @@ func (EndpointsTemplate) Path() string {
 }
 
 func (t *EndpointsTemplate) PackageName() string {
-	return t.packageName
+	return t.PkgName
 }
 
 // Render full endpoints method.

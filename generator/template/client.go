@@ -7,7 +7,7 @@ import (
 )
 
 type ClientTemplate struct {
-	packageName string
+	PkgName string
 }
 
 // Renders whole client file.
@@ -42,7 +42,6 @@ type ClientTemplate struct {
 //		}
 //
 func (t *ClientTemplate) Render(i *types.Interface) *Statement {
-	t.packageName = i.Name
 	f := Statement{}
 
 	f.Type().Id("client").Struct(
@@ -67,7 +66,7 @@ func (ClientTemplate) Path() string {
 }
 
 func (t *ClientTemplate) PackageName() string {
-	return t.packageName
+	return t.PkgName
 }
 
 // Render full client method.
