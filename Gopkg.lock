@@ -11,7 +11,7 @@
   branch = "master"
   name = "github.com/vetcher/godecl"
   packages = [".","types"]
-  revision = "cb19c702fcbcc2bae702fa93e87d8e506ae71125"
+  revision = "9ed0a2301877da54a0bf62b50951ecfc69a6a90e"
 
 [[projects]]
   branch = "master"

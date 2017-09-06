@@ -68,6 +68,9 @@ func (t *EndpointsTemplate) Render(i *types.Interface) *Statement {
 	for _, signature := range i.Methods {
 		f.Add(createEndpoint(signature, i)).Line()
 	}
+	// Render all endpoints init as single method
+	/*f.Line()
+	f.Add(allEndpoints(i))*/
 
 	return &f
 }
@@ -190,4 +193,35 @@ func createEndpoint(signature *types.Function, svcInterface *types.Interface) *S
 	return Func().
 		Id(endpointStructName(signature.Name)).Params(Id("svc").Id(svcInterface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
 		Block(createEndpointBody(signature))
+}
+
+// Render all endpoints init as single method
+func allEndpoints(iface *types.Interface) *Statement {
+	s := &Statement{}
+	s.Func().Id(endpointStructName(iface.Name)+"s").
+		Params(
+			Id(util.ToLowerFirst(iface.Name)).Id(iface.Name),
+			Id(endpointOptsName(iface)).Op("...").Qual(PackagePathTransportLayer, "EndpointOption"),
+		).
+		Params(
+			Index().Qual(PackagePathTransportLayer, "Endpoint"),
+		).Block(
+		Return().Index().Qual(PackagePathTransportLayer, "Endpoint").ValuesFunc(
+			func(g *Group) {
+				for _, method := range iface.Methods {
+					g.Line().Qual(PackagePathTransportLayer, "NewEndpoint").Call(
+						Line().Lit(method.Name),
+						Line().Id(endpointStructName(method.Name)).Call(Id(util.ToLowerFirst(iface.Name))),
+						Line().Qual(PackagePathTransportLayer, "WithConverter").Call(),
+						Line().Id(endpointOptsName(iface)).Op("..."),
+					)
+				}
+			},
+		),
+	)
+	return s
+}
+
+func endpointOptsName(i *types.Interface) string {
+	return util.ToLowerFirst(i.Name) + "EndpointOpts"
 }
