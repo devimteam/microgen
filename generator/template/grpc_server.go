@@ -1,6 +1,8 @@
 package template
 
 import (
+	"path/filepath"
+
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
@@ -9,10 +11,19 @@ import (
 type GRPCServerTemplate struct {
 	packageName        string
 	ServicePackageName string
+	ServicePath        string
 }
 
 func serverStructName(iface *types.Interface) string {
 	return iface.Name + "Server"
+}
+
+func privateServerStructName(iface *types.Interface) string {
+	return util.ToLowerFirst(iface.Name) + "Server"
+}
+
+func pathToConverter(servicePath string) string {
+	return filepath.Join(servicePath, "transport/converter/protobuf")
 }
 
 // Render whole grpc server file.
@@ -47,16 +58,29 @@ func (t *GRPCServerTemplate) Render(i *types.Interface) *Statement {
 	t.packageName = "transportgrpc"
 	f := Statement{}
 
-	f.Type().Id("server").Struct(
-		Id("ts").Qual(PackagePathTransportLayer, "Server"),
-	).Line()
+	f.Type().Id(privateServerStructName(i)).StructFunc(func(g *Group) {
+		for _, method := range i.Methods {
+			g.Id(util.ToLowerFirst(method.Name)).Qual(PackagePathGoKitTransportGRPC, "Handler")
+		}
+	}).Line()
 
-	f.Func().Id("NewServer").
-		Call(Id("endpoints").
-			Index().Qual(PackagePathTransportLayer, "Endpoint")).Qual(protobufPath(t.ServicePackageName), serverStructName(i)).
+	f.Func().Id("NewGRPCServer").
+		Params(
+			Id("endpoints").Op("*").Qual(t.ServicePath, "Endpoints"),
+		).Params(
+		Qual(protobufPath(t.ServicePackageName), serverStructName(i)),
+	).
 		Block(
-			Return().Op("&").Id("server").Values(
-				Qual(PackagePathTransportLayerGRPC, "NewServer").Call(Id("endpoints")),
+			Return().Op("&").Id(privateServerStructName(i)).Values(DictFunc(func(g Dict) {
+				for _, m := range i.Methods {
+					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
+						Call(
+							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
+							Line().Qual(pathToConverter(t.ServicePath), decodeRequestName(m)),
+							Line().Qual(pathToConverter(t.ServicePath), encodeResponseName(m)),
+						)
+				}
+			}),
 			),
 		)
 	f.Line()
@@ -89,7 +113,7 @@ func (t *GRPCServerTemplate) PackageName() string {
 //
 func (t *GRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.Interface) *Statement {
 	return Func().
-		Params(Id(util.FirstLowerChar("server")).Op("*").Id("server")).
+		Params(Id(util.FirstLowerChar(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
 		Id(signature.Name).
 		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Op("*").Qual(protobufPath(t.ServicePackageName), requestStructName(signature))).
 		Params(Op("*").Qual(protobufPath(t.ServicePackageName), responseStructName(signature)), Error()).
@@ -108,7 +132,7 @@ func (t *GRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 	return func(g *Group) {
 		g.List(Id("_"), Id("resp"), Err()).
 			Op(":=").
-			Id(util.FirstLowerChar("server")).Dot("ts").Dot("Serve").Call(Id("ctx"), Id("req"))
+			Id(util.FirstLowerChar(privateServerStructName(i))).Dot(util.ToLowerFirst(signature.Name)).Dot("ServeGRPC").Call(Id("ctx"), Id("req"))
 
 		g.If(Err().Op("!=").Nil()).Block(
 			Return().List(Nil(), Err()),

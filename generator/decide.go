@@ -41,7 +41,7 @@ func tagToTemplate(tag string, methods []*types.Function, packagePath, servicePa
 	case "grpc":
 		return []Template{
 			&template.GRPCClientTemplate{PackagePath: packagePath},
-			&template.GRPCServerTemplate{ServicePackageName: servicePackageName},
+			&template.GRPCServerTemplate{ServicePackageName: servicePackageName, ServicePath: packagePath},
 			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
 			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName, Methods: methods},
 		}
