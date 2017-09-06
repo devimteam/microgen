@@ -4,7 +4,6 @@ import (
 	"fmt"
 	astparser "go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 
 	"github.com/vetcher/godecl"
@@ -12,12 +11,10 @@ import (
 )
 
 func ParseFile(filename string) (*types.File, error) {
-	currentDir, err := os.Getwd()
+	path, err := filepath.Abs(filename)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can not filepath.Abs: %v", err)
 	}
-
-	path := filepath.Join(currentDir, filename)
 	fset := token.NewFileSet()
 	tree, err := astparser.ParseFile(fset, path, nil, astparser.ParseComments)
 	if err != nil {
