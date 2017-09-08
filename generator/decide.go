@@ -8,7 +8,7 @@ import (
 	"github.com/vetcher/godecl/types"
 )
 
-func Decide(p *types.Interface, force bool, packageName, packagePath string) ([]Template, error) {
+func Decide(p *types.Interface, init bool, packageName, packagePath string) ([]Template, error) {
 	var genTags []string
 	for _, comment := range p.Docs {
 		if strings.HasPrefix(comment, "//@") {
@@ -22,7 +22,7 @@ func Decide(p *types.Interface, force bool, packageName, packagePath string) ([]
 	}
 
 	for _, tag := range genTags {
-		t := tagToTemplate(tag, p.Methods, packagePath, packageName, force)
+		t := tagToTemplate(tag, packagePath, packageName, init)
 		if t == nil {
 			return nil, fmt.Errorf("unexpected tag %s", tag)
 		}
@@ -31,36 +31,44 @@ func Decide(p *types.Interface, force bool, packageName, packagePath string) ([]
 	return tmpls, nil
 }
 
-func tagToTemplate(tag string, methods []*types.Function, packagePath, servicePackageName string, force bool) []Template {
+func tagToTemplate(tag string, packagePath, servicePackageName string, init bool) (tmpls []Template) {
 	switch tag {
 	case "middleware":
-		return []Template{&template.MiddlewareTemplate{PackagePath: packagePath}}
+		return append(tmpls, &template.MiddlewareTemplate{PackagePath: packagePath})
 	case "logging":
-		return []Template{&template.LoggingTemplate{PackagePath: packagePath, IfaceFunctions: methods, Overwrite: force}}
+		return []Template{&template.LoggingTemplate{PackagePath: packagePath}}
 	case "grpc":
-		return []Template{
+		if init {
+			tmpls = append(tmpls, &template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName})
+		}
+		return append(tmpls,
 			&template.GRPCClientTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
 			&template.GRPCServerTemplate{ServicePackageName: servicePackageName, PackagePath: packagePath},
 			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
-			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName, Methods: methods},
-		}
+		)
 	case "grpc-client":
-		return []Template{
+		if init {
+			tmpls = append(tmpls, &template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName})
+		}
+		return append(tmpls,
 			&template.GRPCClientTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
 			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
-			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName, Methods: methods},
-		}
+		)
 	case "grpc-server":
-		return []Template{
+		if init {
+			tmpls = append(tmpls, &template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName})
+		}
+		return append(tmpls,
 			&template.GRPCServerTemplate{ServicePackageName: servicePackageName, PackagePath: packagePath},
 			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
-			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName, Methods: methods},
-		}
+		)
 	case "grpc-conv":
-		return []Template{
-			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
-			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName, Methods: methods},
+		if init {
+			tmpls = append(tmpls, &template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName})
 		}
+		return append(tmpls,
+			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
+		)
 	}
 	return nil
 }

@@ -16,10 +16,8 @@ var (
 	flagFileName  = flag.String("file", "service.go", "Name of file where described interface definition")
 	flagIfaceName = flag.String("interface", "", "Interface name")
 	flagOutputDir = flag.String("out", "", "Output directory")
-	flagGRPC      = flag.Bool("grpc", false, "Render gRPC transport")
-	flagDebug     = flag.Bool("debug", false, "Debug mode")
 	flagHelp      = flag.Bool("help", false, "Show help")
-	flagInit      = flag.Bool("init", false, "With flag `-grpc` generate stub methods for converters")
+	flagInit      = flag.Bool("init", false, "Generate stub methods for converters")
 )
 
 func init() {
@@ -57,9 +55,9 @@ func main() {
 	}
 
 	packagePath := resolvePackagePath(*flagOutputDir)
-	templates, err := generator.Decide(i, true, info.Name, packagePath)
+	templates, err := generator.Decide(i, *flagInit, info.Name, packagePath)
 
-	gen := generator.NewForceGenerator(templates, i, strategy)
+	gen := generator.NewGenerator(templates, i, strategy)
 	err = gen.Generate()
 	if err != nil {
 		fmt.Println(err.Error())

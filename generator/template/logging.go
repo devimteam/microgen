@@ -13,10 +13,8 @@ const (
 )
 
 type LoggingTemplate struct {
-	packageName    string
-	PackagePath    string
-	IfaceFunctions []*types.Function
-	Overwrite      bool
+	packageName string
+	PackagePath string
 }
 
 // Render all logging.go file.
@@ -60,12 +58,6 @@ type LoggingTemplate struct {
 //		}
 //
 func (t *LoggingTemplate) Render(i *types.Interface) *Statement {
-	if !t.Overwrite {
-		fileInfo, err := util.ParseFile(t.Path())
-		if err == nil {
-			t.IfaceFunctions = decideMehodsToGenerate(fileInfo.Methods, t.IfaceFunctions)
-		}
-	}
 	t.packageName = "middleware"
 	f := Statement{}
 
@@ -81,9 +73,9 @@ func (t *LoggingTemplate) Render(i *types.Interface) *Statement {
 	)
 
 	// Render functions
-	for _, signature := range t.IfaceFunctions {
+	for _, signature := range i.Methods {
 		f.Line()
-		f.Add(loggingFunc(signature))
+		f.Add(loggingFunc(signature)).Line()
 	}
 
 	return &f

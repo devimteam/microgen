@@ -13,7 +13,6 @@ const (
 	PackagePathTime               = "time"
 	PackagePathGoogleGRPC         = "google.golang.org/grpc"
 	PackagePathNetContext         = "golang.org/x/net/context"
-	PackagePathProtoTimestamp     = "github.com/golang/protobuf/ptypes/timestamp"
 	PackagePathGoKitTransportGRPC = "github.com/go-kit/kit/transport/grpc"
 )
 

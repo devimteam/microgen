@@ -26,7 +26,7 @@ type forceGenerator struct {
 	strategy  Strategy
 }
 
-func NewForceGenerator(ts []Template, iface *types.Interface, strategy Strategy) Generator {
+func NewGenerator(ts []Template, iface *types.Interface, strategy Strategy) Generator {
 	return &forceGenerator{
 		templates: ts,
 		iface:     iface,

@@ -29,7 +29,6 @@ func specialTypeConverter(p types.Type) *Statement {
 
 type StubGRPCTypeConverterTemplate struct {
 	PackagePath               string
-	Methods                   []*types.Function
 	ServicePackageName        string
 	alreadyRenderedConverters []string
 	packageName               string
@@ -49,18 +48,10 @@ type StubGRPCTypeConverterTemplate struct {
 //		}
 //
 func (t *StubGRPCTypeConverterTemplate) Render(i *types.Interface) *Statement {
-	fileInfo, err := util.ParseFile(t.Path())
-	if err != nil {
-		t.alreadyRenderedConverters = []string{}
-	} else {
-		for _, fn := range fileInfo.Functions {
-			t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, fn.Name)
-		}
-	}
 	t.packageName = "protobuf"
 	f := Statement{}
 
-	for _, signature := range t.Methods {
+	for _, signature := range i.Methods {
 		args := append(removeContextIfFirst(signature.Args), removeContextIfFirst(signature.Results)...)
 		for _, field := range args {
 			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(&field.Type), t.alreadyRenderedConverters) {

@@ -64,18 +64,13 @@ func TestTemplates(t *testing.T) {
 			OutFilePath: "exchange.go.txt",
 		},
 		{
-			TestName:    "Client",
-			Template:    &template.ClientTemplate{ServicePackageName: "stringsvc"},
-			OutFilePath: "client.go.txt",
-		},
-		{
 			TestName:    "Middleware",
 			Template:    &template.MiddlewareTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
 			OutFilePath: "middleware.go.txt",
 		},
 		{
 			TestName:    "Logging",
-			Template:    &template.LoggingTemplate{PackagePath: "github.com/devimteam/microgen/test/svc", IfaceFunctions: fs.Methods, Overwrite: true},
+			Template:    &template.LoggingTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
 			OutFilePath: "logging.go.txt",
 		},
 		{
@@ -95,7 +90,7 @@ func TestTemplates(t *testing.T) {
 		},
 		{
 			TestName:    "GRPC Type Converter",
-			Template:    &template.StubGRPCTypeConverterTemplate{PackagePath: "github.com/devimteam/microgen/test/svc", Methods: fs.Methods, ServicePackageName: "stringsvc"},
+			Template:    &template.StubGRPCTypeConverterTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
 			OutFilePath: "grpc_type.go.txt",
 		},
 	}
@@ -107,7 +102,7 @@ func TestTemplates(t *testing.T) {
 			}
 
 			buf := bytes.NewBuffer([]byte{})
-			gen := generator.NewForceGenerator([]generator.Template{test.Template}, fs, generator.WriterStrategy(buf))
+			gen := generator.NewGenerator([]generator.Template{test.Template}, fs, generator.WriterStrategy(buf))
 			err = gen.Generate()
 			if err != nil {
 				t.Fatalf("unable to generate: %v", err)
