@@ -27,6 +27,34 @@ func specialTypeConverter(p types.Type) *Statement {
 	return nil
 }
 
+func converterToProtoBody(field *types.Variable) Code {
+	s := &Statement{}
+	switch typeToProto(&field.Type) {
+	case "ErrorToProto":
+		s.If().Id(util.ToLowerFirst(field.Name)).Op("==").Nil().Block(
+			Return().List(Lit(""), Nil()),
+		).Line()
+		s.Return().List(Id(util.ToLowerFirst(field.Name)).Dot("Error").Call(), Nil())
+	default:
+		s.Panic(Lit("method not provided"))
+	}
+	return s
+}
+
+func converterProtoToBody(field *types.Variable) Code {
+	s := &Statement{}
+	switch protoToType(&field.Type) {
+	case "ProtoToError":
+		s.If().Id("proto" + util.ToUpperFirst(field.Name)).Op("==").Lit("").Block(
+			Return().List(Nil(), Nil()),
+		).Line()
+		s.Return().List(Qual("errors", "New").Call(Id("proto"+util.ToUpperFirst(field.Name))), Nil())
+	default:
+		s.Panic(Lit("method not provided"))
+	}
+	return s
+}
+
 type StubGRPCTypeConverterTemplate struct {
 	PackagePath               string
 	ServicePackageName        string
@@ -84,9 +112,7 @@ func (t *StubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variab
 	return Func().Id(typeToProto(&field.Type)).
 		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(&field.Type))).
 		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(field)), Id("conv"+util.ToUpperFirst(field.Name)+"Err").Error()).
-		Block(
-			Panic(Lit("method not provided")),
-		)
+		Block(converterToProtoBody(field))
 }
 
 // Render stub method for protobuf to golang converter.
@@ -99,9 +125,7 @@ func (t *StubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variab
 	return Func().Id(protoToType(&field.Type)).
 		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(field))).
 		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(&field.Type)), Id("conv"+util.ToUpperFirst(field.Name)+"Err").Error()).
-		Block(
-			Panic(Lit("method not provided")),
-		)
+		Block(converterProtoToBody(field))
 }
 
 // Render protobuf field type for given func field.
