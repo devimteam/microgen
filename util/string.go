@@ -6,6 +6,9 @@ import (
 )
 
 func ToUpperFirst(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
 	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
@@ -19,10 +22,16 @@ func ToSnakeCase(s string) string {
 }
 
 func ToLowerFirst(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
 	return strings.ToLower(string(s[0])) + s[1:]
 }
 
 func FirstLowerChar(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
 	return strings.ToLower(string(s[0]))
 }
 

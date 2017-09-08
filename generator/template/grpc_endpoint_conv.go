@@ -107,7 +107,7 @@ func (t *GRPCEndpointConverterTemplate) Render(i *types.Interface) *Statement {
 }
 
 // Returns FieldTypeToProto.
-func typeToProto(field *types.Type) string {
+func typeToProto(field *types.Type, depth int) string {
 	methodName := util.ToUpperFirst(field.Name)
 	if field.IsPointer {
 		methodName += "Ptr"
@@ -117,15 +117,20 @@ func typeToProto(field *types.Type) string {
 	}
 	if field.IsMap {
 		methodName += "Map"
+		m := field.Map()
+		methodName += typeToProto(&m.Key, depth+1) + typeToProto(&m.Value, depth+1)
 	}
 	if field.IsInterface {
 		methodName += "Interface"
 	}
-	return methodName + "ToProto"
+	if depth == 0 {
+		methodName += "ToProto"
+	}
+	return methodName
 }
 
 // Returns ProtoToFieldType.
-func protoToType(field *types.Type) string {
+func protoToType(field *types.Type, depth int) string {
 	methodName := "ProtoTo" + util.ToUpperFirst(field.Name)
 	if field.IsPointer {
 		methodName += "Ptr"
@@ -135,6 +140,8 @@ func protoToType(field *types.Type) string {
 	}
 	if field.IsMap {
 		methodName += "Map"
+		m := field.Map()
+		methodName += protoToType(&m.Key, depth+1) + protoToType(&m.Value, depth+1)
 	}
 	if field.IsInterface {
 		methodName += "Interface"
@@ -237,7 +244,7 @@ func (t *GRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.PackagePath, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := golangTypeToProto("", &field); !ok {
-						group.Add(t.convertCustomType("req", typeToProto(&field.Type), &field))
+						group.Add(t.convertCustomType("req", typeToProto(&field.Type, 0), &field))
 					}
 				}
 			}
@@ -273,7 +280,7 @@ func (t *GRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.PackagePath, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := golangTypeToProto("", &field); !ok {
-						group.Add(t.convertCustomType("resp", typeToProto(&field.Type), &field))
+						group.Add(t.convertCustomType("resp", typeToProto(&field.Type, 0), &field))
 					}
 				}
 			}
@@ -305,7 +312,7 @@ func (t *GRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(t.ServicePackageName), requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := protoTypeToGolang("", &field); !ok {
-						group.Add(t.convertCustomType("req", protoToType(&field.Type), &field))
+						group.Add(t.convertCustomType("req", protoToType(&field.Type, 0), &field))
 					}
 				}
 			}
@@ -341,7 +348,7 @@ func (t *GRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(t.ServicePackageName), responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := protoTypeToGolang("", &field); !ok {
-						group.Add(t.convertCustomType("resp", protoToType(&field.Type), &field))
+						group.Add(t.convertCustomType("resp", protoToType(&field.Type, 0), &field))
 					}
 				}
 			}

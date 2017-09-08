@@ -63,7 +63,6 @@ func funcDefinitionParams(fields []types.Variable) *Statement {
 //
 func fieldType(field *types.Type) *Statement {
 	c := &Statement{}
-
 	if field.IsArray {
 		c.Index()
 	}
@@ -73,13 +72,15 @@ func fieldType(field *types.Type) *Statement {
 	}
 	if field.IsMap {
 		m := field.Map()
-		c.Map(fieldType(&m.Key)).Add(fieldType(&m.Value))
+		return c.Map(fieldType(&m.Key)).Add(fieldType(&m.Value))
+	}
+	if field.IsInterface {
+		c.Interface()
+	}
+	if field.Import != nil {
+		c.Qual(field.Import.Package, field.Name)
 	} else {
-		if field.Import != nil {
-			c.Qual(field.Import.Package, field.Name)
-		} else {
-			c.Id(field.Name)
-		}
+		c.Id(field.Name)
 	}
 
 	return c
