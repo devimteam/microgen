@@ -68,9 +68,6 @@ func (t *EndpointsTemplate) Render(i *types.Interface) *Statement {
 	for _, signature := range i.Methods {
 		f.Add(createEndpoint(signature, i)).Line().Line()
 	}
-	// Render all endpoints init as single method
-	/*f.Line()
-	f.Add(allEndpoints(i))*/
 
 	return &f
 }
