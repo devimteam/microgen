@@ -19,7 +19,6 @@ func Decide(p *types.Interface, force bool, packageName, packagePath string) ([]
 	tmpls := []Template{
 		&template.ExchangeTemplate{ServicePackageName: packageName},
 		&template.EndpointsTemplate{ServicePackageName: packageName},
-		&template.ClientTemplate{ServicePackageName: packageName},
 	}
 
 	for _, tag := range genTags {
@@ -40,27 +39,27 @@ func tagToTemplate(tag string, methods []*types.Function, packagePath, servicePa
 		return []Template{&template.LoggingTemplate{PackagePath: packagePath, IfaceFunctions: methods, Overwrite: force}}
 	case "grpc":
 		return []Template{
-			&template.GRPCClientTemplate{PackagePath: packagePath},
-			&template.GRPCServerTemplate{ServicePackageName: servicePackageName, ServicePath: packagePath},
+			&template.GRPCClientTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
+			&template.GRPCServerTemplate{ServicePackageName: servicePackageName, PackagePath: packagePath},
 			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
 			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName, Methods: methods},
 		}
 	case "grpc-client":
 		return []Template{
-			&template.GRPCClientTemplate{PackagePath: packagePath},
+			&template.GRPCClientTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
 			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
 			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName, Methods: methods},
 		}
 	case "grpc-server":
 		return []Template{
-			&template.GRPCServerTemplate{},
+			&template.GRPCServerTemplate{ServicePackageName: servicePackageName, PackagePath: packagePath},
 			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
 			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName, Methods: methods},
 		}
 	case "grpc-conv":
 		return []Template{
-			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath},
-			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, Methods: methods},
+			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
+			&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName, Methods: methods},
 		}
 	}
 	return nil

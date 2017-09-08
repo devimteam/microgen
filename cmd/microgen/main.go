@@ -41,6 +41,12 @@ func main() {
 	i := findInterface(info, *flagIfaceName)
 	if i == nil {
 		fmt.Printf("could not find %s interface", *flagIfaceName)
+		os.Exit(1)
+	}
+
+	if err := generator.ValidateInterface(i); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 
 	var strategy generator.Strategy
@@ -51,31 +57,14 @@ func main() {
 	}
 
 	packagePath := resolvePackagePath(*flagOutputDir)
-	/*templates := []generator.Template{
-		&template.ExchangeTemplate{},
-		&template.EndpointsTemplate{},
-		&template.ClientTemplate{},
-		&template.MiddlewareTemplate{PackagePath: packagePath},
-		&template.LoggingTemplate{PackagePath: packagePath},
-	}
-	if *flagGRPC {
-		templates = append(templates,
-			&template.GRPCServerTemplate{},
-			&template.GRPCClientTemplate{PackagePath: packagePath},
-			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath},
-		)
-		if *flagInit {
-			templates = append(templates,
-				&template.StubGRPCTypeConverterTemplate{PackagePath: packagePath},
-			)
-		}
-	}*/
 	templates, err := generator.Decide(i, true, info.Name, packagePath)
 
 	gen := generator.NewForceGenerator(templates, i, strategy)
 	err = gen.Generate()
 	if err != nil {
 		fmt.Println(err.Error())
+	} else {
+		fmt.Println("All files successfully generated")
 	}
 }
 
