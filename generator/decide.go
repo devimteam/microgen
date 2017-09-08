@@ -12,7 +12,7 @@ func Decide(p *types.Interface, init bool, packageName, packagePath string) ([]T
 	var genTags []string
 	for _, comment := range p.Docs {
 		if strings.HasPrefix(comment, "//@") {
-			genTags = append(genTags, strings.Split(comment[3:], ",")...)
+			genTags = append(genTags, strings.Split(strings.Replace(comment[3:], " ", "", -1), ",")...)
 		}
 	}
 
@@ -60,13 +60,6 @@ func tagToTemplate(tag string, packagePath, servicePackageName string, init bool
 		}
 		return append(tmpls,
 			&template.GRPCServerTemplate{ServicePackageName: servicePackageName, PackagePath: packagePath},
-			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
-		)
-	case "grpc-conv":
-		if init {
-			tmpls = append(tmpls, &template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName})
-		}
-		return append(tmpls,
 			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
 		)
 	}
