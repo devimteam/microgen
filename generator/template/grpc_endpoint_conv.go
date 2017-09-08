@@ -96,15 +96,6 @@ func (t *GRPCEndpointConverterTemplate) Render(i *types.Interface) *Statement {
 	f := Statement{}
 
 	for _, signature := range i.Methods {
-		/*f.Var().Id(converterStructName(signature)).Op("=").Op("&").Qual(PackagePathTransportLayerGRPC, "EndpointConverter").
-		ValuesFunc(func(g *Group) {
-			g.Add(t.encodeRequest(signature))
-			g.Add(t.encodeResponse(signature))
-			g.Add(t.decodeRequest(signature))
-			g.Add(t.decodeResponse(signature))
-			g.Add(t.replyType(signature))
-			g.Line()
-		})*/
 		f.Line().Add(t.encodeRequest(signature))
 		f.Line().Add(t.encodeResponse(signature))
 		f.Line().Add(t.decodeRequest(signature))
@@ -362,10 +353,4 @@ func (t *GRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 			})), Nil())
 		},
 	)
-}
-
-// Renders reply type argument
-// 		stringsvc.CountResponse{}
-func (t *GRPCEndpointConverterTemplate) replyType(signature *types.Function) *Statement {
-	return Line().Qual(protobufPath(t.ServicePackageName), responseStructName(signature)).Values()
 }

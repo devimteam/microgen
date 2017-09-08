@@ -62,11 +62,11 @@ func (t *EndpointsTemplate) Render(i *types.Interface) *Statement {
 	}).Line()
 
 	for _, signature := range i.Methods {
-		f.Add(serviceEndpointMethod(signature)).Line()
+		f.Add(serviceEndpointMethod(signature)).Line().Line()
 	}
 	f.Line()
 	for _, signature := range i.Methods {
-		f.Add(createEndpoint(signature, i)).Line()
+		f.Add(createEndpoint(signature, i)).Line().Line()
 	}
 	// Render all endpoints init as single method
 	/*f.Line()
@@ -195,7 +195,7 @@ func createEndpoint(signature *types.Function, svcInterface *types.Interface) *S
 		Block(createEndpointBody(signature))
 }
 
-// Render all endpoints init as single method
+/*// Render all endpoints init as single method
 func allEndpoints(iface *types.Interface) *Statement {
 	s := &Statement{}
 	s.Func().Id(endpointStructName(iface.Name)+"s").
@@ -224,4 +224,4 @@ func allEndpoints(iface *types.Interface) *Statement {
 
 func endpointOptsName(i *types.Interface) string {
 	return util.ToLowerFirst(i.Name) + "EndpointOpts"
-}
+}*/

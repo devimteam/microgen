@@ -11,8 +11,6 @@ const (
 	PackagePathContext            = "context"
 	PackagePathGoKitLog           = "github.com/go-kit/kit/log"
 	PackagePathTime               = "time"
-	PackagePathTransportLayer     = "github.com/devimteam/go-kit/transportlayer"
-	PackagePathTransportLayerGRPC = "github.com/devimteam/go-kit/transportlayer/grpc"
 	PackagePathGoogleGRPC         = "google.golang.org/grpc"
 	PackagePathNetContext         = "golang.org/x/net/context"
 	PackagePathProtoTimestamp     = "github.com/golang/protobuf/ptypes/timestamp"

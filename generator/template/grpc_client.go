@@ -8,8 +8,9 @@ import (
 )
 
 type GRPCClientTemplate struct {
-	packageName string
-	PackagePath string
+	packageName        string
+	PackagePath        string
+	ServicePackageName string
 }
 
 func (t *GRPCClientTemplate) grpcConverterPackagePath() string {
@@ -51,13 +52,28 @@ func (t *GRPCClientTemplate) Render(i *types.Interface) *Statement {
 	t.packageName = "transportgrpc"
 	f := Statement{}
 
-	f.Func().Id("NewClient").
-		Call(Id("conn").
-			Op("*").Qual(PackagePathGoogleGRPC, "ClientConn")).Qual(t.PackagePath, i.Name).
+	f.Func().Id("NewGRPCClient").
+		Params(
+			Id("conn").Op("*").Qual(PackagePathGoogleGRPC, "ClientConn"),
+			Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption"),
+		).Qual(t.PackagePath, i.Name).
 		BlockFunc(func(g *Group) {
-			g.Id("endpoints").Op(":=").Index().Qual(PackagePathTransportLayer, "Endpoint").ValuesFunc(func(group *Group) {
+			g.Return().Qual(t.PackagePath, "Endpoints").Values(DictFunc(func(d Dict) {
+				for _, m := range i.Methods {
+					d[Id(endpointStructName(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewClient").Call(
+						Line().Id("conn"),
+						Line().Lit("devim."+strings.ToLower(strings.TrimSuffix(i.Name, "Service"))+".protobuf."+i.Name),
+						Line().Lit(m.Name),
+						Line().Qual(pathToConverter(t.PackagePath), encodeRequestName(m)),
+						Line().Qual(pathToConverter(t.PackagePath), decodeResponseName(m)),
+						Line().Add(t.replyType(m)),
+						Line().Id("opts").Op("...").Line(),
+					).Dot("Endpoint").Call()
+				}
+			}))
+			/*g.Id("endpoints").Op(":=").Index().Qual(PackagePathTransportLayer, "Endpoint").ValuesFunc(func(group *Group) {
 				for _, signature := range i.Methods {
-					group.Line().Qual(PackagePathTransportLayer, "NewEndpoint").Call(
+					group.Line().Qual(PackagePathTransportLayer, "NewClient").Call(
 						Line().Lit(signature.Name),
 						Line().Nil(),
 						Line().Qual(PackagePathTransportLayer, "WithConverter").Call(Qual(t.grpcConverterPackagePath(), converterStructName(signature))),
@@ -74,9 +90,15 @@ func (t *GRPCClientTemplate) Render(i *types.Interface) *Statement {
 					Line(),
 				),
 				Line(),
-			)
+			)*/
 		})
 	return &f
+}
+
+// Renders reply type argument
+// 		stringsvc.CountResponse{}
+func (t *GRPCClientTemplate) replyType(signature *types.Function) *Statement {
+	return Qual(protobufPath(t.ServicePackageName), responseStructName(signature)).Values()
 }
 
 func (GRPCClientTemplate) Path() string {

@@ -11,7 +11,7 @@ import (
 type GRPCServerTemplate struct {
 	packageName        string
 	ServicePackageName string
-	ServicePath        string
+	PackagePath        string
 }
 
 func serverStructName(iface *types.Interface) string {
@@ -66,7 +66,8 @@ func (t *GRPCServerTemplate) Render(i *types.Interface) *Statement {
 
 	f.Func().Id("NewGRPCServer").
 		Params(
-			Id("endpoints").Op("*").Qual(t.ServicePath, "Endpoints"),
+			Id("endpoints").Op("*").Qual(t.PackagePath, "Endpoints"),
+			Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ServerOption"),
 		).Params(
 		Qual(protobufPath(t.ServicePackageName), serverStructName(i)),
 	).
@@ -76,8 +77,9 @@ func (t *GRPCServerTemplate) Render(i *types.Interface) *Statement {
 					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
-							Line().Qual(pathToConverter(t.ServicePath), decodeRequestName(m)),
-							Line().Qual(pathToConverter(t.ServicePath), encodeResponseName(m)),
+							Line().Qual(pathToConverter(t.PackagePath), decodeRequestName(m)),
+							Line().Qual(pathToConverter(t.PackagePath), encodeResponseName(m)),
+							Line().Id("opts").Op("...").Line(),
 						)
 				}
 			}),
@@ -87,7 +89,7 @@ func (t *GRPCServerTemplate) Render(i *types.Interface) *Statement {
 
 	for _, signature := range i.Methods {
 		f.Line()
-		f.Add(t.grpcServerFunc(signature, i))
+		f.Add(t.grpcServerFunc(signature, i)).Line()
 	}
 
 	return &f
