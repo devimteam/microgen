@@ -116,14 +116,14 @@ func serviceEndpointMethod(signature *types.Function) *Statement {
 //
 func serviceEndpointMethodBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
-		g.Id("req").Op(":=").Id(requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))
-		g.List(Id("resp"), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id("req"))
+		g.Id("_req").Op(":=").Id(requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))
+		g.List(Id("_resp"), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id("_req"))
 		g.If(Err().Op("!=").Nil()).Block(
 			Return(),
 		)
 		g.ReturnFunc(func(group *Group) {
 			for _, field := range signature.Results {
-				group.Id("resp").Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(&field))
+				group.Id("_resp").Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(&field))
 			}
 		})
 	}
@@ -155,7 +155,7 @@ func createEndpointBody(signature *types.Function) *Statement {
 	).BlockFunc(func(g *Group) {
 		methodParams := removeContextIfFirst(signature.Args)
 		if len(methodParams) > 0 {
-			g.Id("req").Op(":=").Id("request").Assert(Op("*").Id(requestStructName(signature)))
+			g.Id("_req").Op(":=").Id("request").Assert(Op("*").Id(requestStructName(signature)))
 		}
 
 		g.Add(paramNames(signature.Results).
@@ -165,7 +165,7 @@ func createEndpointBody(signature *types.Function) *Statement {
 			CallFunc(func(g *Group) {
 				g.Add(Id(firstArgName(signature)))
 				for _, field := range methodParams {
-					g.Add(Id("req").Dot(util.ToUpperFirst(field.Name)))
+					g.Add(Id("_req").Dot(util.ToUpperFirst(field.Name)))
 				}
 			}))
 
@@ -194,34 +194,3 @@ func createEndpoint(signature *types.Function, svcInterface *types.Interface) *S
 		Id(endpointStructName(signature.Name)).Params(Id("svc").Id(svcInterface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
 		Block(createEndpointBody(signature))
 }
-
-/*// Render all endpoints init as single method
-func allEndpoints(iface *types.Interface) *Statement {
-	s := &Statement{}
-	s.Func().Id(endpointStructName(iface.Name)+"s").
-		Params(
-			Id(util.ToLowerFirst(iface.Name)).Id(iface.Name),
-			Id(endpointOptsName(iface)).Op("...").Qual(PackagePathTransportLayer, "EndpointOption"),
-		).
-		Params(
-			Index().Qual(PackagePathTransportLayer, "Endpoint"),
-		).Block(
-		Return().Index().Qual(PackagePathTransportLayer, "Endpoint").ValuesFunc(
-			func(g *Group) {
-				for _, method := range iface.Methods {
-					g.Line().Qual(PackagePathTransportLayer, "NewEndpoint").Call(
-						Line().Lit(method.Name),
-						Line().Id(endpointStructName(method.Name)).Call(Id(util.ToLowerFirst(iface.Name))),
-						Line().Qual(PackagePathTransportLayer, "WithConverter").Call(),
-						Line().Id(endpointOptsName(iface)).Op("..."),
-					)
-				}
-			},
-		),
-	)
-	return s
-}
-
-func endpointOptsName(i *types.Interface) string {
-	return util.ToLowerFirst(i.Name) + "EndpointOpts"
-}*/

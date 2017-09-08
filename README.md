@@ -76,10 +76,8 @@ For correct generation, please, follow rules below.
 
 #### Not allowed names:
 ```
-req
-request
-resp
-response
+_req
+_resp
 ```
 
 ### Misc
