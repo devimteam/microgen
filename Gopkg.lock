@@ -8,10 +8,10 @@
   version = "v0.1.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/vetcher/godecl"
   packages = [".","types"]
-  revision = "9ed0a2301877da54a0bf62b50951ecfc69a6a90e"
+  revision = "b6905f3182d19d957d9d535b50603f93b07c75ed"
+  version = "v0.1.0"
 
 [[projects]]
   branch = "master"
@@ -29,11 +29,11 @@
   branch = "master"
   name = "google.golang.org/api"
   packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates"]
-  revision = "389ac18434a93e8455f6f546845de20c5858f22f"
+  revision = "4cbdde7d4ee4bb5f6d6da987a182c3f1dfeb9cd6"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "48fa97c412a1e5184dad7f24c8073dd08b94daabc0b2c7578cff61929b43e510"
+  inputs-digest = "380c606c268742bbbc7121428ffac2ef78b9af9b26911819ec9b134760bf9a5e"
   solver-name = "gps-cdcl"
   solver-version = 1

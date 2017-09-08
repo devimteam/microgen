@@ -28,3 +28,7 @@
 [[constraint]]
   name = "github.com/vetcher/jennifer"
   branch = "master"
+
+[[constraint]]
+  name = "github.com/vetcher/godecl"
+  version = "^0.1.0"
