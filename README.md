@@ -71,7 +71,7 @@ For correct generation, please, follow rules below.
 * All interface method's arguments and results should be named and should be different (name duplicating unacceptable).
 * First argument of each method should be of type `context.Context` (from [standard library](https://golang.org/pkg/context/)).
 * Method results should contain at least one variable of `error` type.
-* [Some names](#not-allowed-names) are not allowed to be an argument or result.
+* [Some names](#not-allowed-names) are not allowed to be an argument or result variable.
 * Field names in _protobuf_ messages should be the same, as in interface methods (_protobuf_ - snake_case, interface - camelCase).
 
 #### Not allowed names:
@@ -79,7 +79,3 @@ For correct generation, please, follow rules below.
 _req
 _resp
 ```
-
-### Misc
-
-Microgen uses __0.9.*__ version of [devimteam/go-kit](https://github.com/devimteam/go-kit)
