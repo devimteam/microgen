@@ -13,8 +13,7 @@ const (
 )
 
 type LoggingTemplate struct {
-	packageName string
-	PackagePath string
+	Info *GenerationInfo
 }
 
 // Render all logging.go file.
@@ -57,23 +56,22 @@ type LoggingTemplate struct {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func (t *LoggingTemplate) Render(i *types.Interface) *Statement {
-	t.packageName = "middleware"
+func (t *LoggingTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
 
 	f.Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
-		Block(t.newLoggingBody(i))
+		Block(t.newLoggingBody(i.Iface))
 
 	f.Line()
 
 	// Render type logger
 	f.Type().Id(serviceLoggingStructName).Struct(
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.PackagePath, i.Name),
+		Id(nextVarName).Qual(t.Info.ServiceDir, i.Iface.Name),
 	)
 
 	// Render functions
-	for _, signature := range i.Methods {
+	for _, signature := range i.Iface.Methods {
 		f.Line()
 		f.Add(loggingFunc(signature)).Line()
 	}
@@ -81,12 +79,8 @@ func (t *LoggingTemplate) Render(i *types.Interface) *Statement {
 	return &f
 }
 
-func (LoggingTemplate) Path() string {
+func (LoggingTemplate) DefaultPath() string {
 	return "./middleware/logging.go"
-}
-
-func (t *LoggingTemplate) PackageName() string {
-	return t.packageName
 }
 
 // Render body for new logging middleware.
@@ -100,9 +94,9 @@ func (t *LoggingTemplate) PackageName() string {
 //
 func (t *LoggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.PackagePath, i.Name),
+		Id(nextVarName).Qual(t.Info.ServiceDir, i.Name),
 	).Params(
-		Qual(t.PackagePath, i.Name),
+		Qual(t.Info.ServiceDir, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(serviceLoggingStructName).Values(
 			Dict{

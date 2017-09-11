@@ -8,21 +8,24 @@ import (
 	"github.com/vetcher/godecl/types"
 )
 
-func Decide(p *types.Interface, init bool, packageName, packagePath string) ([]Template, error) {
-	var genTags []string
-	for _, comment := range p.Docs {
-		if strings.HasPrefix(comment, "//@") {
-			genTags = append(genTags, strings.Split(strings.Replace(comment[3:], " ", "", -1), ",")...)
-		}
+var (
+	tagTemplatesMap = map[string][]Template{
+		"": {
+			&template.ExchangeTemplate{},
+			&template.EndpointsTemplate{},
+		},
 	}
+)
 
+func Decide(p *types.Interface, force bool, packageName, packagePath string) ([]generationUnit, error) {
+	genTags := fetchTags(p.Docs)
 	tmpls := []Template{
 		&template.ExchangeTemplate{ServicePackageName: packageName},
 		&template.EndpointsTemplate{ServicePackageName: packageName},
 	}
 
 	for _, tag := range genTags {
-		t := tagToTemplate(tag, packagePath, packageName, init)
+		t := tagToTemplate(tag, packagePath, packageName, force)
 		if t == nil {
 			return nil, fmt.Errorf("unexpected tag %s", tag)
 		}
@@ -64,4 +67,13 @@ func tagToTemplate(tag string, packagePath, servicePackageName string, init bool
 		)
 	}
 	return nil
+}
+
+func fetchTags(strs []string) (tags []string) {
+	for _, comment := range strs {
+		if strings.HasPrefix(comment, "//@") {
+			tags = append(tags, strings.Split(strings.Replace(comment[3:], " ", "", -1), ",")...)
+		}
+	}
+	return
 }

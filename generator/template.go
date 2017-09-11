@@ -1,12 +1,10 @@
 package generator
 
 import (
-	"github.com/vetcher/godecl/types"
+	"github.com/devimteam/microgen/generator/template"
 	"github.com/vetcher/jennifer/jen"
 )
 
 type Template interface {
-	PackageName() string
-	Path() string
-	Render(data *types.Interface) *jen.Statement
+	Render(data *template.GenerationInfo) *jen.Statement
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/devimteam/microgen/generator"
+	"github.com/devimteam/microgen/generator/template"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 )

@@ -7,7 +7,7 @@ import (
 )
 
 type EndpointsTemplate struct {
-	ServicePackageName string
+	Info *GenerationInfo
 }
 
 func endpointStructName(str string) string {
@@ -52,32 +52,28 @@ func endpointStructName(str string) string {
 //			}
 //		}
 //
-func (t *EndpointsTemplate) Render(i *types.Interface) *Statement {
+func (t *EndpointsTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
 
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {
-		for _, signature := range i.Methods {
+		for _, signature := range i.Iface.Methods {
 			g.Id(endpointStructName(signature.Name)).Qual(PackagePathGoKitEndpoint, "Endpoint")
 		}
 	}).Line()
 
-	for _, signature := range i.Methods {
+	for _, signature := range i.Iface.Methods {
 		f.Add(serviceEndpointMethod(signature)).Line().Line()
 	}
 	f.Line()
-	for _, signature := range i.Methods {
+	for _, signature := range i.Iface.Methods {
 		f.Add(createEndpoint(signature, i)).Line().Line()
 	}
 
 	return &f
 }
 
-func (EndpointsTemplate) Path() string {
+func (EndpointsTemplate) DefaultPath() string {
 	return "./endpoints.go"
-}
-
-func (t *EndpointsTemplate) PackageName() string {
-	return t.ServicePackageName
 }
 
 // Render full endpoints method.
@@ -186,8 +182,8 @@ func createEndpointBody(signature *types.Function) *Statement {
 //			}
 //		}
 //
-func createEndpoint(signature *types.Function, svcInterface *types.Interface) *Statement {
+func createEndpoint(signature *types.Function, info *GenerationInfo) *Statement {
 	return Func().
-		Id(endpointStructName(signature.Name)).Params(Id("svc").Id(svcInterface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
+		Id(endpointStructName(signature.Name)).Params(Id("svc").Id(info.Iface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
 		Block(createEndpointBody(signature))
 }

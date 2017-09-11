@@ -60,10 +60,8 @@ func converterProtoToBody(field *types.Variable) Code {
 }
 
 type StubGRPCTypeConverterTemplate struct {
-	PackagePath               string
-	ServicePackageName        string
+	Info                      *GenerationInfo
 	alreadyRenderedConverters []string
-	packageName               string
 }
 
 // Render whole file with protobuf converters.
@@ -79,11 +77,10 @@ type StubGRPCTypeConverterTemplate struct {
 //			panic("method not provided")
 //		}
 //
-func (t *StubGRPCTypeConverterTemplate) Render(i *types.Interface) *Statement {
-	t.packageName = "protobuf"
+func (t *StubGRPCTypeConverterTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
 
-	for _, signature := range i.Methods {
+	for _, signature := range i.Iface.Methods {
 		args := append(removeContextIfFirst(signature.Args), removeContextIfFirst(signature.Results)...)
 		for _, field := range args {
 			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(&field.Type, 0), t.alreadyRenderedConverters) {
@@ -98,12 +95,8 @@ func (t *StubGRPCTypeConverterTemplate) Render(i *types.Interface) *Statement {
 	return &f
 }
 
-func (StubGRPCTypeConverterTemplate) Path() string {
+func (StubGRPCTypeConverterTemplate) DefaultPath() string {
 	return "./transport/converter/protobuf/type_converters.go"
-}
-
-func (t *StubGRPCTypeConverterTemplate) PackageName() string {
-	return t.packageName
 }
 
 // Render stub method for golang to protobuf converter.
@@ -162,7 +155,7 @@ func (t *StubGRPCTypeConverterTemplate) protoFieldType(field *types.Type) *State
 		return c.Add(code)
 	}
 	if field.Import != nil {
-		c.Qual(protobufPath(t.ServicePackageName), protoType)
+		c.Qual(protobufPath(t.Info.ServicePackageName), protoType)
 	} else {
 		c.Id(protoType)
 	}

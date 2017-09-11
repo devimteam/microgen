@@ -16,6 +16,13 @@ const (
 	PackagePathGoKitTransportGRPC = "github.com/go-kit/kit/transport/grpc"
 )
 
+type GenerationInfo struct {
+	ServicePackageName string
+	Iface              *types.Interface
+	ServiceDir         string
+	Force              string
+}
+
 func structFieldName(field *types.Variable) *Statement {
 	return Id(util.ToUpperFirst(field.Name))
 }

@@ -16,9 +16,7 @@ var (
 )
 
 type GRPCEndpointConverterTemplate struct {
-	packageName        string
-	PackagePath        string
-	ServicePackageName string
+	Info *GenerationInfo
 }
 
 func decodeRequestName(f *types.Function) string {
@@ -91,11 +89,10 @@ func encodeResponseName(f *types.Function) string {
 //			stringsvc.CountResponse{},
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) Render(i *types.Interface) *Statement {
-	t.packageName = "protobuf"
+func (t *GRPCEndpointConverterTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
 
-	for _, signature := range i.Methods {
+	for _, signature := range i.Iface.Methods {
 		f.Line().Add(t.encodeRequest(signature))
 		f.Line().Add(t.encodeResponse(signature))
 		f.Line().Add(t.decodeRequest(signature))
@@ -149,12 +146,8 @@ func protoToType(field *types.Type, depth int) string {
 	return methodName
 }
 
-func (GRPCEndpointConverterTemplate) Path() string {
+func (GRPCEndpointConverterTemplate) DefaultPath() string {
 	return "./transport/converter/protobuf/endpoint_converters.go"
-}
-
-func (t *GRPCEndpointConverterTemplate) PackageName() string {
-	return t.packageName
 }
 
 // Renders type conversion (if need) to default protobuf types.
@@ -241,14 +234,14 @@ func (t *GRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 	return Line().Func().Id(encodeRequestName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
-				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.PackagePath, requestStructName(signature)))
+				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ServiceDir, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := golangTypeToProto("", &field); !ok {
 						group.Add(t.convertCustomType("req", typeToProto(&field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(protobufPath(t.ServicePackageName), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(protobufPath(t.Info.ServicePackageName), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodParams {
 					req, _ := golangTypeToProto("req", &field)
 					dict[structFieldName(&field)] = Line().Add(req)
@@ -277,14 +270,14 @@ func (t *GRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 	return Line().Func().Id(encodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
-				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.PackagePath, responseStructName(signature)))
+				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.Info.ServiceDir, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := golangTypeToProto("", &field); !ok {
 						group.Add(t.convertCustomType("resp", typeToProto(&field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(protobufPath(t.ServicePackageName), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(protobufPath(t.Info.ServicePackageName), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodResults {
 					resp, _ := golangTypeToProto("resp", &field)
 					dict[structFieldName(&field)] = Line().Add(resp)
@@ -309,14 +302,14 @@ func (t *GRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 	return Line().Func().Id(decodeRequestName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
-				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(t.ServicePackageName), requestStructName(signature)))
+				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(t.Info.ServicePackageName), requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := protoTypeToGolang("", &field); !ok {
 						group.Add(t.convertCustomType("req", protoToType(&field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(t.PackagePath, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(t.Info.ServiceDir, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodParams {
 					req, _ := protoTypeToGolang("req", &field)
 					dict[structFieldName(&field)] = Line().Add(req)
@@ -345,14 +338,14 @@ func (t *GRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 	return Line().Func().Id(decodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
-				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(t.ServicePackageName), responseStructName(signature)))
+				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(t.Info.ServicePackageName), responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := protoTypeToGolang("", &field); !ok {
 						group.Add(t.convertCustomType("resp", protoToType(&field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(t.PackagePath, responseStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(t.Info.ServiceDir, responseStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodResults {
 					resp, _ := protoTypeToGolang("resp", &field)
 					dict[structFieldName(&field)] = Line().Add(resp)

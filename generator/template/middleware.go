@@ -1,7 +1,6 @@
 package template
 
 import (
-	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
 )
 
@@ -10,8 +9,7 @@ const (
 )
 
 type MiddlewareTemplate struct {
-	packageName string
-	PackagePath string
+	Info *GenerationInfo
 }
 
 // Render middleware decorator
@@ -24,17 +22,12 @@ type MiddlewareTemplate struct {
 //
 //		type Middleware func(svc.StringService) svc.StringService
 //
-func (t *MiddlewareTemplate) Render(i *types.Interface) *Statement {
-	t.packageName = "middleware"
+func (t *MiddlewareTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
-	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.PackagePath, i.Name)).Qual(t.PackagePath, i.Name)
+	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.ServiceDir, i.Iface.Name)).Qual(t.Info.ServiceDir, i.Iface.Name)
 	return &f
 }
 
-func (MiddlewareTemplate) Path() string {
+func (MiddlewareTemplate) DefaultPath() string {
 	return "./middleware/middleware.go"
-}
-
-func (t *MiddlewareTemplate) PackageName() string {
-	return t.packageName
 }

@@ -6,7 +6,7 @@ import (
 )
 
 type ExchangeTemplate struct {
-	ServicePackageName string
+	Info *GenerationInfo
 }
 
 func requestStructName(signature *types.Function) string {
@@ -34,10 +34,10 @@ func responseStructName(signature *types.Function) string {
 //  	Err error         `json:"err"`
 //  }
 //
-func (t *ExchangeTemplate) Render(i *types.Interface) *Statement {
+func (t *ExchangeTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
 
-	for _, signature := range i.Methods {
+	for _, signature := range i.Iface.Methods {
 		f.Add(exchange(requestStructName(signature), signature.Args)).Line()
 		f.Add(exchange(responseStructName(signature), signature.Results)).Line()
 	}
@@ -45,12 +45,8 @@ func (t *ExchangeTemplate) Render(i *types.Interface) *Statement {
 	return &f
 }
 
-func (ExchangeTemplate) Path() string {
+func (ExchangeTemplate) DefaultPath() string {
 	return "./exchanges.go"
-}
-
-func (t *ExchangeTemplate) PackageName() string {
-	return t.ServicePackageName
 }
 
 // Renders exchanges that represents requests and responses.
