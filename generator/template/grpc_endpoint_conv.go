@@ -45,50 +45,48 @@ func encodeResponseName(f *types.Function) string {
 //
 //		import (
 //			context "context"
-//			grpc "github.com/devimteam/go-kit/transportlayer/grpc"
 //			svc "github.com/devimteam/microgen/test/svc"
-//			util "github.com/devimteam/microgen/test/svc/util"
 //			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //		)
 //
-//		var CountConverter = &grpc.EndpointConverter{
-//			func(_ context.Context, request interface{}) (interface{}, error) {
-//				req := request.(*svc.CountRequest)
-//				return &stringsvc.CountRequest{
-//					Symbol: req.Symbol,
-//					Text:   req.Text,
-//				}, nil
-//			},
-//			func(_ context.Context, response interface{}) (interface{}, error) {
-//				resp := response.(*svc.CountResponse)
-//				respPositions, err := IntListToProto(resp.Positions)
-//				if err != nil {
-//					return nil, err
-//				}
-//				return &stringsvc.CountResponse{
-//					Count:     int64(resp.Count),
-//					Positions: respPositions,
-//				}, nil
-//			},
-//			func(_ context.Context, request interface{}) (interface{}, error) {
-//				req := request.(*stringsvc.CountRequest)
-//				return &svc.CountRequest{
-//					Symbol: string(req.Symbol),
-//					Text:   string(req.Text),
-//				}, nil
-//			},
-//			func(_ context.Context, response interface{}) (interface{}, error) {
-//				resp := response.(*stringsvc.CountResponse)
-//				respPositions, err := ProtoToIntList(resp.Positions)
-//				if err != nil {
-//					return nil, err
-//				}
-//				return &svc.CountResponse{
-//					Count:     int(resp.Count),
-//					Positions: respPositions,
-//				}, nil
-//			},
-//			stringsvc.CountResponse{},
+//		func EncodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
+//			req := request.(*svc.CountRequest)
+//			return &stringsvc.CountRequest{
+//				Symbol: req.Symbol,
+//				Text:   req.Text,
+//			}, nil
+//		}
+//
+//		func EncodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
+//			resp := response.(*svc.CountResponse)
+//			respPositions, err := IntListToProto(resp.Positions)
+//			if err != nil {
+//				return nil, err
+//			}
+//			return &stringsvc.CountResponse{
+//				Count:     int64(resp.Count),
+//				Positions: respPositions,
+//			}, nil
+//		}
+//
+//		func DecodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
+//			req := request.(*stringsvc.CountRequest)
+//			return &svc.CountRequest{
+//				Symbol: string(req.Symbol),
+//				Text:   string(req.Text),
+//			}, nil
+//		}
+//
+//		func DecodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
+//			resp := response.(*stringsvc.CountResponse)
+//			respPositions, err := ProtoToIntList(resp.Positions)
+//			if err != nil {
+//				return nil, err
+//			}
+//			return &svc.CountResponse{
+//				Count:     int(resp.Count),
+//				Positions: respPositions,
+//			}, nil
 //		}
 //
 func (t *GRPCEndpointConverterTemplate) Render(i *types.Interface) *Statement {
@@ -120,9 +118,6 @@ func typeToProto(field *types.Type, depth int) string {
 		m := field.Map()
 		methodName += typeToProto(&m.Key, depth+1) + typeToProto(&m.Value, depth+1)
 	}
-	if field.IsInterface {
-		methodName += "Interface"
-	}
 	if depth == 0 {
 		methodName += "ToProto"
 	}
@@ -142,9 +137,6 @@ func protoToType(field *types.Type, depth int) string {
 		methodName += "Map"
 		m := field.Map()
 		methodName += protoToType(&m.Key, depth+1) + protoToType(&m.Value, depth+1)
-	}
-	if field.IsInterface {
-		methodName += "Interface"
 	}
 	return methodName
 }
@@ -172,8 +164,7 @@ func golangTypeToProto(structName string, field *types.Variable) (*Statement, bo
 		return Id(structName).Dot(util.ToUpperFirst(field.Name)), true
 	} else if newType, ok := goToProtoTypesMap[field.Type.Name]; ok {
 		newField := &types.Type{
-			Name: newType,
-			//Name:      field.Type.Name,
+			Name:      newType,
 			IsArray:   field.Type.IsArray,
 			Import:    field.Type.Import,
 			IsPointer: field.Type.IsPointer,
@@ -228,7 +219,7 @@ func (t *GRPCEndpointConverterTemplate) convertCustomType(structName, converterN
 
 // Renders function for encoding request, golang type converts to proto type.
 //
-//		func(_ context.Context, request interface{}) (interface{}, error) {
+//		func EncodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
 //			req := request.(*svc.CountRequest)
 //			return &stringsvc.CountRequest{
 //				Symbol: req.Symbol,
@@ -260,7 +251,7 @@ func (t *GRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 
 // Renders function for encoding response, golang type converts to proto type.
 //
-//		func(_ context.Context, response interface{}) (interface{}, error) {
+//		func EncodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
 //			resp := response.(*svc.CountResponse)
 //			respPositions, err := IntListToProto(resp.Positions)
 //			if err != nil {
@@ -296,7 +287,7 @@ func (t *GRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 
 // Renders function for decoding request, proto type converts to golang type.
 //
-//		func(_ context.Context, request interface{}) (interface{}, error) {
+//		func DecodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
 //			req := request.(*stringsvc.CountRequest)
 //			return &svc.CountRequest{
 //				Symbol: string(req.Symbol),
@@ -328,7 +319,7 @@ func (t *GRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 
 // Renders function for decoding response, proto type converts to golang type.
 //
-//		func(_ context.Context, response interface{}) (interface{}, error) {
+//		func DecodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
 //			resp := response.(*stringsvc.CountResponse)
 //			respPositions, err := ProtoToIntList(resp.Positions)
 //			if err != nil {

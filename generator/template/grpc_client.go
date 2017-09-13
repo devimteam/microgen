@@ -24,28 +24,23 @@ func (t *GRPCClientTemplate) grpcConverterPackagePath() string {
 //		package transportgrpc
 //
 //		import (
-//			transportlayer "github.com/devimteam/go-kit/transportlayer"
-//			grpc1 "github.com/devimteam/go-kit/transportlayer/grpc"
 //			svc "github.com/devimteam/microgen/test/svc"
 //			protobuf "github.com/devimteam/microgen/test/svc/transport/converter/protobuf"
+//			grpc1 "github.com/go-kit/kit/transport/grpc"
+//			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //			grpc "google.golang.org/grpc"
 //		)
 //
-//		func NewClient(conn *grpc.ClientConn) svc.StringService {
-//			endpoints := []transportlayer.Endpoint{
-//				transportlayer.NewEndpoint(
-//					"Count",
-//					nil,
-//					transportlayer.WithConverter(protobuf.CountConverter),
-// 				),
-// 			}
-//			return svc.NewClient(
-//				grpc1.NewClient(
-//					"devim.string.protobuf.StringService",
-//					conn,
-//					endpoints,
-// 				),
-// 			)
+//		func NewGRPCClient(conn *grpc.ClientConn, opts ...grpc1.ClientOption) svc.StringService {
+//			return svc.Endpoints{CountEndpoint: grpc1.NewClient(
+//				conn,
+//				"devim.string.protobuf.StringService",
+//				"Count",
+//				protobuf.EncodeCountRequest,
+//				protobuf.DecodeCountResponse,
+//				stringsvc.CountResponse{},
+//				opts...,
+//			).Endpoint()}
 //		}
 //
 func (t *GRPCClientTemplate) Render(i *types.Interface) *Statement {
@@ -71,26 +66,6 @@ func (t *GRPCClientTemplate) Render(i *types.Interface) *Statement {
 					).Dot("Endpoint").Call()
 				}
 			}))
-			/*g.Id("endpoints").Op(":=").Index().Qual(PackagePathTransportLayer, "Endpoint").ValuesFunc(func(group *Group) {
-				for _, signature := range i.Methods {
-					group.Line().Qual(PackagePathTransportLayer, "NewClient").Call(
-						Line().Lit(signature.Name),
-						Line().Nil(),
-						Line().Qual(PackagePathTransportLayer, "WithConverter").Call(Qual(t.grpcConverterPackagePath(), converterStructName(signature))),
-						Line(),
-					)
-				}
-				group.Line()
-			})
-			g.Return().Qual(t.PackagePath, "NewClient").Call(
-				Line().Qual(PackagePathTransportLayerGRPC, "NewClient").Call(
-					Line().Lit("devim."+strings.ToLower(strings.TrimSuffix(i.Name, "Service"))+".protobuf."+i.Name),
-					Line().Id("conn"),
-					Line().Id("endpoints"),
-					Line(),
-				),
-				Line(),
-			)*/
 		})
 	return &f
 }

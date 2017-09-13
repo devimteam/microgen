@@ -14,8 +14,7 @@ import (
 
 var (
 	flagFileName  = flag.String("file", "service.go", "Name of file where described interface definition")
-	flagIfaceName = flag.String("interface", "", "Interface name")
-	flagOutputDir = flag.String("out", "", "Output directory")
+	flagOutputDir = flag.String("out", ".", "Output directory")
 	flagHelp      = flag.Bool("help", false, "Show help")
 	flagInit      = flag.Bool("init", false, "Generate stub methods for converters")
 )
@@ -25,7 +24,7 @@ func init() {
 }
 
 func main() {
-	if *flagHelp || *flagFileName == "" || *flagIfaceName == "" {
+	if *flagHelp || *flagFileName == "" {
 		flag.Usage()
 		os.Exit(0)
 	}
@@ -36,63 +35,73 @@ func main() {
 		os.Exit(1)
 	}
 
-	i := findInterface(info, *flagIfaceName)
+	i := findInterface(info)
 	if i == nil {
-		fmt.Printf("could not find %s interface", *flagIfaceName)
+		fmt.Println("could not find interface with @microgen tag")
 		os.Exit(1)
 	}
 
 	if err := generator.ValidateInterface(i); err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	var strategy generator.Strategy
 	if *flagOutputDir == "" {
-		strategy = generator.WriterStrategy(os.Stdout)
+		strategy = generator.NewWriterStrategy(os.Stdout)
 	} else {
 		strategy = generator.NewFileStrategy(*flagOutputDir)
 	}
 
-	packagePath := resolvePackagePath(*flagOutputDir)
-	templates, err := generator.Decide(i, *flagInit, info.Name, packagePath)
+	packagePath, err := resolvePackagePath(*flagOutputDir)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	templates, err := generator.ListTemplatesForGen(i, *flagInit, info.Name, packagePath)
 
 	gen := generator.NewGenerator(templates, i, strategy)
 	err = gen.Generate()
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err)
 	} else {
-		fmt.Println("All files successfully generated")
+		fmt.Printf("All files for %s successfully generated\n", i.Name)
 	}
 }
 
-func resolvePackagePath(outPath string) string {
+func resolvePackagePath(outPath string) (string, error) {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
-		fmt.Println("GOPATH is empty")
-		os.Exit(1)
+		return "", fmt.Errorf("GOPATH is empty")
 	}
 
 	absOutPath, err := filepath.Abs(outPath)
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return "", err
 	}
 
 	gopathSrc := filepath.Join(gopath, "src")
 	if !strings.HasPrefix(absOutPath, gopathSrc) {
-		fmt.Println("-out not in GOPATH")
-		os.Exit(1)
+		return "", fmt.Errorf("-out not in GOPATH")
 	}
 
-	return absOutPath[len(gopathSrc)+1:]
+	return absOutPath[len(gopathSrc)+1:], nil
 }
 
-func findInterface(file *types.File, ifaceName string) *types.Interface {
+func findInterface(file *types.File) *types.Interface {
 	for i := range file.Interfaces {
-		if file.Interfaces[i].Name == ifaceName {
+		if docsContainMicrogenTag(file.Interfaces[i].Docs) {
 			return &file.Interfaces[i]
 		}
 	}
 	return nil
+}
+
+func docsContainMicrogenTag(strs []string) bool {
+	for _, str := range strs {
+		if strings.HasPrefix(str, generator.MicrogenTag) {
+			return true
+		}
+	}
+	return false
 }

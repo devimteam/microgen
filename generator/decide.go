@@ -8,11 +8,13 @@ import (
 	"github.com/vetcher/godecl/types"
 )
 
-func Decide(p *types.Interface, init bool, packageName, packagePath string) ([]Template, error) {
+const MicrogenTag = "// @microgen"
+
+func ListTemplatesForGen(p *types.Interface, init bool, packageName, packagePath string) ([]Template, error) {
 	var genTags []string
 	for _, comment := range p.Docs {
-		if strings.HasPrefix(comment, "//@") {
-			genTags = append(genTags, strings.Split(strings.Replace(comment[3:], " ", "", -1), ",")...)
+		if strings.HasPrefix(comment, MicrogenTag) {
+			genTags = append(genTags, strings.Split(strings.Replace(comment[len(MicrogenTag):], " ", "", -1), ",")...)
 		}
 	}
 

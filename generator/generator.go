@@ -20,21 +20,21 @@ type Strategy interface {
 	Write(Renderer, Template) error
 }
 
-type forceGenerator struct {
+type fileGenerator struct {
 	templates []Template
 	iface     *types.Interface
 	strategy  Strategy
 }
 
 func NewGenerator(ts []Template, iface *types.Interface, strategy Strategy) Generator {
-	return &forceGenerator{
+	return &fileGenerator{
 		templates: ts,
 		iface:     iface,
 		strategy:  strategy,
 	}
 }
 
-func (g *forceGenerator) Generate() error {
+func (g *fileGenerator) Generate() error {
 	for _, t := range g.templates {
 		statement := t.Render(g.iface)
 		file := jen.NewFile(t.PackageName())
@@ -42,32 +42,6 @@ func (g *forceGenerator) Generate() error {
 		file.PackageComment(`Please, do not edit.`)
 		file.Add(statement)
 		err := g.strategy.Write(file, t)
-		if err != nil {
-			return fmt.Errorf("write error: %v", err)
-		}
-	}
-	return nil
-}
-
-// For future purposes
-type appendGenerator struct {
-	templates []Template
-	iface     *types.Interface
-	strategy  Strategy
-}
-
-func NewAppendGenerator(ts []Template, iface *types.Interface, strategy Strategy) Generator {
-	return &appendGenerator{
-		templates: ts,
-		iface:     iface,
-		strategy:  strategy,
-	}
-}
-
-func (g *appendGenerator) Generate() error {
-	for _, t := range g.templates {
-		statement := t.Render(g.iface)
-		err := g.strategy.Write(statement, t)
 		if err != nil {
 			return fmt.Errorf("write error: %v", err)
 		}

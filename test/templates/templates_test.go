@@ -102,32 +102,14 @@ func TestTemplates(t *testing.T) {
 			}
 
 			buf := bytes.NewBuffer([]byte{})
-			gen := generator.NewGenerator([]generator.Template{test.Template}, fs, generator.WriterStrategy(buf))
+			gen := generator.NewGenerator([]generator.Template{test.Template}, fs, generator.NewWriterStrategy(buf))
 			err = gen.Generate()
 			if err != nil {
 				t.Fatalf("unable to generate: %v", err)
 			}
 			if buf.String() != string(out[:]) {
 				t.Errorf("Got:\n/////////\n%s\n/////////\nExpected:\n/////////\n%s\n/////////", buf.String(), string(out[:]))
-				t.Errorf("1: Got(bytes), 2: Expected(bytes):\n/////////\n1: %v\n2: %v\n/////////", buf.Bytes(), out[:])
-				x, y, _ := findDifference(buf.String(), string(out[:]))
-				t.Errorf("%d:%d", x, y)
 			}
 		})
 	}
-}
-
-func findDifference(first, second string) (line int, pos int, raw int) {
-	for i, sym := range first {
-		if first[i] != second[i] {
-			return
-		}
-		if sym == '\n' {
-			line += 1
-			pos = 0
-		}
-		pos += 1
-		raw += 1
-	}
-	return 0, 0, 0
 }
