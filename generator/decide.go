@@ -4,66 +4,71 @@ import (
 	"fmt"
 	"strings"
 
+	"os"
+	"path/filepath"
+
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/vetcher/godecl/types"
 )
 
-var (
-	tagTemplatesMap = map[string][]Template{
-		"": {
-			&template.ExchangeTemplate{},
-			&template.EndpointsTemplate{},
-		},
+func Decide(iface *types.Interface, force bool, importPackageName, absOutPath string) (units []*generationUnit, err error) {
+	importPackagePath, err := resolvePackagePath(absOutPath)
+	if err != nil {
+		return nil, err
 	}
-)
-
-func Decide(p *types.Interface, force bool, packageName, packagePath string) ([]generationUnit, error) {
-	genTags := fetchTags(p.Docs)
-	tmpls := []Template{
-		&template.ExchangeTemplate{ServicePackageName: packageName},
-		&template.EndpointsTemplate{ServicePackageName: packageName},
+	info := &template.GenerationInfo{
+		ServiceImportPackageName: importPackageName,
+		ServiceImportPath:        importPackagePath,
+		Force:                    force,
+		Iface:                    iface,
+		AbsOutPath:               absOutPath,
 	}
 
+	exch, err := NewGenUnit(template.NewExchangeTemplate(info), info, absOutPath)
+	endp, err := NewGenUnit(template.NewEndpointsTemplate(info), info, absOutPath)
+	units = append(units, exch, endp)
+
+	genTags := fetchTags(iface.Docs)
 	for _, tag := range genTags {
-		t := tagToTemplate(tag, packagePath, packageName, force)
-		if t == nil {
+		templates := tagToTemplate(tag, info)
+		if templates == nil {
 			return nil, fmt.Errorf("unexpected tag %s", tag)
 		}
-		tmpls = append(tmpls, t...)
+		for _, t := range templates {
+			unit, err := NewGenUnit(t, info, absOutPath)
+			if err != nil {
+				return nil, err
+			}
+			units = append(units, unit)
+		}
 	}
-	return tmpls, nil
+	return units, nil
 }
 
-func tagToTemplate(tag string, packagePath, servicePackageName string, init bool) (tmpls []Template) {
+func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []Template) {
 	switch tag {
 	case "middleware":
-		return append(tmpls, &template.MiddlewareTemplate{PackagePath: packagePath})
+		return []Template{template.NewMiddlewareTemplate(info)}
 	case "logging":
-		return []Template{&template.LoggingTemplate{PackagePath: packagePath}}
+		return []Template{template.NewLoggingTemplate(info)}
 	case "grpc":
-		if init {
-			tmpls = append(tmpls, &template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName})
-		}
 		return append(tmpls,
-			&template.GRPCClientTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
-			&template.GRPCServerTemplate{ServicePackageName: servicePackageName, PackagePath: packagePath},
-			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
+			template.NewGRPCClientTemplate(info),
+			template.NewGRPCServerTemplate(info),
+			template.NewGRPCEndpointConverterTemplate(info),
+			template.NewStubGRPCTypeConverterTemplate(info),
 		)
 	case "grpc-client":
-		if init {
-			tmpls = append(tmpls, &template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName})
-		}
 		return append(tmpls,
-			&template.GRPCClientTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
-			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
+			template.NewGRPCClientTemplate(info),
+			template.NewGRPCEndpointConverterTemplate(info),
+			template.NewStubGRPCTypeConverterTemplate(info),
 		)
 	case "grpc-server":
-		if init {
-			tmpls = append(tmpls, &template.StubGRPCTypeConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName})
-		}
 		return append(tmpls,
-			&template.GRPCServerTemplate{ServicePackageName: servicePackageName, PackagePath: packagePath},
-			&template.GRPCEndpointConverterTemplate{PackagePath: packagePath, ServicePackageName: servicePackageName},
+			template.NewGRPCServerTemplate(info),
+			template.NewGRPCEndpointConverterTemplate(info),
+			template.NewStubGRPCTypeConverterTemplate(info),
 		)
 	}
 	return nil
@@ -76,4 +81,23 @@ func fetchTags(strs []string) (tags []string) {
 		}
 	}
 	return
+}
+
+func resolvePackagePath(outPath string) (string, error) {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		return "", fmt.Errorf("GOPATH is empty")
+	}
+
+	absOutPath, err := filepath.Abs(outPath)
+	if err != nil {
+		return "", err
+	}
+
+	gopathSrc := filepath.Join(gopath, "src")
+	if !strings.HasPrefix(absOutPath, gopathSrc) {
+		return "", fmt.Errorf("path not in GOPATH")
+	}
+
+	return absOutPath[len(gopathSrc)+1:], nil
 }

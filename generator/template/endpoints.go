@@ -1,13 +1,22 @@
 package template
 
 import (
+	"github.com/devimteam/microgen/generator/write_method"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
 )
 
-type EndpointsTemplate struct {
+type endpointsTemplate struct {
 	Info *GenerationInfo
+}
+
+func NewEndpointsTemplate(info *GenerationInfo) *endpointsTemplate {
+	infoCopy := info.Duplicate()
+	infoCopy.Force = true
+	return &endpointsTemplate{
+		Info: infoCopy,
+	}
 }
 
 func endpointStructName(str string) string {
@@ -52,7 +61,7 @@ func endpointStructName(str string) string {
 //			}
 //		}
 //
-func (t *EndpointsTemplate) Render(i *GenerationInfo) *Statement {
+func (t *endpointsTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
 
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {
@@ -72,8 +81,12 @@ func (t *EndpointsTemplate) Render(i *GenerationInfo) *Statement {
 	return &f
 }
 
-func (EndpointsTemplate) DefaultPath() string {
+func (endpointsTemplate) DefaultPath() string {
 	return "./endpoints.go"
+}
+
+func (t *endpointsTemplate) ChooseMethod() (write_method.Method, error) {
+	return write_method.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render full endpoints method.

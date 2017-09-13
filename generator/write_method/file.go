@@ -1,4 +1,4 @@
-package generator
+package write_method
 
 import (
 	"bytes"
@@ -12,12 +12,12 @@ import (
 const MkdirPermissions = 0777
 
 type newFileStrategy struct {
-	outputDir string
-	outPath   string
+	absPath string
+	relPath string
 }
 
 func (s newFileStrategy) Write(renderer Renderer) error {
-	outpath, err := filepath.Abs(filepath.Join(s.outputDir, s.outPath))
+	outpath, err := filepath.Abs(filepath.Join(s.absPath, s.relPath))
 	if err != nil {
 		return fmt.Errorf("unable to resolve path: %v", err)
 	}
@@ -38,7 +38,7 @@ func (s newFileStrategy) Write(renderer Renderer) error {
 	if err != nil {
 		return fmt.Errorf("error when save file: %v", err)
 	}
-	fmt.Println(filepath.Join(s.outputDir, s.outPath))
+	fmt.Println(filepath.Join(s.absPath, s.relPath))
 	return nil
 }
 
@@ -54,27 +54,27 @@ func (s newFileStrategy) Save(f Renderer, filename string) error {
 	return nil
 }
 
-func NewFileStrategy(dir, outPath string) Strategy {
+func NewFileMethod(absPath, relPath string) Method {
 	return newFileStrategy{
-		outputDir: dir,
-		outPath:   outPath,
+		absPath: absPath,
+		relPath: relPath,
 	}
 }
 
 type appendFileStrategy struct {
-	outputDir string
-	outPath   string
+	absPath string
+	relPath string
 }
 
-func AppendToFileStrategy(dir, outPath string) Strategy {
+func AppendToFileStrategy(absPath, relPath string) Method {
 	return appendFileStrategy{
-		outputDir: dir,
-		outPath:   outPath,
+		absPath: absPath,
+		relPath: relPath,
 	}
 }
 
 func (s appendFileStrategy) Write(renderer Renderer) error {
-	outpath, err := filepath.Abs(filepath.Join(s.outputDir, s.outPath))
+	outpath, err := filepath.Abs(filepath.Join(s.absPath, s.relPath))
 	if err != nil {
 		return fmt.Errorf("unable to resolve path: %v", err)
 	}
@@ -96,7 +96,6 @@ func (s appendFileStrategy) Write(renderer Renderer) error {
 		if err != nil {
 			return fmt.Errorf("can't create %s: error: %v", outpath, err)
 		}
-		f.WriteString(fmt.Sprintf("package %s\n\n", t.PackageName()))
 		f.Close()
 	}
 
@@ -104,7 +103,7 @@ func (s appendFileStrategy) Write(renderer Renderer) error {
 	if err != nil {
 		return fmt.Errorf("error when save file: %v", err)
 	}
-	fmt.Println(filepath.Join(s.outputDir, s.outPath))
+	fmt.Println(filepath.Join(s.absPath, s.relPath))
 	return nil
 }
 

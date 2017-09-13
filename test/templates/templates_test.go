@@ -55,42 +55,42 @@ func TestTemplates(t *testing.T) {
 	}{
 		{
 			TestName:    "Endpoints",
-			Template:    &template.EndpointsTemplate{ServicePackageName: "stringsvc"},
+			Template:    &template.endpointsTemplate{ServicePackageName: "stringsvc"},
 			OutFilePath: "endpoints.go.txt",
 		},
 		{
 			TestName:    "Exchange",
-			Template:    &template.ExchangeTemplate{ServicePackageName: "stringsvc"},
+			Template:    &template.exchangeTemplate{ServicePackageName: "stringsvc"},
 			OutFilePath: "exchange.go.txt",
 		},
 		{
 			TestName:    "Middleware",
-			Template:    &template.MiddlewareTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
+			Template:    &template.middlewareTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
 			OutFilePath: "middleware.go.txt",
 		},
 		{
 			TestName:    "Logging",
-			Template:    &template.LoggingTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
+			Template:    &template.loggingTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
 			OutFilePath: "logging.go.txt",
 		},
 		{
 			TestName:    "GRPC Server",
-			Template:    &template.GRPCServerTemplate{ServicePackageName: "stringsvc"},
+			Template:    &template.gRPCServerTemplate{ServicePackageName: "stringsvc"},
 			OutFilePath: "grpc_server.go.txt",
 		},
 		{
 			TestName:    "GRPC Client",
-			Template:    &template.GRPCClientTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
+			Template:    &template.gRPCClientTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
 			OutFilePath: "grpc_client.go.txt",
 		},
 		{
 			TestName:    "GRPC Converter",
-			Template:    &template.GRPCEndpointConverterTemplate{PackagePath: "github.com/devimteam/microgen/test/svc", ServicePackageName: "stringsvc"},
+			Template:    &template.gRPCEndpointConverterTemplate{PackagePath: "github.com/devimteam/microgen/test/svc", ServicePackageName: "stringsvc"},
 			OutFilePath: "grpc_converters.go.txt",
 		},
 		{
 			TestName:    "GRPC Type Converter",
-			Template:    &template.StubGRPCTypeConverterTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
+			Template:    &template.stubGRPCTypeConverterTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
 			OutFilePath: "grpc_type.go.txt",
 		},
 	}

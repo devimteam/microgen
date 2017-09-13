@@ -4,11 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/devimteam/microgen/generator"
-	"github.com/devimteam/microgen/generator/template"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 )
@@ -48,45 +45,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	var strategy generator.Strategy
-	if *flagOutputDir == "" {
-		strategy = generator.WriterStrategy(os.Stdout)
-	} else {
-		strategy = generator.NewFileStrategy(*flagOutputDir)
-	}
-
-	packagePath := resolvePackagePath(*flagOutputDir)
-	templates, err := generator.Decide(i, *flagInit, info.Name, packagePath)
-
-	gen := generator.NewGenerator(templates, i, strategy)
-	err = gen.Generate()
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		fmt.Println("All files successfully generated")
-	}
-}
-
-func resolvePackagePath(outPath string) string {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		fmt.Println("GOPATH is empty")
-		os.Exit(1)
-	}
-
-	absOutPath, err := filepath.Abs(outPath)
+	units, err := generator.Decide(i, *flagInit, info.Name, *flagOutputDir)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-
-	gopathSrc := filepath.Join(gopath, "src")
-	if !strings.HasPrefix(absOutPath, gopathSrc) {
-		fmt.Println("-out not in GOPATH")
-		os.Exit(1)
+	for _, unit := range units {
+		err := unit.Generate()
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	}
-
-	return absOutPath[len(gopathSrc)+1:]
+	fmt.Println("All files successfully generated")
 }
 
 func findInterface(file *types.File, ifaceName string) *types.Interface {

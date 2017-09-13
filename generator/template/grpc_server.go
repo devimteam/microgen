@@ -3,13 +3,20 @@ package template
 import (
 	"path/filepath"
 
+	"github.com/devimteam/microgen/generator/write_method"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
 )
 
-type GRPCServerTemplate struct {
+type gRPCServerTemplate struct {
 	Info *GenerationInfo
+}
+
+func NewGRPCServerTemplate(info *GenerationInfo) *gRPCServerTemplate {
+	return &gRPCServerTemplate{
+		Info: info.Duplicate(),
+	}
 }
 
 func serverStructName(iface *types.Interface) string {
@@ -52,7 +59,7 @@ func pathToConverter(servicePath string) string {
 //			return resp.(*stringsvc.CountResponse), nil
 //		}
 //
-func (t *GRPCServerTemplate) Render(i *GenerationInfo) *Statement {
+func (t *gRPCServerTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
 
 	f.Type().Id(privateServerStructName(i.Iface)).StructFunc(func(g *Group) {
@@ -63,10 +70,10 @@ func (t *GRPCServerTemplate) Render(i *GenerationInfo) *Statement {
 
 	f.Func().Id("NewGRPCServer").
 		Params(
-			Id("endpoints").Op("*").Qual(t.Info.ServiceDir, "Endpoints"),
+			Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints"),
 			Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ServerOption"),
 		).Params(
-		Qual(protobufPath(t.Info.ServicePackageName), serverStructName(i.Iface)),
+		Qual(protobufPath(t.Info.ServiceImportPackageName), serverStructName(i.Iface)),
 	).
 		Block(
 			Return().Op("&").Id(privateServerStructName(i.Iface)).Values(DictFunc(func(g Dict) {
@@ -74,8 +81,8 @@ func (t *GRPCServerTemplate) Render(i *GenerationInfo) *Statement {
 					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
-							Line().Qual(pathToConverter(t.Info.ServiceDir), decodeRequestName(m)),
-							Line().Qual(pathToConverter(t.Info.ServiceDir), encodeResponseName(m)),
+							Line().Qual(pathToConverter(t.Info.ServiceImportPath), decodeRequestName(m)),
+							Line().Qual(pathToConverter(t.Info.ServiceImportPath), encodeResponseName(m)),
 							Line().Id("opts").Op("...").Line(),
 						)
 				}
@@ -92,8 +99,12 @@ func (t *GRPCServerTemplate) Render(i *GenerationInfo) *Statement {
 	return &f
 }
 
-func (GRPCServerTemplate) DefaultPath() string {
+func (gRPCServerTemplate) DefaultPath() string {
 	return "./transport/grpc/server.go"
+}
+
+func (t *gRPCServerTemplate) ChooseMethod() (write_method.Method, error) {
+	return write_method.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render service interface method for grpc server.
@@ -106,12 +117,12 @@ func (GRPCServerTemplate) DefaultPath() string {
 //			return resp.(*stringsvc.CountResponse), nil
 //		}
 //
-func (t *GRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.Interface) *Statement {
+func (t *gRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.Interface) *Statement {
 	return Func().
 		Params(Id(util.FirstLowerChar(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
 		Id(signature.Name).
-		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Op("*").Qual(protobufPath(t.Info.ServicePackageName), requestStructName(signature))).
-		Params(Op("*").Qual(protobufPath(t.Info.ServicePackageName), responseStructName(signature)), Error()).
+		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Op("*").Qual(protobufPath(t.Info.ServiceImportPackageName), requestStructName(signature))).
+		Params(Op("*").Qual(protobufPath(t.Info.ServiceImportPackageName), responseStructName(signature)), Error()).
 		BlockFunc(t.grpcServerFuncBody(signature, i))
 }
 
@@ -123,7 +134,7 @@ func (t *GRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.
 //		}
 //		return resp.(*stringsvc.CountResponse), nil
 //
-func (t *GRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *types.Interface) func(g *Group) {
+func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *types.Interface) func(g *Group) {
 	return func(g *Group) {
 		g.List(Id("_"), Id("resp"), Err()).
 			Op(":=").
@@ -133,6 +144,6 @@ func (t *GRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 			Return().List(Nil(), Err()),
 		)
 
-		g.Return().List(Id("resp").Assert(Op("*").Qual(protobufPath(t.Info.ServicePackageName), responseStructName(signature))), Nil())
+		g.Return().List(Id("resp").Assert(Op("*").Qual(protobufPath(t.Info.ServiceImportPackageName), responseStructName(signature))), Nil())
 	}
 }

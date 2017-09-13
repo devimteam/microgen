@@ -1,9 +1,11 @@
 package template
 
 import (
+	"github.com/devimteam/microgen/generator/write_method"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
+	"path/filepath"
 )
 
 var (
@@ -15,8 +17,14 @@ var (
 	defaultGolangTypes = []string{"string", "bool", "int", "uint", "byte", "int64", "uint64", "float64", "int32", "uint32", "float32"}
 )
 
-type GRPCEndpointConverterTemplate struct {
+type gRPCEndpointConverterTemplate struct {
 	Info *GenerationInfo
+}
+
+func NewGRPCEndpointConverterTemplate(info *GenerationInfo) *gRPCEndpointConverterTemplate {
+	return &gRPCEndpointConverterTemplate{
+		Info: info.Duplicate(),
+	}
 }
 
 func decodeRequestName(f *types.Function) string {
@@ -89,7 +97,7 @@ func encodeResponseName(f *types.Function) string {
 //			stringsvc.CountResponse{},
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) Render(i *GenerationInfo) *Statement {
+func (t *gRPCEndpointConverterTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
 
 	for _, signature := range i.Iface.Methods {
@@ -146,8 +154,26 @@ func protoToType(field *types.Type, depth int) string {
 	return methodName
 }
 
-func (GRPCEndpointConverterTemplate) DefaultPath() string {
+func (gRPCEndpointConverterTemplate) DefaultPath() string {
 	return "./transport/converter/protobuf/endpoint_converters.go"
+}
+
+func (t *gRPCEndpointConverterTemplate) ChooseMethod() (write_method.Method, error) {
+	var strategy write_method.Method
+	if err := util.TryToOpenFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
+		strategy = write_method.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath())
+	} else if file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath())); err != nil {
+		strategy = write_method.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath())
+	} else {
+		t.
+	}
+	return strategy, nil
+}
+
+func (t *gRPCEndpointConverterTemplate) ShouldGenerate() *types.File {
+	file := &types.File{
+
+	}
 }
 
 // Renders type conversion (if need) to default protobuf types.
@@ -206,7 +232,7 @@ func isDefaultGolangField(field *types.Variable) bool {
 //			return nil, err
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) convertCustomType(structName, converterName string, field *types.Variable) *Statement {
+func (t *gRPCEndpointConverterTemplate) convertCustomType(structName, converterName string, field *types.Variable) *Statement {
 	return List(Id(structName+util.ToUpperFirst(field.Name)), Err()).
 		Op(":=").
 		Add(
@@ -229,19 +255,19 @@ func (t *GRPCEndpointConverterTemplate) convertCustomType(structName, converterN
 //			}, nil
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) encodeRequest(signature *types.Function) *Statement {
+func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function) *Statement {
 	methodParams := removeContextIfFirst(signature.Args)
 	return Line().Func().Id(encodeRequestName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
-				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ServiceDir, requestStructName(signature)))
+				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ServiceImportPath, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := golangTypeToProto("", &field); !ok {
 						group.Add(t.convertCustomType("req", typeToProto(&field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(protobufPath(t.Info.ServicePackageName), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(protobufPath(t.Info.ServiceImportPackageName), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodParams {
 					req, _ := golangTypeToProto("req", &field)
 					dict[structFieldName(&field)] = Line().Add(req)
@@ -265,19 +291,19 @@ func (t *GRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 //			}, nil
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) encodeResponse(signature *types.Function) *Statement {
+func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function) *Statement {
 	methodResults := removeContextIfFirst(signature.Results)
 	return Line().Func().Id(encodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
-				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.Info.ServiceDir, responseStructName(signature)))
+				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.Info.ServiceImportPath, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := golangTypeToProto("", &field); !ok {
 						group.Add(t.convertCustomType("resp", typeToProto(&field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(protobufPath(t.Info.ServicePackageName), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(protobufPath(t.Info.ServiceImportPackageName), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodResults {
 					resp, _ := golangTypeToProto("resp", &field)
 					dict[structFieldName(&field)] = Line().Add(resp)
@@ -297,19 +323,19 @@ func (t *GRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 //			}, nil
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) decodeRequest(signature *types.Function) *Statement {
+func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function) *Statement {
 	methodParams := removeContextIfFirst(signature.Args)
 	return Line().Func().Id(decodeRequestName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
-				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(t.Info.ServicePackageName), requestStructName(signature)))
+				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(t.Info.ServiceImportPackageName), requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := protoTypeToGolang("", &field); !ok {
 						group.Add(t.convertCustomType("req", protoToType(&field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(t.Info.ServiceDir, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(t.Info.ServiceImportPath, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodParams {
 					req, _ := protoTypeToGolang("req", &field)
 					dict[structFieldName(&field)] = Line().Add(req)
@@ -333,19 +359,19 @@ func (t *GRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 //			}, nil
 //		}
 //
-func (t *GRPCEndpointConverterTemplate) decodeResponse(signature *types.Function) *Statement {
+func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function) *Statement {
 	methodResults := removeContextIfFirst(signature.Results)
 	return Line().Func().Id(decodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
-				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(t.Info.ServicePackageName), responseStructName(signature)))
+				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(t.Info.ServiceImportPackageName), responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := protoTypeToGolang("", &field); !ok {
 						group.Add(t.convertCustomType("resp", protoToType(&field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(t.Info.ServiceDir, responseStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(t.Info.ServiceImportPath, responseStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodResults {
 					resp, _ := protoTypeToGolang("resp", &field)
 					dict[structFieldName(&field)] = Line().Add(resp)

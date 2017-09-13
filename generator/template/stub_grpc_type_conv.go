@@ -59,9 +59,15 @@ func converterProtoToBody(field *types.Variable) Code {
 	return s
 }
 
-type StubGRPCTypeConverterTemplate struct {
+type stubGRPCTypeConverterTemplate struct {
 	Info                      *GenerationInfo
 	alreadyRenderedConverters []string
+}
+
+func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) *stubGRPCTypeConverterTemplate {
+	return &stubGRPCTypeConverterTemplate{
+		Info: info.Duplicate(),
+	}
 }
 
 // Render whole file with protobuf converters.
@@ -77,7 +83,7 @@ type StubGRPCTypeConverterTemplate struct {
 //			panic("method not provided")
 //		}
 //
-func (t *StubGRPCTypeConverterTemplate) Render(i *GenerationInfo) *Statement {
+func (t *stubGRPCTypeConverterTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
 
 	for _, signature := range i.Iface.Methods {
@@ -95,7 +101,7 @@ func (t *StubGRPCTypeConverterTemplate) Render(i *GenerationInfo) *Statement {
 	return &f
 }
 
-func (StubGRPCTypeConverterTemplate) DefaultPath() string {
+func (stubGRPCTypeConverterTemplate) DefaultPath() string {
 	return "./transport/converter/protobuf/type_converters.go"
 }
 
@@ -105,7 +111,7 @@ func (StubGRPCTypeConverterTemplate) DefaultPath() string {
 //			return
 //		}
 //
-func (t *StubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variable) *Statement {
+func (t *stubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variable) *Statement {
 	return Func().Id(typeToProto(&field.Type, 0)).
 		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(&field.Type))).
 		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(&field.Type)), Id("conv"+util.ToUpperFirst(field.Name)+"Err").Error()).
@@ -118,7 +124,7 @@ func (t *StubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variab
 //			return
 //		}
 //
-func (t *StubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variable) *Statement {
+func (t *stubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variable) *Statement {
 	return Func().Id(protoToType(&field.Type, 0)).
 		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(&field.Type))).
 		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(&field.Type)), Id("conv"+util.ToUpperFirst(field.Name)+"Err").Error()).
@@ -129,7 +135,7 @@ func (t *StubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variab
 //
 //  	*repository.Visit
 //
-func (t *StubGRPCTypeConverterTemplate) protoFieldType(field *types.Type) *Statement {
+func (t *stubGRPCTypeConverterTemplate) protoFieldType(field *types.Type) *Statement {
 	c := &Statement{}
 
 	if field.IsArray {
@@ -155,7 +161,7 @@ func (t *StubGRPCTypeConverterTemplate) protoFieldType(field *types.Type) *State
 		return c.Add(code)
 	}
 	if field.Import != nil {
-		c.Qual(protobufPath(t.Info.ServicePackageName), protoType)
+		c.Qual(protobufPath(t.Info.ServiceImportPackageName), protoType)
 	} else {
 		c.Id(protoType)
 	}

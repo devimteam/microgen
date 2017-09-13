@@ -1,6 +1,8 @@
 package template
 
 import (
+	"errors"
+
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
@@ -16,11 +18,25 @@ const (
 	PackagePathGoKitTransportGRPC = "github.com/go-kit/kit/transport/grpc"
 )
 
+var (
+	ErrNothingToGenerate = errors.New("nothing to generate")
+)
+
 type GenerationInfo struct {
-	ServicePackageName string
-	Iface              *types.Interface
-	ServiceDir         string
-	Force              string
+	ServiceImportPackageName string
+	Iface                    *types.Interface
+	ServiceImportPath        string
+	Force                    bool
+	AbsOutPath               string
+}
+
+func (info GenerationInfo) Duplicate() *GenerationInfo {
+	return &GenerationInfo{
+		Iface: info.Iface,
+		Force: info.Force,
+		ServiceImportPackageName: info.ServiceImportPackageName,
+		ServiceImportPath:        info.ServiceImportPath,
+	}
 }
 
 func structFieldName(field *types.Variable) *Statement {

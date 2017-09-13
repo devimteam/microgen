@@ -12,8 +12,14 @@ const (
 	serviceLoggingStructName = "serviceLogging"
 )
 
-type LoggingTemplate struct {
+type loggingTemplate struct {
 	Info *GenerationInfo
+}
+
+func NewLoggingTemplate(info *GenerationInfo) *loggingTemplate {
+	return &loggingTemplate{
+		Info: info.Duplicate(),
+	}
 }
 
 // Render all logging.go file.
@@ -56,7 +62,7 @@ type LoggingTemplate struct {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func (t *LoggingTemplate) Render(i *GenerationInfo) *Statement {
+func (t *loggingTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
 
 	f.Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
@@ -67,7 +73,7 @@ func (t *LoggingTemplate) Render(i *GenerationInfo) *Statement {
 	// Render type logger
 	f.Type().Id(serviceLoggingStructName).Struct(
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.Info.ServiceDir, i.Iface.Name),
+		Id(nextVarName).Qual(t.Info.ServiceImportPath, i.Iface.Name),
 	)
 
 	// Render functions
@@ -79,7 +85,7 @@ func (t *LoggingTemplate) Render(i *GenerationInfo) *Statement {
 	return &f
 }
 
-func (LoggingTemplate) DefaultPath() string {
+func (loggingTemplate) DefaultPath() string {
 	return "./middleware/logging.go"
 }
 
@@ -92,11 +98,11 @@ func (LoggingTemplate) DefaultPath() string {
 //			}
 //		}
 //
-func (t *LoggingTemplate) newLoggingBody(i *types.Interface) *Statement {
+func (t *loggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.Info.ServiceDir, i.Name),
+		Id(nextVarName).Qual(t.Info.ServiceImportPath, i.Name),
 	).Params(
-		Qual(t.Info.ServiceDir, i.Name),
+		Qual(t.Info.ServiceImportPath, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(serviceLoggingStructName).Values(
 			Dict{

@@ -1,4 +1,4 @@
-package generator
+package write_method
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ func (s writerStrategy) Write(f Renderer, t Template) error {
 	return nil
 }
 
-func WriterStrategy(writer io.Writer) Strategy {
+func WriterStrategy(writer io.Writer) Method {
 	return writerStrategy{
 		writer: writer,
 	}

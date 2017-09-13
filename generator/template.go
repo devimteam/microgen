@@ -1,10 +1,12 @@
 package generator
 
 import (
-	"github.com/devimteam/microgen/generator/template"
+	"github.com/devimteam/microgen/generator/write_method"
 	"github.com/vetcher/jennifer/jen"
 )
 
 type Template interface {
-	Render(data *template.GenerationInfo) *jen.Statement
+	DefaultPath() string
+	ChooseMethod() (write_method.Method, error)
+	Render() *jen.Statement
 }

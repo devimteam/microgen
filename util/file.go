@@ -6,6 +6,8 @@ import (
 	"go/token"
 	"path/filepath"
 
+	"os"
+
 	"github.com/vetcher/godecl"
 	"github.com/vetcher/godecl/types"
 )
@@ -25,4 +27,20 @@ func ParseFile(filename string) (*types.File, error) {
 		return nil, fmt.Errorf("error when parsing info from file: %v\n", err)
 	}
 	return info, nil
+}
+
+func TryToOpenFile(absPath, relPath string) error {
+	outpath, err := filepath.Abs(filepath.Join(absPath, relPath))
+	if err != nil {
+		return fmt.Errorf("unable to resolve path: %v", err)
+	}
+
+	fileInfo, err := os.Stat(outpath)
+	if os.IsNotExist(err) || os.IsPermission(err) {
+		return err
+	}
+	if fileInfo.IsDir() {
+		return fmt.Errorf("%s is dir", outpath)
+	}
+	return nil
 }

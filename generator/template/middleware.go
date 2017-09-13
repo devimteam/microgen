@@ -8,8 +8,14 @@ const (
 	MiddlewareTypeName = "Middleware"
 )
 
-type MiddlewareTemplate struct {
+type middlewareTemplate struct {
 	Info *GenerationInfo
+}
+
+func NewMiddlewareTemplate(info *GenerationInfo) *middlewareTemplate {
+	return &middlewareTemplate{
+		Info: info.Duplicate(),
+	}
 }
 
 // Render middleware decorator
@@ -22,12 +28,12 @@ type MiddlewareTemplate struct {
 //
 //		type Middleware func(svc.StringService) svc.StringService
 //
-func (t *MiddlewareTemplate) Render(i *GenerationInfo) *Statement {
+func (t *middlewareTemplate) Render(i *GenerationInfo) *Statement {
 	f := Statement{}
-	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.ServiceDir, i.Iface.Name)).Qual(t.Info.ServiceDir, i.Iface.Name)
+	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.ServiceImportPath, i.Iface.Name)).Qual(t.Info.ServiceImportPath, i.Iface.Name)
 	return &f
 }
 
-func (MiddlewareTemplate) DefaultPath() string {
+func (middlewareTemplate) DefaultPath() string {
 	return "./middleware/middleware.go"
 }
