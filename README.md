@@ -11,20 +11,32 @@ go get -u github.com/devimteam/microgen/cmd/microgen
 ``` sh
 microgen [OPTIONS]
 ```
+microgen tool search in file first `type * interface` with docs, that contains `// @microgen`.
+
+generation parameters provides through ["tags"](#tags) in interface docs after general `// @microgen` tag (space before @ __required__).
+
 microgen is stable, so you can generate without flag `-init` any time your interface changed (e.g. added new method)
 ### Options
 
-| Name        | Default          | Description                                                                   |
-|:------------|:-----------------|:------------------------------------------------------------------------------|
-| -file       | service.go       | Relative path to source file with service interface                           |
-| -interface* |                  | Service interface name in source file                                         |
-| -out        | writes to stdout | Relative or absolute path to directory, where you want to see generated files |
-| -package*   |                  | Package path of your service interface source file                            |
-| -debug      | false            | Display some debug information                                                |
-| -grpc       | false            | Render client, server and converters for gRPC protocol                        |
-| -init       | false            | With flag `-grpc` generate stub methods for converters                        |
+| Name        | Default    | Description                                                                   |
+|:------------|:-----------|:------------------------------------------------------------------------------|
+| -file       | service.go | Relative path to source file with service interface                           |
+| -out        | .          | Relative or absolute path to directory, where you want to see generated files |
+| -init       | false      | With flag generate stub methods.                                              |
+| -help       | false      | Print usage information                                                       |
 
 \* __Required option__
+
+## Tags
+All allowed tags provided here.
+
+| Tag         | Description                                                                            |
+|:------------|:---------------------------------------------------------------------------------------|
+| middleware  | General application middleware interface                                               |
+| logging     | Middleware that writes to logger all request/response information with handled time    |
+| grpc-client | Generates client for grpc transport with request/response encoders/decoders            |
+| grpc-server | Generates server for grpc transport with request/response encoders/decoders            |
+| grpc        | Generates client and server for grpc transport with request/response encoders/decoders |
 
 ## Example
 Follow this short guide to try microgen tool.
@@ -39,6 +51,7 @@ import (
 	drive "google.golang.org/api/drive/v3"
 )
 
+// @microgen grpc, middleware, logging
 type StringService interface {
 	Uppercase(ctx context.Context, str string) (ans string, err error)
 	Count(ctx context.Context, text string, symbol string) (count int, positions []int)
@@ -46,7 +59,7 @@ type StringService interface {
 }
 ```
 2. Open command line next to your `service.go`.
-3. Enter `microgen -file ./service.go -interface StringService -out . -grpc -init`. __*__
+3. Enter `microgen -init`. __*__
 4. You should see something like that:
 ```
 exchanges.go
