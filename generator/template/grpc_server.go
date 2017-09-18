@@ -1,16 +1,29 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
+	"path/filepath"
+
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
+	. "github.com/vetcher/jennifer/jen"
 )
 
 type GRPCServerTemplate struct {
+	packageName        string
+	ServicePackageName string
+	PackagePath        string
 }
 
-func serverStructName(iface *parser.Interface) string {
+func serverStructName(iface *types.Interface) string {
 	return iface.Name + "Server"
+}
+
+func privateServerStructName(iface *types.Interface) string {
+	return util.ToLowerFirst(iface.Name) + "Server"
+}
+
+func pathToConverter(servicePath string) string {
+	return filepath.Join(servicePath, "transport/converter/protobuf")
 }
 
 // Render whole grpc server file.
@@ -20,93 +33,120 @@ func serverStructName(iface *parser.Interface) string {
 //		package transportgrpc
 //
 //		import (
-//			transportlayer "github.com/devimteam/go-kit/transportlayer/grpc"
+//			svc "github.com/devimteam/microgen/test/svc"
+//			protobuf "github.com/devimteam/microgen/test/svc/transport/converter/protobuf"
+//			grpc "github.com/go-kit/kit/transport/grpc"
 //			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //			context "golang.org/x/net/context"
 //		)
 //
-//		type server struct {
-//			ts transportlayer.Server
+//		type stringServiceServer struct {
+//			count grpc.Handler
 //		}
 //
-//		func NewServer(endpoints []transportlayer.Endpoint) stringsvc.StringServiceServer {
-//			return &server{transportlayer.NewServer(endpoints)}
+//		func NewGRPCServer(endpoints *svc.Endpoints, opts ...grpc.ServerOption) stringsvc.StringServiceServer {
+//			return &stringServiceServer{count: grpc.NewServer(
+//				endpoints.CountEndpoint,
+//				protobuf.DecodeCountRequest,
+//				protobuf.EncodeCountResponse,
+//				opts...,
+//			)}
 //		}
 //
-//		func (s *server) Count(ctx context.Context, req *stringsvc.CountRequest) (*stringsvc.CountResponse, error) {
-//			_, resp, err := s.ts.Serve(ctx, req)
+//		func (s *stringServiceServer) Count(ctx context.Context, req *stringsvc.CountRequest) (*stringsvc.CountResponse, error) {
+//			_, resp, err := s.count.ServeGRPC(ctx, req)
 //			if err != nil {
 //				return nil, err
 //			}
 //			return resp.(*stringsvc.CountResponse), nil
 //		}
 //
-func (GRPCServerTemplate) Render(i *parser.Interface) *File {
-	f := NewFile("transportgrpc")
+func (t *GRPCServerTemplate) Render(i *types.Interface) *Statement {
+	t.packageName = "transportgrpc"
+	f := Statement{}
 
-	f.Type().Id("server").Struct(
-		Id("ts").Qual(PackagePathTransportLayer, "Server"),
-	)
+	f.Type().Id(privateServerStructName(i)).StructFunc(func(g *Group) {
+		for _, method := range i.Methods {
+			g.Id(util.ToLowerFirst(method.Name)).Qual(PackagePathGoKitTransportGRPC, "Handler")
+		}
+	}).Line()
 
-	f.Func().Id("NewServer").
-		Call(Id("endpoints").
-			Index().Qual(PackagePathTransportLayer, "Endpoint")).Qual(protobufPath(i), serverStructName(i)).
+	f.Func().Id("NewGRPCServer").
+		Params(
+			Id("endpoints").Op("*").Qual(t.PackagePath, "Endpoints"),
+			Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ServerOption"),
+		).Params(
+		Qual(protobufPath(t.ServicePackageName), serverStructName(i)),
+	).
 		Block(
-			Return().Op("&").Id("server").Values(
-				Qual(PackagePathTransportLayerGRPC, "NewServer").Call(Id("endpoints")),
+			Return().Op("&").Id(privateServerStructName(i)).Values(DictFunc(func(g Dict) {
+				for _, m := range i.Methods {
+					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
+						Call(
+							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
+							Line().Qual(pathToConverter(t.PackagePath), decodeRequestName(m)),
+							Line().Qual(pathToConverter(t.PackagePath), encodeResponseName(m)),
+							Line().Id("opts").Op("...").Line(),
+						)
+				}
+			}),
 			),
 		)
 	f.Line()
 
-	for _, signature := range i.FuncSignatures {
+	for _, signature := range i.Methods {
 		f.Line()
-		f.Add(grpcServerFunc(signature, i))
+		f.Add(t.grpcServerFunc(signature, i)).Line()
 	}
 
-	return f
+	return &f
 }
 
 func (GRPCServerTemplate) Path() string {
 	return "./transport/grpc/server.go"
 }
 
+func (t *GRPCServerTemplate) PackageName() string {
+	return t.packageName
+}
+
 // Render service interface method for grpc server.
 //
-//		func (s *server) Count(ctx context.Context, req *stringsvc.CountRequest) (*stringsvc.CountResponse, error) {
-//			_, resp, err := s.ts.Serve(ctx, req)
+//		func (s *stringServiceServer) Count(ctx context.Context, req *stringsvc.CountRequest) (*stringsvc.CountResponse, error) {
+//			_, resp, err := s.count.ServeGRPC(ctx, req)
 //			if err != nil {
 //				return nil, err
 //			}
 //			return resp.(*stringsvc.CountResponse), nil
 //		}
 //
-func grpcServerFunc(signature *parser.FuncSignature, i *parser.Interface) *Statement {
+func (t *GRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.Interface) *Statement {
 	return Func().
-		Params(Id(util.FirstLowerChar("server")).Op("*").Id("server")).
+		Params(Id(util.FirstLowerChar(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
 		Id(signature.Name).
-		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Op("*").Qual(protobufPath(i), requestStructName(signature))).
-		Params(Op("*").Qual(protobufPath(i), responseStructName(signature)), Error()).
-		BlockFunc(grpcServerFuncBody(signature, i))
+		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Op("*").Qual(protobufPath(t.ServicePackageName), requestStructName(signature))).
+		Params(Op("*").Qual(protobufPath(t.ServicePackageName), responseStructName(signature)), Error()).
+		BlockFunc(t.grpcServerFuncBody(signature, i))
 }
 
 // Render service method body for grpc server.
 //
-//		_, resp, err := s.ts.Serve(ctx, req)
+//		_, resp, err := s.count.ServeGRPC(ctx, req)
 //		if err != nil {
 //			return nil, err
 //		}
 //		return resp.(*stringsvc.CountResponse), nil
 //
-func grpcServerFuncBody(signature *parser.FuncSignature, i *parser.Interface) func(g *Group) {
+func (t *GRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *types.Interface) func(g *Group) {
 	return func(g *Group) {
 		g.List(Id("_"), Id("resp"), Err()).
 			Op(":=").
-			Id(util.FirstLowerChar("server")).Dot("ts").Dot("Serve").Call(Id("ctx"), Id("req"))
+			Id(util.FirstLowerChar(privateServerStructName(i))).Dot(util.ToLowerFirst(signature.Name)).Dot("ServeGRPC").Call(Id("ctx"), Id("req"))
 
 		g.If(Err().Op("!=").Nil()).Block(
 			Return().List(Nil(), Err()),
 		)
 
-		g.Return().List(Id("resp").Assert(Op("*").Qual(protobufPath(i), responseStructName(signature))), Nil())
+		g.Return().List(Id("resp").Assert(Op("*").Qual(protobufPath(t.ServicePackageName), responseStructName(signature))), Nil())
 	}
 }

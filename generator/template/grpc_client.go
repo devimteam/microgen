@@ -3,15 +3,17 @@ package template
 import (
 	"strings"
 
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
+	"github.com/vetcher/godecl/types"
+	. "github.com/vetcher/jennifer/jen"
 )
 
 type GRPCClientTemplate struct {
-	PackagePath string
+	packageName        string
+	PackagePath        string
+	ServicePackageName string
 }
 
-func (t GRPCClientTemplate) grpcConverterPackagePath() string {
+func (t *GRPCClientTemplate) grpcConverterPackagePath() string {
 	return t.PackagePath + "/transport/converter/protobuf"
 }
 
@@ -22,61 +24,62 @@ func (t GRPCClientTemplate) grpcConverterPackagePath() string {
 //		package transportgrpc
 //
 //		import (
-//			transportlayer "github.com/devimteam/go-kit/transportlayer"
-//			grpc1 "github.com/devimteam/go-kit/transportlayer/grpc"
 //			svc "github.com/devimteam/microgen/test/svc"
 //			protobuf "github.com/devimteam/microgen/test/svc/transport/converter/protobuf"
+//			grpc1 "github.com/go-kit/kit/transport/grpc"
+//			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //			grpc "google.golang.org/grpc"
 //		)
 //
-//		func NewClient(conn *grpc.ClientConn) svc.StringService {
-//			endpoints := []transportlayer.Endpoint{
-//				transportlayer.NewEndpoint(
-//					"Count",
-//					nil,
-//					transportlayer.WithConverter(protobuf.CountConverter),
-// 				),
-// 			}
-//			return svc.NewClient(
-//				grpc1.NewClient(
-//					"devim.string.protobuf.StringService",
-//					conn,
-//					endpoints,
-// 				),
-// 			)
+//		func NewGRPCClient(conn *grpc.ClientConn, opts ...grpc1.ClientOption) svc.StringService {
+//			return svc.Endpoints{CountEndpoint: grpc1.NewClient(
+//				conn,
+//				"devim.string.protobuf.StringService",
+//				"Count",
+//				protobuf.EncodeCountRequest,
+//				protobuf.DecodeCountResponse,
+//				stringsvc.CountResponse{},
+//				opts...,
+//			).Endpoint()}
 //		}
 //
-func (t GRPCClientTemplate) Render(i *parser.Interface) *File {
-	f := NewFile("transportgrpc")
+func (t *GRPCClientTemplate) Render(i *types.Interface) *Statement {
+	t.packageName = "transportgrpc"
+	f := Statement{}
 
-	f.Func().Id("NewClient").
-		Call(Id("conn").
-			Op("*").Qual(PackagePathGoogleGRPC, "ClientConn")).Qual(t.PackagePath, i.Name).
+	f.Func().Id("NewGRPCClient").
+		Params(
+			Id("conn").Op("*").Qual(PackagePathGoogleGRPC, "ClientConn"),
+			Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption"),
+		).Qual(t.PackagePath, i.Name).
 		BlockFunc(func(g *Group) {
-			g.Id("endpoints").Op(":=").Index().Qual(PackagePathTransportLayer, "Endpoint").ValuesFunc(func(group *Group) {
-				for _, signature := range i.FuncSignatures {
-					group.Line().Qual(PackagePathTransportLayer, "NewEndpoint").Call(
-						Line().Lit(signature.Name),
-						Line().Nil(),
-						Line().Qual(PackagePathTransportLayer, "WithConverter").Call(Qual(t.grpcConverterPackagePath(), converterStructName(signature))),
-						Line(),
-					)
+			g.Return().Qual(t.PackagePath, "Endpoints").Values(DictFunc(func(d Dict) {
+				for _, m := range i.Methods {
+					d[Id(endpointStructName(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewClient").Call(
+						Line().Id("conn"),
+						Line().Lit("devim."+strings.ToLower(strings.TrimSuffix(i.Name, "Service"))+".protobuf."+i.Name),
+						Line().Lit(m.Name),
+						Line().Qual(pathToConverter(t.PackagePath), encodeRequestName(m)),
+						Line().Qual(pathToConverter(t.PackagePath), decodeResponseName(m)),
+						Line().Add(t.replyType(m)),
+						Line().Id("opts").Op("...").Line(),
+					).Dot("Endpoint").Call()
 				}
-				group.Line()
-			})
-			g.Return().Qual(t.PackagePath, "NewClient").Call(
-				Line().Qual(PackagePathTransportLayerGRPC, "NewClient").Call(
-					Line().Lit("devim."+strings.ToLower(strings.TrimSuffix(i.Name, "Service"))+".protobuf."+i.Name),
-					Line().Id("conn"),
-					Line().Id("endpoints"),
-					Line(),
-				),
-				Line(),
-			)
+			}))
 		})
-	return f
+	return &f
+}
+
+// Renders reply type argument
+// 		stringsvc.CountResponse{}
+func (t *GRPCClientTemplate) replyType(signature *types.Function) *Statement {
+	return Qual(protobufPath(t.ServicePackageName), responseStructName(signature)).Values()
 }
 
 func (GRPCClientTemplate) Path() string {
 	return "./transport/grpc/client.go"
+}
+
+func (t *GRPCClientTemplate) PackageName() string {
+	return t.packageName
 }

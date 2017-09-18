@@ -1,9 +1,9 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
+	. "github.com/vetcher/jennifer/jen"
 )
 
 const (
@@ -13,6 +13,7 @@ const (
 )
 
 type LoggingTemplate struct {
+	packageName string
 	PackagePath string
 }
 
@@ -56,8 +57,9 @@ type LoggingTemplate struct {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func (t LoggingTemplate) Render(i *parser.Interface) *File {
-	f := NewFile("middleware")
+func (t *LoggingTemplate) Render(i *types.Interface) *Statement {
+	t.packageName = "middleware"
+	f := Statement{}
 
 	f.Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newLoggingBody(i))
@@ -71,16 +73,20 @@ func (t LoggingTemplate) Render(i *parser.Interface) *File {
 	)
 
 	// Render functions
-	for _, signature := range i.FuncSignatures {
+	for _, signature := range i.Methods {
 		f.Line()
-		f.Add(loggingFunc(signature))
+		f.Add(loggingFunc(signature)).Line()
 	}
 
-	return f
+	return &f
 }
 
 func (LoggingTemplate) Path() string {
 	return "./middleware/logging.go"
+}
+
+func (t *LoggingTemplate) PackageName() string {
+	return t.packageName
 }
 
 // Render body for new logging middleware.
@@ -92,7 +98,7 @@ func (LoggingTemplate) Path() string {
 //			}
 //		}
 //
-func (t LoggingTemplate) newLoggingBody(i *parser.Interface) *Statement {
+func (t *LoggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
 		Id(nextVarName).Qual(t.PackagePath, i.Name),
 	).Params(
@@ -120,7 +126,7 @@ func (t LoggingTemplate) newLoggingBody(i *parser.Interface) *Statement {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func loggingFunc(signature *parser.FuncSignature) *Statement {
+func loggingFunc(signature *types.Function) *Statement {
 	return methodDefinition(serviceLoggingStructName, signature).
 		BlockFunc(loggingFuncBody(signature))
 }
@@ -136,18 +142,18 @@ func loggingFunc(signature *parser.FuncSignature) *Statement {
 //		}(time.Now())
 //		return s.next.Count(ctx, text, symbol)
 //
-func loggingFuncBody(signature *parser.FuncSignature) func(g *Group) {
+func loggingFuncBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
 			Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
 				Line().Lit("method"), Lit(signature.Name),
-				Add(paramsNameAndValue(removeContextIfFirst(signature.Params))),
+				Add(paramsNameAndValue(removeContextIfFirst(signature.Args))),
 				Add(paramsNameAndValue(removeContextIfFirst(signature.Results))),
 				Line().Lit("took"), Qual(PackagePathTime, "Since").Call(Id("begin")),
 			),
 		).Call(Qual(PackagePathTime, "Now").Call())
 
-		g.Return().Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Params))
+		g.Return().Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
 	}
 }
 
@@ -157,10 +163,36 @@ func loggingFuncBody(signature *parser.FuncSignature) func(g *Group) {
 // 		"result", result,
 //		"count", count,
 //
-func paramsNameAndValue(fields []*parser.FuncField) *Statement {
+func paramsNameAndValue(fields []types.Variable) *Statement {
 	return ListFunc(func(g *Group) {
 		for _, field := range fields {
 			g.Line().List(Lit(field.Name), Id(field.Name))
 		}
 	})
+}
+
+// A = 1, 2, 3
+// B = 2, 3, 4
+// xor(A, B) = 1, 4
+func decideMehodsToGenerate(methods []types.Method, functions []*types.Function) []*types.Function {
+	fnSet := make(map[string]*types.Function)
+	genSet := make(map[string]bool)
+	for _, s := range functions {
+		fnSet[s.Name] = s
+		genSet[s.Name] = true
+	}
+
+	for _, m := range methods {
+		if _, ok := genSet[m.Name]; ok && m.Receiver.Type.Name == serviceLoggingStructName {
+			genSet[m.Name] = false
+		}
+	}
+
+	var c []*types.Function
+	for name, ok := range genSet {
+		if ok {
+			c = append(c, fnSet[name])
+		}
+	}
+	return c
 }

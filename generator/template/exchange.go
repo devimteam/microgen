@@ -1,18 +1,19 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
+	"github.com/vetcher/godecl/types"
+	. "github.com/vetcher/jennifer/jen"
 )
 
 type ExchangeTemplate struct {
+	ServicePackageName string
 }
 
-func requestStructName(signature *parser.FuncSignature) string {
+func requestStructName(signature *types.Function) string {
 	return signature.Name + "Request"
 }
 
-func responseStructName(signature *parser.FuncSignature) string {
+func responseStructName(signature *types.Function) string {
 	return signature.Name + "Response"
 }
 
@@ -33,19 +34,23 @@ func responseStructName(signature *parser.FuncSignature) string {
 //  	Err error         `json:"err"`
 //  }
 //
-func (ExchangeTemplate) Render(i *parser.Interface) *File {
-	f := NewFile(i.PackageName)
+func (t *ExchangeTemplate) Render(i *types.Interface) *Statement {
+	f := Statement{}
 
-	for _, signature := range i.FuncSignatures {
-		f.Add(exchange(requestStructName(signature), signature.Params))
-		f.Add(exchange(responseStructName(signature), signature.Results))
+	for _, signature := range i.Methods {
+		f.Add(exchange(requestStructName(signature), signature.Args)).Line()
+		f.Add(exchange(responseStructName(signature), signature.Results)).Line()
 	}
 
-	return f
+	return &f
 }
 
 func (ExchangeTemplate) Path() string {
 	return "./exchanges.go"
+}
+
+func (t *ExchangeTemplate) PackageName() string {
+	return t.ServicePackageName
 }
 
 // Renders exchanges that represents requests and responses.
@@ -54,10 +59,10 @@ func (ExchangeTemplate) Path() string {
 //  	Visit *entity.Visit `json:"visit"`
 //  }
 //
-func exchange(name string, params []*parser.FuncField) Code {
+func exchange(name string, params []types.Variable) Code {
 	return Type().Id(name).StructFunc(func(g *Group) {
 		for _, param := range removeContextIfFirst(params) {
-			g.Add(structField(param))
+			g.Add(structField(&param))
 		}
 	}).Line()
 }

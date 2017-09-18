@@ -2,20 +2,38 @@
 
 
 [[projects]]
-  name = "github.com/dave/jennifer"
+  name = "github.com/fatih/structtag"
   packages = ["."]
-  revision = "59fb95b01278c19af505cbe3f97dc0948bb8bcf7"
-  version = "v0.14.0"
+  revision = "da3d9ab5b78fdc25d3a7614853b085200bd10da9"
+  version = "v0.1.0"
 
 [[projects]]
-  name = "github.com/davecgh/go-spew"
-  packages = ["spew"]
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
+  name = "github.com/vetcher/godecl"
+  packages = [".","types"]
+  revision = "b6905f3182d19d957d9d535b50603f93b07c75ed"
+  version = "v0.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/vetcher/jennifer"
+  packages = ["jen"]
+  revision = "55d079354d5a11ea904466c6148d986c76441c44"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/net"
+  packages = ["context","context/ctxhttp"]
+  revision = "66aacef3dd8a676686c7ae3716979581e8b03c47"
+
+[[projects]]
+  branch = "master"
+  name = "google.golang.org/api"
+  packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates"]
+  revision = "4cbdde7d4ee4bb5f6d6da987a182c3f1dfeb9cd6"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b3f5faaaf11ff41e50ad41c2531b818887c5c2db81260949bfc17bb11808b58c"
+  inputs-digest = "380c606c268742bbbc7121428ffac2ef78b9af9b26911819ec9b134760bf9a5e"
   solver-name = "gps-cdcl"
   solver-version = 1

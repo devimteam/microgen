@@ -1,14 +1,69 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
+	. "github.com/vetcher/jennifer/jen"
 )
+
+const (
+	GolangProtobufPtypesTimestamp = "github.com/golang/protobuf/ptypes/timestamp"
+	JsonbPackage                  = "github.com/sas1024/gorm-jsonb/jsonb"
+)
+
+func specialTypeConverter(p *types.Type) *Statement {
+	// error -> string
+	if p.Name == "error" && p.Import == nil {
+		return (&Statement{}).Id("string")
+	}
+	// time.Time -> timestamp.Timestamp
+	if p.Name == "Time" && p.Import != nil && p.Import.Package == "time" {
+		return (&Statement{}).Qual(GolangProtobufPtypesTimestamp, "Timestamp")
+	}
+	// jsonb.JSONB -> string
+	if p.Name == "JSONB" && p.Import != nil && p.Import.Package == JsonbPackage {
+		return (&Statement{}).Id("string")
+	}
+	return nil
+}
+
+func converterToProtoBody(field *types.Variable) Code {
+	s := &Statement{}
+	switch typeToProto(&field.Type, 0) {
+	case "ErrorToProto":
+		s.If().Id(util.ToLowerFirst(field.Name)).Op("==").Nil().Block(
+			Return().List(Lit(""), Nil()),
+		).Line()
+		s.Return().List(Id(util.ToLowerFirst(field.Name)).Dot("Error").Call(), Nil())
+	case "ByteListToProto":
+		s.Return().List(Id(util.ToLowerFirst(field.Name)), Nil())
+	default:
+		s.Panic(Lit("method not provided"))
+	}
+	return s
+}
+
+func converterProtoToBody(field *types.Variable) Code {
+	s := &Statement{}
+	switch protoToType(&field.Type, 0) {
+	case "ProtoToError":
+		s.If().Id("proto" + util.ToUpperFirst(field.Name)).Op("==").Lit("").Block(
+			Return().List(Nil(), Nil()),
+		).Line()
+		s.Return().List(Qual("errors", "New").Call(Id("proto"+util.ToUpperFirst(field.Name))), Nil())
+	case "ProtoToByteList":
+		s.Return().List(Id("proto"+util.ToLowerFirst(field.Name)), Nil())
+	default:
+		s.Panic(Lit("method not provided"))
+	}
+	return s
+}
 
 type StubGRPCTypeConverterTemplate struct {
 	PackagePath               string
+	ServicePackageName        string
 	alreadyRenderedConverters []string
+	packageName               string
 }
 
 // Render whole file with protobuf converters.
@@ -17,36 +72,38 @@ type StubGRPCTypeConverterTemplate struct {
 //		package protobuf
 //
 //		func IntListToProto(positions []int) (protoPositions []int64, convPositionsErr error) {
-//			return
+//			panic("method not provided")
 //		}
 //
 //		func ProtoToIntList(protoPositions []int64) (positions []int, convPositionsErr error) {
-//			return
+//			panic("method not provided")
 //		}
 //
-func (t StubGRPCTypeConverterTemplate) Render(i *parser.Interface) *File {
-	t.alreadyRenderedConverters = []string{}
-	f := NewFile("protobuf")
+func (t *StubGRPCTypeConverterTemplate) Render(i *types.Interface) *Statement {
+	t.packageName = "protobuf"
+	f := Statement{}
 
-	for _, signature := range i.FuncSignatures {
-		args := append(removeContextIfFirst(signature.Params), removeContextIfFirst(signature.Results)...)
+	for _, signature := range i.Methods {
+		args := append(removeContextIfFirst(signature.Args), removeContextIfFirst(signature.Results)...)
 		for _, field := range args {
-			if _, ok := golangTypeToProto("", field); !ok && !util.IsInStringSlice(typeToProto(field), t.alreadyRenderedConverters) {
-				f.Add(t.stubConverterToProto(field, i))
-				f.Line()
-				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, typeToProto(field))
-				f.Add(t.stubConverterProtoTo(field, i))
-				f.Line()
-				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, protoToType(field))
+			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(&field.Type, 0), t.alreadyRenderedConverters) {
+				f.Add(t.stubConverterToProto(&field)).Line().Line()
+				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, typeToProto(&field.Type, 0))
+				f.Add(t.stubConverterProtoTo(&field)).Line().Line()
+				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, protoToType(&field.Type, 0))
 			}
 		}
 	}
 
-	return f
+	return &f
 }
 
 func (StubGRPCTypeConverterTemplate) Path() string {
 	return "./transport/converter/protobuf/type_converters.go"
+}
+
+func (t *StubGRPCTypeConverterTemplate) PackageName() string {
+	return t.packageName
 }
 
 // Render stub method for golang to protobuf converter.
@@ -55,13 +112,11 @@ func (StubGRPCTypeConverterTemplate) Path() string {
 //			return
 //		}
 //
-func (t StubGRPCTypeConverterTemplate) stubConverterToProto(field *parser.FuncField, iface *parser.Interface) *Statement {
-	return Func().Id(typeToProto(field)).
-		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(field))).
-		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(field, iface)), Id("conv"+util.ToUpperFirst(field.Name)+"Err").Error()).
-		Block(
-			Return(),
-		)
+func (t *StubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variable) *Statement {
+	return Func().Id(typeToProto(&field.Type, 0)).
+		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(&field.Type))).
+		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(&field.Type)), Id("conv"+util.ToUpperFirst(field.Name)+"Err").Error()).
+		Block(converterToProtoBody(field))
 }
 
 // Render stub method for protobuf to golang converter.
@@ -70,20 +125,18 @@ func (t StubGRPCTypeConverterTemplate) stubConverterToProto(field *parser.FuncFi
 //			return
 //		}
 //
-func (t StubGRPCTypeConverterTemplate) stubConverterProtoTo(field *parser.FuncField, iface *parser.Interface) *Statement {
-	return Func().Id(protoToType(field)).
-		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(field, iface))).
-		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(field)), Id("conv"+util.ToUpperFirst(field.Name)+"Err").Error()).
-		Block(
-			Return(),
-		)
+func (t *StubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variable) *Statement {
+	return Func().Id(protoToType(&field.Type, 0)).
+		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(&field.Type))).
+		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(&field.Type)), Id("conv"+util.ToUpperFirst(field.Name)+"Err").Error()).
+		Block(converterProtoToBody(field))
 }
 
 // Render protobuf field type for given func field.
 //
 //  	*repository.Visit
 //
-func (t StubGRPCTypeConverterTemplate) protoFieldType(field *parser.FuncField, iface *parser.Interface) *Statement {
+func (t *StubGRPCTypeConverterTemplate) protoFieldType(field *types.Type) *Statement {
 	c := &Statement{}
 
 	if field.IsArray {
@@ -94,21 +147,23 @@ func (t StubGRPCTypeConverterTemplate) protoFieldType(field *parser.FuncField, i
 		c.Op("*")
 	}
 
-	protoType := field.Type
-	if tmp, ok := goToProtoTypesMap[field.Type]; ok {
+	if field.IsMap {
+		m := field.Map()
+		return c.Map(t.protoFieldType(&m.Key)).Add(t.protoFieldType(&m.Value))
+	}
+	if field.IsInterface {
+		c.Interface()
+	}
+	protoType := field.Name
+	if tmp, ok := goToProtoTypesMap[field.Name]; ok {
 		protoType = tmp
 	}
-	if field.Package != nil {
-		if field.Package.Path == "time" && field.Type == "Time" {
-			c.Qual(PackagePathProtoTimestamp, "Timestamp")
-		} else {
-			c.Qual(protobufPath(iface), protoType)
-		}
+	if code := specialTypeConverter(field); code != nil {
+		return c.Add(code)
+	}
+	if field.Import != nil {
+		c.Qual(protobufPath(t.ServicePackageName), protoType)
 	} else {
-		// Special condition for error converting
-		if field.Type == "error" {
-			protoType = "string"
-		}
 		c.Id(protoType)
 	}
 

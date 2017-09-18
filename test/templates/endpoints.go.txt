@@ -12,21 +12,21 @@ type Endpoints struct {
 }
 
 func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
-	req := CountRequest{
+	_req := CountRequest{
 		Symbol: symbol,
 		Text:   text,
 	}
-	resp, err := e.CountEndpoint(ctx, &req)
+	_resp, err := e.CountEndpoint(ctx, &_req)
 	if err != nil {
 		return
 	}
-	return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
+	return _resp.(*CountResponse).Count, _resp.(*CountResponse).Positions
 }
 
 func CountEndpoint(svc StringService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(*CountRequest)
-		count, positions := svc.Count(ctx, req.Text, req.Symbol)
+		_req := request.(*CountRequest)
+		count, positions := svc.Count(ctx, _req.Text, _req.Symbol)
 		return &CountResponse{
 			Count:     count,
 			Positions: positions,

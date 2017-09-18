@@ -1,21 +1,21 @@
 package generator
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
-
-	"github.com/dave/jennifer/jen"
 )
 
 const MkdirPermissions = 0777
 
-type fileStrategy struct {
+type newFileStrategy struct {
 	outputDir string
 }
 
-func (s fileStrategy) Write(f *jen.File, t Template) error {
+func (s newFileStrategy) Write(renderer Renderer, t Template) error {
 	outpath, err := filepath.Abs(filepath.Join(s.outputDir, t.Path()))
 	if err != nil {
 		return fmt.Errorf("unable to resolve path: %v", err)
@@ -33,7 +33,7 @@ func (s fileStrategy) Write(f *jen.File, t Template) error {
 		return fmt.Errorf("could not stat file: %v", err)
 	}
 
-	err = f.Save(outpath)
+	err = s.Save(renderer, outpath)
 	if err != nil {
 		return fmt.Errorf("error when save file: %v", err)
 	}
@@ -41,8 +41,20 @@ func (s fileStrategy) Write(f *jen.File, t Template) error {
 	return nil
 }
 
+// Copied from original github.com/dave/jennifer/jen.go func Save()
+func (s newFileStrategy) Save(f Renderer, filename string) error {
+	buf := &bytes.Buffer{}
+	if err := f.Render(buf); err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(filename, buf.Bytes(), 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
 func NewFileStrategy(dir string) Strategy {
-	return fileStrategy{
+	return newFileStrategy{
 		outputDir: dir,
 	}
 }

@@ -1,9 +1,9 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
+	. "github.com/vetcher/jennifer/jen"
 )
 
 var (
@@ -16,7 +16,25 @@ var (
 )
 
 type GRPCEndpointConverterTemplate struct {
-	PackagePath string
+	packageName        string
+	PackagePath        string
+	ServicePackageName string
+}
+
+func decodeRequestName(f *types.Function) string {
+	return "Decode" + f.Name + "Request"
+}
+
+func decodeResponseName(f *types.Function) string {
+	return "Decode" + f.Name + "Response"
+}
+
+func encodeRequestName(f *types.Function) string {
+	return "Encode" + f.Name + "Request"
+}
+
+func encodeResponseName(f *types.Function) string {
+	return "Encode" + f.Name + "Response"
 }
 
 // Renders converter file.
@@ -27,97 +45,108 @@ type GRPCEndpointConverterTemplate struct {
 //
 //		import (
 //			context "context"
-//			grpc "github.com/devimteam/go-kit/transportlayer/grpc"
 //			svc "github.com/devimteam/microgen/test/svc"
-//			util "github.com/devimteam/microgen/test/svc/util"
 //			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //		)
 //
-//		var CountConverter = &grpc.EndpointConverter{
-//			func(_ context.Context, request interface{}) (interface{}, error) {
-//				req := request.(*svc.CountRequest)
-//				return &stringsvc.CountRequest{
-//					Symbol: req.Symbol,
-//					Text:   req.Text,
-//				}, nil
-//			},
-//			func(_ context.Context, response interface{}) (interface{}, error) {
-//				resp := response.(*svc.CountResponse)
-//				respPositions, err := IntListToProto(resp.Positions)
-//				if err != nil {
-//					return nil, err
-//				}
-//				return &stringsvc.CountResponse{
-//					Count:     int64(resp.Count),
-//					Positions: respPositions,
-//				}, nil
-//			},
-//			func(_ context.Context, request interface{}) (interface{}, error) {
-//				req := request.(*stringsvc.CountRequest)
-//				return &svc.CountRequest{
-//					Symbol: string(req.Symbol),
-//					Text:   string(req.Text),
-//				}, nil
-//			},
-//			func(_ context.Context, response interface{}) (interface{}, error) {
-//				resp := response.(*stringsvc.CountResponse)
-//				respPositions, err := ProtoToIntList(resp.Positions)
-//				if err != nil {
-//					return nil, err
-//				}
-//				return &svc.CountResponse{
-//					Count:     int(resp.Count),
-//					Positions: respPositions,
-//				}, nil
-//			},
-//			stringsvc.CountResponse{},
+//		func EncodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
+//			req := request.(*svc.CountRequest)
+//			return &stringsvc.CountRequest{
+//				Symbol: req.Symbol,
+//				Text:   req.Text,
+//			}, nil
 //		}
 //
-func (t GRPCEndpointConverterTemplate) Render(i *parser.Interface) *File {
-	f := NewFile("protobuf")
+//		func EncodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
+//			resp := response.(*svc.CountResponse)
+//			respPositions, err := IntListToProto(resp.Positions)
+//			if err != nil {
+//				return nil, err
+//			}
+//			return &stringsvc.CountResponse{
+//				Count:     int64(resp.Count),
+//				Positions: respPositions,
+//			}, nil
+//		}
+//
+//		func DecodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
+//			req := request.(*stringsvc.CountRequest)
+//			return &svc.CountRequest{
+//				Symbol: string(req.Symbol),
+//				Text:   string(req.Text),
+//			}, nil
+//		}
+//
+//		func DecodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
+//			resp := response.(*stringsvc.CountResponse)
+//			respPositions, err := ProtoToIntList(resp.Positions)
+//			if err != nil {
+//				return nil, err
+//			}
+//			return &svc.CountResponse{
+//				Count:     int(resp.Count),
+//				Positions: respPositions,
+//			}, nil
+//		}
+//
+func (t *GRPCEndpointConverterTemplate) Render(i *types.Interface) *Statement {
+	t.packageName = "protobuf"
+	f := Statement{}
 
-	for _, signature := range i.FuncSignatures {
-		f.Var().Id(converterStructName(signature)).Op("=").Op("&").Qual(PackagePathTransportLayerGRPC, "EndpointConverter").
-			ValuesFunc(func(g *Group) {
-				g.Add(t.encodeRequest(signature, i))
-				g.Add(t.encodeResponse(signature, i))
-				g.Add(t.decodeRequest(signature, i))
-				g.Add(t.decodeResponse(signature, i))
-				g.Add(t.replyType(signature, i))
-				g.Line()
-			})
+	for _, signature := range i.Methods {
+		f.Line().Add(t.encodeRequest(signature))
+		f.Line().Add(t.encodeResponse(signature))
+		f.Line().Add(t.decodeRequest(signature))
+		f.Line().Add(t.decodeResponse(signature))
 		f.Line()
 	}
 
-	return f
+	return &f
 }
 
 // Returns FieldTypeToProto.
-func typeToProto(field *parser.FuncField) string {
-	methodName := util.ToUpperFirst(field.Type)
+func typeToProto(field *types.Type, depth int) string {
+	methodName := util.ToUpperFirst(field.Name)
 	if field.IsPointer {
 		methodName += "Ptr"
 	}
 	if field.IsArray {
 		methodName += "List"
 	}
-	return methodName + "ToProto"
+	if field.IsMap {
+		methodName += "Map"
+		m := field.Map()
+		methodName += typeToProto(&m.Key, depth+1) + typeToProto(&m.Value, depth+1)
+	}
+	if depth == 0 {
+		methodName += "ToProto"
+	}
+	return methodName
 }
 
 // Returns ProtoToFieldType.
-func protoToType(field *parser.FuncField) string {
-	methodName := "ProtoTo" + util.ToUpperFirst(field.Type)
+func protoToType(field *types.Type, depth int) string {
+	methodName := "ProtoTo" + util.ToUpperFirst(field.Name)
 	if field.IsPointer {
 		methodName += "Ptr"
 	}
 	if field.IsArray {
 		methodName += "List"
+	}
+	if field.IsMap {
+		methodName += "Map"
+		m := field.Map()
+		methodName += protoToType(&m.Key, depth+1) + protoToType(&m.Value, depth+1)
 	}
 	return methodName
 }
 
 func (GRPCEndpointConverterTemplate) Path() string {
 	return "./transport/converter/protobuf/endpoint_converters.go"
+}
+
+func (t *GRPCEndpointConverterTemplate) PackageName() string {
+	return t.packageName
 }
 
 // Renders type conversion (if need) to default protobuf types.
@@ -128,18 +157,17 @@ func (GRPCEndpointConverterTemplate) Path() string {
 //		structNamePositions
 // based on field type
 // Second result means can field converts to default protobuf type.
-func golangTypeToProto(structName string, field *parser.FuncField) (*Statement, bool) {
-	if field.IsArray || field.IsPointer {
+func golangTypeToProto(structName string, field *types.Variable) (*Statement, bool) {
+	if field.Type.IsArray || field.Type.IsPointer {
 		return Id(structName + util.ToUpperFirst(field.Name)), false
 	} else if isDefaultProtoField(field) {
 		return Id(structName).Dot(util.ToUpperFirst(field.Name)), true
-	} else if newType, ok := goToProtoTypesMap[field.Type]; ok {
-		newField := &parser.FuncField{
-			Type:      newType,
-			Name:      field.Name,
-			IsArray:   field.IsArray,
-			Package:   field.Package,
-			IsPointer: field.IsPointer,
+	} else if newType, ok := goToProtoTypesMap[field.Type.Name]; ok {
+		newField := &types.Type{
+			Name:      newType,
+			IsArray:   field.Type.IsArray,
+			Import:    field.Type.Import,
+			IsPointer: field.Type.IsPointer,
 		}
 		return fieldType(newField).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
 	}
@@ -152,21 +180,21 @@ func golangTypeToProto(structName string, field *parser.FuncField) (*Statement, 
 // 		structNamePositions
 // based on field type
 // Second result means can field converts to golang type.
-func protoTypeToGolang(structName string, field *parser.FuncField) (*Statement, bool) {
-	if field.IsArray || field.IsPointer {
+func protoTypeToGolang(structName string, field *types.Variable) (*Statement, bool) {
+	if field.Type.IsArray || field.Type.IsPointer {
 		return Id(structName + util.ToUpperFirst(field.Name)), false
 	} else if isDefaultGolangField(field) {
-		return fieldType(field).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
+		return fieldType(&field.Type).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
 	}
 	return Id(structName + util.ToUpperFirst(field.Name)), false
 }
 
-func isDefaultProtoField(field *parser.FuncField) bool {
-	return util.IsInStringSlice(field.Type, defaultProtoTypes)
+func isDefaultProtoField(field *types.Variable) bool {
+	return util.IsInStringSlice(field.Type.Name, defaultProtoTypes)
 }
 
-func isDefaultGolangField(field *parser.FuncField) bool {
-	return util.IsInStringSlice(field.Type, defaultGolangTypes)
+func isDefaultGolangField(field *types.Variable) bool {
+	return util.IsInStringSlice(field.Type.Name, defaultGolangTypes)
 }
 
 // Render custom type converting and error checking
@@ -176,7 +204,7 @@ func isDefaultGolangField(field *parser.FuncField) bool {
 //			return nil, err
 //		}
 //
-func (t GRPCEndpointConverterTemplate) convertCustomType(structName, converterName string, field *parser.FuncField) *Statement {
+func (t *GRPCEndpointConverterTemplate) convertCustomType(structName, converterName string, field *types.Variable) *Statement {
 	return List(Id(structName+util.ToUpperFirst(field.Name)), Err()).
 		Op(":=").
 		Add(
@@ -191,7 +219,7 @@ func (t GRPCEndpointConverterTemplate) convertCustomType(structName, converterNa
 
 // Renders function for encoding request, golang type converts to proto type.
 //
-//		func(_ context.Context, request interface{}) (interface{}, error) {
+//		func EncodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
 //			req := request.(*svc.CountRequest)
 //			return &stringsvc.CountRequest{
 //				Symbol: req.Symbol,
@@ -199,22 +227,22 @@ func (t GRPCEndpointConverterTemplate) convertCustomType(structName, converterNa
 //			}, nil
 //		}
 //
-func (t GRPCEndpointConverterTemplate) encodeRequest(signature *parser.FuncSignature, i *parser.Interface) *Statement {
-	methodParams := removeContextIfFirst(signature.Params)
-	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
+func (t *GRPCEndpointConverterTemplate) encodeRequest(signature *types.Function) *Statement {
+	methodParams := removeContextIfFirst(signature.Args)
+	return Line().Func().Id(encodeRequestName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
 				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.PackagePath, requestStructName(signature)))
 				for _, field := range methodParams {
-					if _, ok := golangTypeToProto("", field); !ok {
-						group.Add(t.convertCustomType("req", typeToProto(field), field))
+					if _, ok := golangTypeToProto("", &field); !ok {
+						group.Add(t.convertCustomType("req", typeToProto(&field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(protobufPath(i), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(protobufPath(t.ServicePackageName), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodParams {
-					req, _ := golangTypeToProto("req", field)
-					dict[structFieldName(field)] = Line().Add(req)
+					req, _ := golangTypeToProto("req", &field)
+					dict[structFieldName(&field)] = Line().Add(req)
 				}
 			})), Nil())
 		},
@@ -223,7 +251,7 @@ func (t GRPCEndpointConverterTemplate) encodeRequest(signature *parser.FuncSigna
 
 // Renders function for encoding response, golang type converts to proto type.
 //
-//		func(_ context.Context, response interface{}) (interface{}, error) {
+//		func EncodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
 //			resp := response.(*svc.CountResponse)
 //			respPositions, err := IntListToProto(resp.Positions)
 //			if err != nil {
@@ -235,22 +263,22 @@ func (t GRPCEndpointConverterTemplate) encodeRequest(signature *parser.FuncSigna
 //			}, nil
 //		}
 //
-func (t GRPCEndpointConverterTemplate) encodeResponse(signature *parser.FuncSignature, i *parser.Interface) *Statement {
+func (t *GRPCEndpointConverterTemplate) encodeResponse(signature *types.Function) *Statement {
 	methodResults := removeContextIfFirst(signature.Results)
-	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(encodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
 				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.PackagePath, responseStructName(signature)))
 				for _, field := range methodResults {
-					if _, ok := golangTypeToProto("", field); !ok {
-						group.Add(t.convertCustomType("resp", typeToProto(field), field))
+					if _, ok := golangTypeToProto("", &field); !ok {
+						group.Add(t.convertCustomType("resp", typeToProto(&field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(protobufPath(i), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(protobufPath(t.ServicePackageName), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodResults {
-					resp, _ := golangTypeToProto("resp", field)
-					dict[structFieldName(field)] = Line().Add(resp)
+					resp, _ := golangTypeToProto("resp", &field)
+					dict[structFieldName(&field)] = Line().Add(resp)
 				}
 			})), Nil())
 		},
@@ -259,7 +287,7 @@ func (t GRPCEndpointConverterTemplate) encodeResponse(signature *parser.FuncSign
 
 // Renders function for decoding request, proto type converts to golang type.
 //
-//		func(_ context.Context, request interface{}) (interface{}, error) {
+//		func DecodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
 //			req := request.(*stringsvc.CountRequest)
 //			return &svc.CountRequest{
 //				Symbol: string(req.Symbol),
@@ -267,22 +295,22 @@ func (t GRPCEndpointConverterTemplate) encodeResponse(signature *parser.FuncSign
 //			}, nil
 //		}
 //
-func (t GRPCEndpointConverterTemplate) decodeRequest(signature *parser.FuncSignature, i *parser.Interface) *Statement {
-	methodParams := removeContextIfFirst(signature.Params)
-	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
+func (t *GRPCEndpointConverterTemplate) decodeRequest(signature *types.Function) *Statement {
+	methodParams := removeContextIfFirst(signature.Args)
+	return Line().Func().Id(decodeRequestName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
-				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(i), requestStructName(signature)))
+				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(t.ServicePackageName), requestStructName(signature)))
 				for _, field := range methodParams {
-					if _, ok := protoTypeToGolang("", field); !ok {
-						group.Add(t.convertCustomType("req", protoToType(field), field))
+					if _, ok := protoTypeToGolang("", &field); !ok {
+						group.Add(t.convertCustomType("req", protoToType(&field.Type, 0), &field))
 					}
 				}
 			}
 			group.Return().List(Op("&").Qual(t.PackagePath, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodParams {
-					req, _ := protoTypeToGolang("req", field)
-					dict[structFieldName(field)] = Line().Add(req)
+					req, _ := protoTypeToGolang("req", &field)
+					dict[structFieldName(&field)] = Line().Add(req)
 				}
 			})), Nil())
 		},
@@ -291,7 +319,7 @@ func (t GRPCEndpointConverterTemplate) decodeRequest(signature *parser.FuncSigna
 
 // Renders function for decoding response, proto type converts to golang type.
 //
-//		func(_ context.Context, response interface{}) (interface{}, error) {
+//		func DecodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
 //			resp := response.(*stringsvc.CountResponse)
 //			respPositions, err := ProtoToIntList(resp.Positions)
 //			if err != nil {
@@ -303,30 +331,24 @@ func (t GRPCEndpointConverterTemplate) decodeRequest(signature *parser.FuncSigna
 //			}, nil
 //		}
 //
-func (t GRPCEndpointConverterTemplate) decodeResponse(signature *parser.FuncSignature, i *parser.Interface) *Statement {
+func (t *GRPCEndpointConverterTemplate) decodeResponse(signature *types.Function) *Statement {
 	methodResults := removeContextIfFirst(signature.Results)
-	return Line().Func().Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(decodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
-				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(i), responseStructName(signature)))
+				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(t.ServicePackageName), responseStructName(signature)))
 				for _, field := range methodResults {
-					if _, ok := protoTypeToGolang("", field); !ok {
-						group.Add(t.convertCustomType("resp", protoToType(field), field))
+					if _, ok := protoTypeToGolang("", &field); !ok {
+						group.Add(t.convertCustomType("resp", protoToType(&field.Type, 0), &field))
 					}
 				}
 			}
 			group.Return().List(Op("&").Qual(t.PackagePath, responseStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodResults {
-					resp, _ := protoTypeToGolang("resp", field)
-					dict[structFieldName(field)] = Line().Add(resp)
+					resp, _ := protoTypeToGolang("resp", &field)
+					dict[structFieldName(&field)] = Line().Add(resp)
 				}
 			})), Nil())
 		},
 	)
-}
-
-// Renders reply type argument
-// 		stringsvc.CountResponse{}
-func (t GRPCEndpointConverterTemplate) replyType(signature *parser.FuncSignature, i *parser.Interface) *Statement {
-	return Line().Qual(protobufPath(i), responseStructName(signature)).Values()
 }

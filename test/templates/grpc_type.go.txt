@@ -3,9 +3,9 @@
 package protobuf
 
 func IntListToProto(positions []int) (protoPositions []int64, convPositionsErr error) {
-	return
+	panic("method not provided")
 }
 
 func ProtoToIntList(protoPositions []int64) (positions []int, convPositionsErr error) {
-	return
+	panic("method not provided")
 }
