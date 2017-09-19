@@ -61,8 +61,9 @@ func endpointStructName(str string) string {
 //			}
 //		}
 //
-func (t *endpointsTemplate) Render() *Statement {
-	f := Statement{}
+func (t *endpointsTemplate) Render() write_strategy.Renderer {
+	f := NewFile(t.Info.ServiceImportPackageName)
+	f.PackageComment(FileHeader)
 
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {
 		for _, signature := range t.Info.Iface.Methods {
@@ -78,7 +79,7 @@ func (t *endpointsTemplate) Render() *Statement {
 		f.Add(createEndpoint(signature, t.Info)).Line().Line()
 	}
 
-	return &f
+	return f
 }
 
 func (endpointsTemplate) DefaultPath() string {

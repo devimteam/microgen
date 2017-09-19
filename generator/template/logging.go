@@ -63,8 +63,9 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func (t *loggingTemplate) Render() *Statement {
-	f := Statement{}
+func (t *loggingTemplate) Render() write_strategy.Renderer {
+	f := NewFile(t.Info.ServiceImportPackageName)
+	f.PackageComment(FileHeader)
 
 	f.Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newLoggingBody(t.Info.Iface))
@@ -83,7 +84,7 @@ func (t *loggingTemplate) Render() *Statement {
 		f.Add(loggingFunc(signature)).Line()
 	}
 
-	return &f
+	return f
 }
 
 func (loggingTemplate) DefaultPath() string {

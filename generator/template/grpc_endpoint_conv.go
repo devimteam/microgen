@@ -96,8 +96,9 @@ func encodeResponseName(f *types.Function) string {
 //			}, nil
 //		}
 //
-func (t *gRPCEndpointConverterTemplate) Render() *Statement {
-	f := Statement{}
+func (t *gRPCEndpointConverterTemplate) Render() write_strategy.Renderer {
+	f := NewFile(t.Info.ServiceImportPackageName)
+	f.PackageComment(FileHeader)
 
 	for _, signature := range t.Info.Iface.Methods {
 		f.Line().Add(t.encodeRequest(signature))
@@ -107,7 +108,7 @@ func (t *gRPCEndpointConverterTemplate) Render() *Statement {
 		f.Line()
 	}
 
-	return &f
+	return f
 }
 
 // Returns FieldTypeToProto.
@@ -170,8 +171,7 @@ func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 
 func (t *gRPCEndpointConverterTemplate) ShouldGenerate() *types.File {
 	dryCode := t.Render()
-	dryFile := NewFile("")
-	dryFile.Add(dryCode)
+	dryCode.Render(nil)
 	return nil
 }
 

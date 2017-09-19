@@ -43,15 +43,16 @@ func responseStructName(signature *types.Function) string {
 //  	Err error         `json:"err"`
 //  }
 //
-func (t *exchangeTemplate) Render() *Statement {
-	f := Statement{}
+func (t *exchangeTemplate) Render() write_strategy.Renderer {
+	f := NewFile(t.Info.ServiceImportPackageName)
+	f.PackageComment(FileHeader)
 
 	for _, signature := range t.Info.Iface.Methods {
 		f.Add(exchange(requestStructName(signature), signature.Args)).Line()
 		f.Add(exchange(responseStructName(signature), signature.Results)).Line()
 	}
 
-	return &f
+	return f
 }
 
 func (exchangeTemplate) DefaultPath() string {

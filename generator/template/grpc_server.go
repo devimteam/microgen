@@ -66,8 +66,9 @@ func pathToConverter(servicePath string) string {
 //			return resp.(*stringsvc.CountResponse), nil
 //		}
 //
-func (t *gRPCServerTemplate) Render() *Statement {
-	f := Statement{}
+func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
+	f := NewFile(t.Info.ServiceImportPackageName)
+	f.PackageComment(FileHeader)
 
 	f.Type().Id(privateServerStructName(t.Info.Iface)).StructFunc(func(g *Group) {
 		for _, method := range t.Info.Iface.Methods {
@@ -103,7 +104,7 @@ func (t *gRPCServerTemplate) Render() *Statement {
 		f.Add(t.grpcServerFunc(signature, t.Info.Iface)).Line()
 	}
 
-	return &f
+	return f
 }
 
 func (gRPCServerTemplate) DefaultPath() string {

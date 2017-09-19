@@ -46,8 +46,9 @@ func (t *gRPCClientTemplate) grpcConverterPackagePath() string {
 //			).Endpoint()}
 //		}
 //
-func (t *gRPCClientTemplate) Render() *Statement {
-	f := Statement{}
+func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
+	f := NewFile(t.Info.ServiceImportPackageName)
+	f.PackageComment(FileHeader)
 
 	f.Func().Id("NewGRPCClient").
 		Params(
@@ -69,7 +70,7 @@ func (t *gRPCClientTemplate) Render() *Statement {
 				}
 			}))
 		})
-	return &f
+	return f
 }
 
 // Renders reply type argument

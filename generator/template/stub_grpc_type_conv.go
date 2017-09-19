@@ -84,8 +84,9 @@ func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
 //			panic("method not provided")
 //		}
 //
-func (t *stubGRPCTypeConverterTemplate) Render() *Statement {
-	f := Statement{}
+func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
+	f := NewFile(t.Info.ServiceImportPackageName)
+	f.PackageComment(FileHeader)
 
 	for _, signature := range t.Info.Iface.Methods {
 		args := append(removeContextIfFirst(signature.Args), removeContextIfFirst(signature.Results)...)
@@ -99,7 +100,7 @@ func (t *stubGRPCTypeConverterTemplate) Render() *Statement {
 		}
 	}
 
-	return &f
+	return f
 }
 
 func (stubGRPCTypeConverterTemplate) DefaultPath() string {

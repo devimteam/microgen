@@ -1,8 +1,6 @@
 package template
 
 import (
-	"fmt"
-
 	"github.com/devimteam/microgen/generator/write_strategy"
 	. "github.com/vetcher/jennifer/jen"
 )
@@ -31,11 +29,11 @@ func NewMiddlewareTemplate(info *GenerationInfo) Template {
 //
 //		type Middleware func(svc.StringService) svc.StringService
 //
-func (t *middlewareTemplate) Render() *Statement {
-	f := Statement{}
-	fmt.Println(t.Info.ServiceImportPath)
+func (t *middlewareTemplate) Render() write_strategy.Renderer {
+	f := NewFile(t.Info.ServiceImportPackageName)
+	f.PackageComment(FileHeader)
 	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)
-	return &f
+	return f
 }
 
 func (middlewareTemplate) DefaultPath() string {
