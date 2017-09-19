@@ -41,6 +41,10 @@ func (middlewareTemplate) DefaultPath() string {
 	return "./middleware/middleware.go"
 }
 
+func (middlewareTemplate) Prepare() error {
+	return nil
+}
+
 func (t *middlewareTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }

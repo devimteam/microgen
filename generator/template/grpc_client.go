@@ -1,6 +1,8 @@
 package template
 
 import (
+	"fmt"
+
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
@@ -82,6 +84,16 @@ func (t *gRPCClientTemplate) replyType(signature *types.Function) *Statement {
 
 func (gRPCClientTemplate) DefaultPath() string {
 	return "./transport/grpc/client.go"
+}
+
+func (t *gRPCClientTemplate) Prepare() error {
+	if t.Info.GRPCRegAddr == "" {
+		return fmt.Errorf("grpc server address is empty")
+	}
+	if t.Info.ProtobufPackage == "" {
+		return fmt.Errorf("protobuf package is empty")
+	}
+	return nil
 }
 
 func (t *gRPCClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {

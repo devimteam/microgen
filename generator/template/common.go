@@ -41,6 +41,10 @@ func (info GenerationInfo) Duplicate() *GenerationInfo {
 		Force: info.Force,
 		ServiceImportPackageName: info.ServiceImportPackageName,
 		ServiceImportPath:        info.ServiceImportPath,
+		AbsOutPath:               info.AbsOutPath,
+
+		GRPCRegAddr:     info.GRPCRegAddr,
+		ProtobufPackage: info.ProtobufPackage,
 	}
 }
 

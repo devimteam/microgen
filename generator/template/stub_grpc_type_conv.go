@@ -1,6 +1,8 @@
 package template
 
 import (
+	"fmt"
+
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
@@ -105,6 +107,13 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 
 func (stubGRPCTypeConverterTemplate) DefaultPath() string {
 	return "./transport/converter/protobuf/type_converters.go"
+}
+
+func (t *stubGRPCTypeConverterTemplate) Prepare() error {
+	if t.Info.ProtobufPackage == "" {
+		return fmt.Errorf("protobuf package is empty")
+	}
+	return nil
 }
 
 func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {

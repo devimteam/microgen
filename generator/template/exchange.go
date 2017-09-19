@@ -60,6 +60,10 @@ func (exchangeTemplate) DefaultPath() string {
 	return "./exchanges.go"
 }
 
+func (exchangeTemplate) Prepare() error {
+	return nil
+}
+
 func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
+	"fmt"
 )
 
 type gRPCServerTemplate struct {
@@ -110,6 +111,13 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 
 func (gRPCServerTemplate) DefaultPath() string {
 	return "./transport/grpc/server.go"
+}
+
+func (t *gRPCServerTemplate) Prepare() error {
+	if t.Info.ProtobufPackage == "" {
+		return fmt.Errorf("protobuf package is empty")
+	}
+	return nil
 }
 
 func (t *gRPCServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {

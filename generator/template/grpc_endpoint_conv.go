@@ -7,6 +7,7 @@ import (
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
+	"fmt"
 )
 
 var (
@@ -154,6 +155,13 @@ func protoToType(field *types.Type, depth int) string {
 
 func (gRPCEndpointConverterTemplate) DefaultPath() string {
 	return "./transport/converter/protobuf/endpoint_converters.go"
+}
+
+func (t *gRPCEndpointConverterTemplate) Prepare() error {
+	if t.Info.ProtobufPackage == "" {
+		return fmt.Errorf("protobuf package is empty")
+	}
+	return nil
 }
 
 func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {

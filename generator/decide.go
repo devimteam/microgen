@@ -33,7 +33,13 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 	}
 
 	exch, err := NewGenUnit(template.NewExchangeTemplate(info), absOutPath, force)
+	if err != nil {
+		return nil, err
+	}
 	endp, err := NewGenUnit(template.NewEndpointsTemplate(info), absOutPath, force)
+	if err != nil {
+		return nil, err
+	}
 	units = append(units, exch, endp)
 
 	genTags := fetchTags(iface.Docs)
@@ -58,6 +64,7 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 func fetchMetaInfo(tag string, comments []string) string {
 	for _, comment := range comments {
 		if len(comment) > len(tag) && strings.HasPrefix(comment, tag) {
+			fmt.Println(comment[len(tag)+1:])
 			return comment[len(tag)+1:]
 		}
 	}

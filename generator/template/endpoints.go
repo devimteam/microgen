@@ -87,6 +87,10 @@ func (endpointsTemplate) DefaultPath() string {
 	return "./endpoints.go"
 }
 
+func (endpointsTemplate) Prepare() error {
+	return nil
+}
+
 func (t *endpointsTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
