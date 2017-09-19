@@ -16,7 +16,7 @@ type loggingTemplate struct {
 	Info *GenerationInfo
 }
 
-func NewLoggingTemplate(info *GenerationInfo) *loggingTemplate {
+func NewLoggingTemplate(info *GenerationInfo) Template {
 	return &loggingTemplate{
 		Info: info.Duplicate(),
 	}

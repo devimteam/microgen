@@ -64,7 +64,7 @@ type stubGRPCTypeConverterTemplate struct {
 	alreadyRenderedConverters []string
 }
 
-func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) *stubGRPCTypeConverterTemplate {
+func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
 	return &stubGRPCTypeConverterTemplate{
 		Info: info.Duplicate(),
 	}

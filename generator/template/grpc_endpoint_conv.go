@@ -21,7 +21,7 @@ type gRPCEndpointConverterTemplate struct {
 	Info *GenerationInfo
 }
 
-func NewGRPCEndpointConverterTemplate(info *GenerationInfo) *gRPCEndpointConverterTemplate {
+func NewGRPCEndpointConverterTemplate(info *GenerationInfo) Template {
 	return &gRPCEndpointConverterTemplate{
 		Info: info.Duplicate(),
 	}
@@ -267,7 +267,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(protobufPath(t.Info.ServiceImportPackageName), requestStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(t.Info.ProtobufPackage, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodParams {
 					req, _ := golangTypeToProto("req", &field)
 					dict[structFieldName(&field)] = Line().Add(req)
@@ -303,7 +303,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(protobufPath(t.Info.ServiceImportPackageName), responseStructName(signature)).Values(DictFunc(func(dict Dict) {
+			group.Return().List(Op("&").Qual(t.Info.ProtobufPackage, responseStructName(signature)).Values(DictFunc(func(dict Dict) {
 				for _, field := range methodResults {
 					resp, _ := golangTypeToProto("resp", &field)
 					dict[structFieldName(&field)] = Line().Add(resp)
@@ -328,7 +328,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 	return Line().Func().Id(decodeRequestName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
-				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(protobufPath(t.Info.ServiceImportPackageName), requestStructName(signature)))
+				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := protoTypeToGolang("", &field); !ok {
 						group.Add(t.convertCustomType("req", protoToType(&field.Type, 0), &field))
@@ -364,7 +364,7 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 	return Line().Func().Id(decodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
-				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(protobufPath(t.Info.ServiceImportPackageName), responseStructName(signature)))
+				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := protoTypeToGolang("", &field); !ok {
 						group.Add(t.convertCustomType("resp", protoToType(&field.Type, 0), &field))

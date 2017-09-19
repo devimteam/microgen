@@ -1,4 +1,4 @@
-package generator
+package template
 
 import (
 	"github.com/devimteam/microgen/generator/write_method"

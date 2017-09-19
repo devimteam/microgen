@@ -12,7 +12,7 @@ type gRPCClientTemplate struct {
 	Info *GenerationInfo
 }
 
-func NewGRPCClientTemplate(info *GenerationInfo) *gRPCClientTemplate {
+func NewGRPCClientTemplate(info *GenerationInfo) Template {
 	return &gRPCClientTemplate{
 		Info: info.Duplicate(),
 	}
@@ -83,7 +83,7 @@ func (t *gRPCClientTemplate) Render(i *GenerationInfo) *Statement {
 // Renders reply type argument
 // 		stringsvc.CountResponse{}
 func (t *gRPCClientTemplate) replyType(signature *types.Function) *Statement {
-	return Qual(protobufPath(t.Info.ServiceImportPackageName), responseStructName(signature)).Values()
+	return Qual(t.Info.ProtobufPackage, responseStructName(signature)).Values()
 }
 
 func (gRPCClientTemplate) DefaultPath() string {

@@ -28,6 +28,9 @@ type GenerationInfo struct {
 	ServiceImportPath        string
 	Force                    bool
 	AbsOutPath               string
+
+	ProtobufPackage string
+	GRPCRegAddr     string
 }
 
 func (info GenerationInfo) Duplicate() *GenerationInfo {

@@ -13,7 +13,7 @@ type gRPCServerTemplate struct {
 	Info *GenerationInfo
 }
 
-func NewGRPCServerTemplate(info *GenerationInfo) *gRPCServerTemplate {
+func NewGRPCServerTemplate(info *GenerationInfo) Template {
 	return &gRPCServerTemplate{
 		Info: info.Duplicate(),
 	}

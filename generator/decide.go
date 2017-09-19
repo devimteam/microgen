@@ -11,6 +11,12 @@ import (
 	"github.com/vetcher/godecl/types"
 )
 
+const (
+	MicrogenGeneralTag = "// @microgen"
+	ProtobufTag        = "// @protobuf"
+	GRPCRegAddr        = "// @grpc-addr"
+)
+
 func Decide(iface *types.Interface, force bool, importPackageName, absOutPath string) (units []*generationUnit, err error) {
 	importPackagePath, err := resolvePackagePath(absOutPath)
 	if err != nil {
@@ -22,10 +28,12 @@ func Decide(iface *types.Interface, force bool, importPackageName, absOutPath st
 		Force:                    force,
 		Iface:                    iface,
 		AbsOutPath:               absOutPath,
+		ProtobufPackage:          fetchMetaInfo(ProtobufTag, iface.Docs),
+		GRPCRegAddr:              fetchMetaInfo(GRPCRegAddr, iface.Docs),
 	}
 
-	exch, err := NewGenUnit(template.NewExchangeTemplate(info), info, absOutPath)
-	endp, err := NewGenUnit(template.NewEndpointsTemplate(info), info, absOutPath)
+	exch, err := NewGenUnit(template.NewExchangeTemplate(info), absOutPath, force)
+	endp, err := NewGenUnit(template.NewEndpointsTemplate(info), absOutPath, force)
 	units = append(units, exch, endp)
 
 	genTags := fetchTags(iface.Docs)
@@ -35,7 +43,7 @@ func Decide(iface *types.Interface, force bool, importPackageName, absOutPath st
 			return nil, fmt.Errorf("unexpected tag %s", tag)
 		}
 		for _, t := range templates {
-			unit, err := NewGenUnit(t, info, absOutPath)
+			unit, err := NewGenUnit(t, absOutPath, force)
 			if err != nil {
 				return nil, err
 			}
@@ -45,12 +53,23 @@ func Decide(iface *types.Interface, force bool, importPackageName, absOutPath st
 	return units, nil
 }
 
-func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []Template) {
+// Fetch information from slice of comments (docs).
+// Returns appendix of first comment which has tag as prefix.
+func fetchMetaInfo(tag string, comments []string) string {
+	for _, comment := range comments {
+		if len(comment) > len(tag) && strings.HasPrefix(comment, tag) {
+			return comment[len(tag)+1:]
+		}
+	}
+	return ""
+}
+
+func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.Template) {
 	switch tag {
 	case "middleware":
-		return []Template{template.NewMiddlewareTemplate(info)}
+		return []template.Template{template.NewMiddlewareTemplate(info)}
 	case "logging":
-		return []Template{template.NewLoggingTemplate(info)}
+		return []template.Template{template.NewLoggingTemplate(info)}
 	case "grpc":
 		return append(tmpls,
 			template.NewGRPCClientTemplate(info),
@@ -76,8 +95,8 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []Template)
 
 func fetchTags(strs []string) (tags []string) {
 	for _, comment := range strs {
-		if strings.HasPrefix(comment, "//@") {
-			tags = append(tags, strings.Split(strings.Replace(comment[3:], " ", "", -1), ",")...)
+		if strings.HasPrefix(comment, MicrogenGeneralTag) {
+			tags = append(tags, strings.Split(strings.Replace(comment[len(MicrogenGeneralTag):], " ", "", -1), ",")...)
 		}
 	}
 	return

@@ -12,7 +12,7 @@ type middlewareTemplate struct {
 	Info *GenerationInfo
 }
 
-func NewMiddlewareTemplate(info *GenerationInfo) *middlewareTemplate {
+func NewMiddlewareTemplate(info *GenerationInfo) Template {
 	return &middlewareTemplate{
 		Info: info.Duplicate(),
 	}
