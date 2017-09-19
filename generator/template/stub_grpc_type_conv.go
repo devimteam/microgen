@@ -2,8 +2,8 @@ package template
 
 import (
 	"fmt"
-
 	"os"
+	"path/filepath"
 
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
@@ -133,6 +133,15 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 		t.state = FileStrat
 		return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 	}
+	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range file.Functions {
+		t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, file.Functions[i].Name)
+	}
+
 	t.state = AppendStrat
 	return write_strategy.AppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
