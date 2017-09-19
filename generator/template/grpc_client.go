@@ -49,6 +49,7 @@ func (t *gRPCClientTemplate) grpcConverterPackagePath() string {
 func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 	f := NewFile(t.Info.ServiceImportPackageName)
 	f.PackageComment(FileHeader)
+	f.PackageComment(`Please, do not edit.`)
 
 	f.Func().Id("NewGRPCClient").
 		Params(

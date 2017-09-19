@@ -66,6 +66,7 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 func (t *loggingTemplate) Render() write_strategy.Renderer {
 	f := NewFile(t.Info.ServiceImportPackageName)
 	f.PackageComment(FileHeader)
+	f.PackageComment(`Please, do not edit.`)
 
 	f.Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newLoggingBody(t.Info.Iface))
