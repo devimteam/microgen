@@ -1,6 +1,7 @@
 package template
 
 import (
+	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
@@ -83,10 +84,10 @@ func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
 //			panic("method not provided")
 //		}
 //
-func (t *stubGRPCTypeConverterTemplate) Render(i *GenerationInfo) *Statement {
+func (t *stubGRPCTypeConverterTemplate) Render() *Statement {
 	f := Statement{}
 
-	for _, signature := range i.Iface.Methods {
+	for _, signature := range t.Info.Iface.Methods {
 		args := append(removeContextIfFirst(signature.Args), removeContextIfFirst(signature.Results)...)
 		for _, field := range args {
 			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(&field.Type, 0), t.alreadyRenderedConverters) {
@@ -103,6 +104,10 @@ func (t *stubGRPCTypeConverterTemplate) Render(i *GenerationInfo) *Statement {
 
 func (stubGRPCTypeConverterTemplate) DefaultPath() string {
 	return "./transport/converter/protobuf/type_converters.go"
+}
+
+func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render stub method for golang to protobuf converter.
@@ -150,9 +155,6 @@ func (t *stubGRPCTypeConverterTemplate) protoFieldType(field *types.Type) *State
 		m := field.Map()
 		return c.Map(t.protoFieldType(&m.Key)).Add(t.protoFieldType(&m.Value))
 	}
-	if field.IsInterface {
-		c.Interface()
-	}
 	protoType := field.Name
 	if tmp, ok := goToProtoTypesMap[field.Name]; ok {
 		protoType = tmp
@@ -161,7 +163,7 @@ func (t *stubGRPCTypeConverterTemplate) protoFieldType(field *types.Type) *State
 		return c.Add(code)
 	}
 	if field.Import != nil {
-		c.Qual(protobufPath(t.Info.ServiceImportPackageName), protoType)
+		c.Qual(t.Info.ProtobufPackage, protoType)
 	} else {
 		c.Id(protoType)
 	}

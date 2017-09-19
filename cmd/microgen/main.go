@@ -45,15 +45,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	units, err := generator.Decide(i, *flagInit, info.Name, *flagOutputDir)
+	units, err := generator.ListTemplatesForGen(i, *flagInit, info.Name, *flagOutputDir)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	for _, unit := range units {
 		err := unit.Generate()
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println(err)
 			os.Exit(1)
 		}
 	}
@@ -71,7 +71,7 @@ func findInterface(file *types.File) *types.Interface {
 
 func docsContainMicrogenTag(strs []string) bool {
 	for _, str := range strs {
-		if strings.HasPrefix(str, generator.MicrogenTag) {
+		if strings.HasPrefix(str, generator.MicrogenGeneralTag) {
 			return true
 		}
 	}

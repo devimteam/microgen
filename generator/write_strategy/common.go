@@ -1,4 +1,4 @@
-package write_method
+package write_strategy
 
 import "io"
 
@@ -6,6 +6,6 @@ type Renderer interface {
 	Render(io.Writer) error
 }
 
-type Method interface {
+type Strategy interface {
 	Write(Renderer) error
 }

@@ -1,9 +1,7 @@
 package template
 
 import (
-	"strings"
-
-	"github.com/devimteam/microgen/generator/write_method"
+	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
 )
@@ -48,21 +46,20 @@ func (t *gRPCClientTemplate) grpcConverterPackagePath() string {
 //			).Endpoint()}
 //		}
 //
-func (t *gRPCClientTemplate) Render(i *GenerationInfo) *Statement {
+func (t *gRPCClientTemplate) Render() *Statement {
 	f := Statement{}
 
 	f.Func().Id("NewGRPCClient").
 		Params(
 			Id("conn").Op("*").Qual(PackagePathGoogleGRPC, "ClientConn"),
 			Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption"),
-		).Qual(t.Info.ServiceImportPath, i.Iface.Name).
+		).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name).
 		BlockFunc(func(g *Group) {
 			g.Return().Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(func(d Dict) {
-				for _, m := range i.Iface.Methods {
+				for _, m := range t.Info.Iface.Methods {
 					d[Id(endpointStructName(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewClient").Call(
 						Line().Id("conn"),
-						// TODO: resolve this
-						Line().Lit("devim."+strings.ToLower(strings.TrimSuffix(i.Iface.Name, "Service"))+".protobuf."+i.Iface.Name),
+						Line().Lit(t.Info.GRPCRegAddr),
 						Line().Lit(m.Name),
 						Line().Qual(pathToConverter(t.Info.ServiceImportPath), encodeRequestName(m)),
 						Line().Qual(pathToConverter(t.Info.ServiceImportPath), decodeResponseName(m)),
@@ -85,6 +82,6 @@ func (gRPCClientTemplate) DefaultPath() string {
 	return "./transport/grpc/client.go"
 }
 
-func (t *gRPCClientTemplate) ChooseMethod() (write_method.Method, error) {
-	return write_method.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
+func (t *gRPCClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }

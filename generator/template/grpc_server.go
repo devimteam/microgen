@@ -3,7 +3,7 @@ package template
 import (
 	"path/filepath"
 
-	"github.com/devimteam/microgen/generator/write_method"
+	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
@@ -66,11 +66,11 @@ func pathToConverter(servicePath string) string {
 //			return resp.(*stringsvc.CountResponse), nil
 //		}
 //
-func (t *gRPCServerTemplate) Render(i *GenerationInfo) *Statement {
+func (t *gRPCServerTemplate) Render() *Statement {
 	f := Statement{}
 
-	f.Type().Id(privateServerStructName(i.Iface)).StructFunc(func(g *Group) {
-		for _, method := range i.Iface.Methods {
+	f.Type().Id(privateServerStructName(t.Info.Iface)).StructFunc(func(g *Group) {
+		for _, method := range t.Info.Iface.Methods {
 			g.Id(util.ToLowerFirst(method.Name)).Qual(PackagePathGoKitTransportGRPC, "Handler")
 		}
 	}).Line()
@@ -80,11 +80,11 @@ func (t *gRPCServerTemplate) Render(i *GenerationInfo) *Statement {
 			Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints"),
 			Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ServerOption"),
 		).Params(
-		Qual(protobufPath(t.Info.ServiceImportPackageName), serverStructName(i.Iface)),
+		Qual(t.Info.ProtobufPackage, serverStructName(t.Info.Iface)),
 	).
 		Block(
-			Return().Op("&").Id(privateServerStructName(i.Iface)).Values(DictFunc(func(g Dict) {
-				for _, m := range i.Iface.Methods {
+			Return().Op("&").Id(privateServerStructName(t.Info.Iface)).Values(DictFunc(func(g Dict) {
+				for _, m := range t.Info.Iface.Methods {
 					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
@@ -98,9 +98,9 @@ func (t *gRPCServerTemplate) Render(i *GenerationInfo) *Statement {
 		)
 	f.Line()
 
-	for _, signature := range i.Iface.Methods {
+	for _, signature := range t.Info.Iface.Methods {
 		f.Line()
-		f.Add(t.grpcServerFunc(signature, i.Iface)).Line()
+		f.Add(t.grpcServerFunc(signature, t.Info.Iface)).Line()
 	}
 
 	return &f
@@ -110,8 +110,8 @@ func (gRPCServerTemplate) DefaultPath() string {
 	return "./transport/grpc/server.go"
 }
 
-func (t *gRPCServerTemplate) ChooseMethod() (write_method.Method, error) {
-	return write_method.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
+func (t *gRPCServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render service interface method for grpc server.
@@ -128,8 +128,8 @@ func (t *gRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.
 	return Func().
 		Params(Id(util.FirstLowerChar(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
 		Id(signature.Name).
-		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Op("*").Qual(protobufPath(t.Info.ServiceImportPackageName), requestStructName(signature))).
-		Params(Op("*").Qual(protobufPath(t.Info.ServiceImportPackageName), responseStructName(signature)), Error()).
+		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature))).
+		Params(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)), Error()).
 		BlockFunc(t.grpcServerFuncBody(signature, i))
 }
 
@@ -151,6 +151,6 @@ func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 			Return().List(Nil(), Err()),
 		)
 
-		g.Return().List(Id("resp").Assert(Op("*").Qual(protobufPath(t.Info.ServiceImportPackageName), responseStructName(signature))), Nil())
+		g.Return().List(Id("resp").Assert(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature))), Nil())
 	}
 }

@@ -1,4 +1,4 @@
-package write_method
+package write_strategy
 
 import (
 	"bytes"
@@ -54,7 +54,7 @@ func (s newFileStrategy) Save(f Renderer, filename string) error {
 	return nil
 }
 
-func NewFileMethod(absPath, relPath string) Method {
+func NewFileMethod(absPath, relPath string) Strategy {
 	return newFileStrategy{
 		absPath: absPath,
 		relPath: relPath,
@@ -66,7 +66,7 @@ type appendFileStrategy struct {
 	relPath string
 }
 
-func AppendToFileStrategy(absPath, relPath string) Method {
+func AppendToFileStrategy(absPath, relPath string) Strategy {
 	return appendFileStrategy{
 		absPath: absPath,
 		relPath: relPath,

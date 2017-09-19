@@ -1,7 +1,7 @@
 package template
 
 import (
-	"github.com/devimteam/microgen/generator/write_method"
+	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
@@ -61,21 +61,21 @@ func endpointStructName(str string) string {
 //			}
 //		}
 //
-func (t *endpointsTemplate) Render(i *GenerationInfo) *Statement {
+func (t *endpointsTemplate) Render() *Statement {
 	f := Statement{}
 
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {
-		for _, signature := range i.Iface.Methods {
+		for _, signature := range t.Info.Iface.Methods {
 			g.Id(endpointStructName(signature.Name)).Qual(PackagePathGoKitEndpoint, "Endpoint")
 		}
 	}).Line()
 
-	for _, signature := range i.Iface.Methods {
+	for _, signature := range t.Info.Iface.Methods {
 		f.Add(serviceEndpointMethod(signature)).Line().Line()
 	}
 	f.Line()
-	for _, signature := range i.Iface.Methods {
-		f.Add(createEndpoint(signature, i)).Line().Line()
+	for _, signature := range t.Info.Iface.Methods {
+		f.Add(createEndpoint(signature, t.Info)).Line().Line()
 	}
 
 	return &f
@@ -85,8 +85,8 @@ func (endpointsTemplate) DefaultPath() string {
 	return "./endpoints.go"
 }
 
-func (t *endpointsTemplate) ChooseMethod() (write_method.Method, error) {
-	return write_method.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
+func (t *endpointsTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render full endpoints method.

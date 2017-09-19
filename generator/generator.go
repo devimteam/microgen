@@ -3,9 +3,9 @@ package generator
 import (
 	"fmt"
 
-	"github.com/devimteam/microgen/generator/write_method"
-	"github.com/vetcher/jennifer/jen"
 	"github.com/devimteam/microgen/generator/template"
+	"github.com/devimteam/microgen/generator/write_strategy"
+	"github.com/vetcher/jennifer/jen"
 )
 
 type Generator interface {
@@ -15,13 +15,13 @@ type Generator interface {
 type generationUnit struct {
 	template template.Template
 
-	writeMethod write_method.Method
+	writeMethod write_strategy.Strategy
 	absOutPath  string
 	force       bool
 }
 
 func NewGenUnit(tmpl template.Template, outPath string, force bool) (*generationUnit, error) {
-	method, err := tmpl.ChooseMethod()
+	method, err := tmpl.ChooseStrategy()
 	if err != nil {
 		return nil, err
 	}
@@ -81,3 +81,4 @@ func (g *fileGenerator) Generate() error {
 	}
 	return nil
 }
+*/

@@ -1,7 +1,7 @@
 package template
 
 import (
-	"github.com/devimteam/microgen/generator/write_method"
+	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
 )
@@ -43,10 +43,10 @@ func responseStructName(signature *types.Function) string {
 //  	Err error         `json:"err"`
 //  }
 //
-func (t *exchangeTemplate) Render(i *GenerationInfo) *Statement {
+func (t *exchangeTemplate) Render() *Statement {
 	f := Statement{}
 
-	for _, signature := range i.Iface.Methods {
+	for _, signature := range t.Info.Iface.Methods {
 		f.Add(exchange(requestStructName(signature), signature.Args)).Line()
 		f.Add(exchange(responseStructName(signature), signature.Results)).Line()
 	}
@@ -58,8 +58,8 @@ func (exchangeTemplate) DefaultPath() string {
 	return "./exchanges.go"
 }
 
-func (t *exchangeTemplate) ChooseMethod() (write_method.Method, error) {
-	return write_method.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
+func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Renders exchanges that represents requests and responses.

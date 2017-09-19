@@ -96,9 +96,6 @@ func fieldType(field *types.Type) *Statement {
 		m := field.Map()
 		return c.Map(fieldType(&m.Key)).Add(fieldType(&m.Value))
 	}
-	if field.IsInterface {
-		c.Interface()
-	}
 	if field.Import != nil {
 		c.Qual(field.Import.Package, field.Name)
 	} else {
@@ -143,9 +140,4 @@ func methodDefinition(obj string, signature *types.Function) *Statement {
 		Id(signature.Name).
 		Params(funcDefinitionParams(signature.Args)).
 		Params(funcDefinitionParams(signature.Results))
-}
-
-// TODO: Resolve this hardcoded path
-func protobufPath(svcName string) string {
-	return "gitlab.devim.team/protobuf/" + svcName
 }

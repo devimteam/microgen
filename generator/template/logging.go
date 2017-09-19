@@ -4,6 +4,7 @@ import (
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
+	"github.com/devimteam/microgen/generator/write_strategy"
 )
 
 const (
@@ -62,22 +63,22 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func (t *loggingTemplate) Render(i *GenerationInfo) *Statement {
+func (t *loggingTemplate) Render() *Statement {
 	f := Statement{}
 
 	f.Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
-		Block(t.newLoggingBody(i.Iface))
+		Block(t.newLoggingBody(t.Info.Iface))
 
 	f.Line()
 
 	// Render type logger
 	f.Type().Id(serviceLoggingStructName).Struct(
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.Info.ServiceImportPath, i.Iface.Name),
+		Id(nextVarName).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name),
 	)
 
 	// Render functions
-	for _, signature := range i.Iface.Methods {
+	for _, signature := range t.Info.Iface.Methods {
 		f.Line()
 		f.Add(loggingFunc(signature)).Line()
 	}
@@ -87,6 +88,10 @@ func (t *loggingTemplate) Render(i *GenerationInfo) *Statement {
 
 func (loggingTemplate) DefaultPath() string {
 	return "./middleware/logging.go"
+}
+
+func (t *loggingTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render body for new logging middleware.
@@ -169,30 +174,4 @@ func paramsNameAndValue(fields []types.Variable) *Statement {
 			g.Line().List(Lit(field.Name), Id(field.Name))
 		}
 	})
-}
-
-// A = 1, 2, 3
-// B = 2, 3, 4
-// xor(A, B) = 1, 4
-func decideMehodsToGenerate(methods []types.Method, functions []*types.Function) []*types.Function {
-	fnSet := make(map[string]*types.Function)
-	genSet := make(map[string]bool)
-	for _, s := range functions {
-		fnSet[s.Name] = s
-		genSet[s.Name] = true
-	}
-
-	for _, m := range methods {
-		if _, ok := genSet[m.Name]; ok && m.Receiver.Type.Name == serviceLoggingStructName {
-			genSet[m.Name] = false
-		}
-	}
-
-	var c []*types.Function
-	for name, ok := range genSet {
-		if ok {
-			c = append(c, fnSet[name])
-		}
-	}
-	return c
 }

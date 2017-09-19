@@ -1,11 +1,12 @@
 package template
 
 import (
-	"github.com/devimteam/microgen/generator/write_method"
+	"path/filepath"
+
+	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
-	"path/filepath"
 )
 
 var (
@@ -95,10 +96,10 @@ func encodeResponseName(f *types.Function) string {
 //			}, nil
 //		}
 //
-func (t *gRPCEndpointConverterTemplate) Render(i *GenerationInfo) *Statement {
+func (t *gRPCEndpointConverterTemplate) Render() *Statement {
 	f := Statement{}
 
-	for _, signature := range i.Iface.Methods {
+	for _, signature := range t.Info.Iface.Methods {
 		f.Line().Add(t.encodeRequest(signature))
 		f.Line().Add(t.encodeResponse(signature))
 		f.Line().Add(t.decodeRequest(signature))
@@ -121,7 +122,7 @@ func typeToProto(field *types.Type, depth int) string {
 	if field.IsMap {
 		methodName += "Map"
 		m := field.Map()
-		methodName += typeToProto(&m.Key, depth+1) + typeToProto(&m.Value, depth+1)
+		methodName += typeToProto(&m.Key, 1) + typeToProto(&m.Value, 1)
 	}
 	if depth == 0 {
 		methodName += "ToProto"
@@ -131,7 +132,11 @@ func typeToProto(field *types.Type, depth int) string {
 
 // Returns ProtoToFieldType.
 func protoToType(field *types.Type, depth int) string {
-	methodName := "ProtoTo" + util.ToUpperFirst(field.Name)
+	methodName := ""
+	if depth == 0 {
+		methodName += "ProtoTo"
+	}
+	methodName += util.ToUpperFirst(field.Name)
 	if field.IsPointer {
 		methodName += "Ptr"
 	}
@@ -141,7 +146,7 @@ func protoToType(field *types.Type, depth int) string {
 	if field.IsMap {
 		methodName += "Map"
 		m := field.Map()
-		methodName += protoToType(&m.Key, depth+1) + protoToType(&m.Value, depth+1)
+		methodName += protoToType(&m.Key, 1) + protoToType(&m.Value, 1)
 	}
 	return methodName
 }
@@ -150,22 +155,24 @@ func (gRPCEndpointConverterTemplate) DefaultPath() string {
 	return "./transport/converter/protobuf/endpoint_converters.go"
 }
 
-func (t *gRPCEndpointConverterTemplate) ChooseMethod() (write_method.Method, error) {
-	var strategy write_method.Method
+func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	var strategy write_strategy.Strategy
 	if err := util.TryToOpenFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
-		strategy = write_method.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath())
-	} else if file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath())); err != nil {
-		strategy = write_method.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath())
+		strategy = write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath())
+	} else if _, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath())); err != nil {
+		return nil, err
 	} else {
-		t.
+		//dryFile := t.ShouldGenerate()
+
 	}
 	return strategy, nil
 }
 
 func (t *gRPCEndpointConverterTemplate) ShouldGenerate() *types.File {
-	file := &types.File{
-
-	}
+	dryCode := t.Render()
+	dryFile := NewFile("")
+	dryFile.Add(dryCode)
+	return nil
 }
 
 // Renders type conversion (if need) to default protobuf types.
