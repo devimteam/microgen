@@ -37,7 +37,7 @@ func (t *gRPCClientTemplate) grpcConverterPackagePath() string {
 //		)
 //
 //		func NewGRPCClient(conn *grpc.ClientConn, opts ...grpc1.ClientOption) svc.StringService {
-//			return svc.Endpoints{CountEndpoint: grpc1.NewClient(
+//			return &svc.Endpoints{CountEndpoint: grpc1.NewClient(
 //				conn,
 //				"devim.string.protobuf.StringService",
 //				"Count",
@@ -59,7 +59,7 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 			Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption"),
 		).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name).
 		BlockFunc(func(g *Group) {
-			g.Return().Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(func(d Dict) {
+			g.Return().Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(func(d Dict) {
 				for _, m := range t.Info.Iface.Methods {
 					d[Id(endpointStructName(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewClient").Call(
 						Line().Id("conn"),
