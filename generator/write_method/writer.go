@@ -17,7 +17,7 @@ func (s writerStrategy) Write(f Renderer, t Template) error {
 	return nil
 }
 
-func WriterStrategy(writer io.Writer) Method {
+func NewWriterStrategy(writer io.Writer) Strategy {
 	return writerStrategy{
 		writer: writer,
 	}

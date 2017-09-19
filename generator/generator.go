@@ -56,16 +56,18 @@ func (g *generationUnit) Generate() error {
 type forceGenerator struct {
 	templates []Template
 	iface     *types.Interface
+	strategy  Strategy
 }
 
-func NewGenerator(ts []Template, iface *types.Interface) Generator {
+func NewGenerator(ts []Template, iface *types.Interface, strategy Strategy) Generator {
 	return &forceGenerator{
 		templates: ts,
 		iface:     iface,
+		strategy:  strategy,
 	}
 }
 
-func (g *forceGenerator) Generate() error {
+func (g *fileGenerator) Generate() error {
 	for _, t := range g.templates {
 		statement := t.Render(g.iface)
 		file := jen.NewFile(t.PackageName())
@@ -79,28 +81,3 @@ func (g *forceGenerator) Generate() error {
 	}
 	return nil
 }
-
-// For future purposes
-type appendGenerator struct {
-	templates []Template
-	iface     *types.Interface
-}
-
-func NewAppendGenerator(ts []Template, iface *types.Interface) Generator {
-	return &appendGenerator{
-		templates: ts,
-		iface:     iface,
-	}
-}
-
-func (g *appendGenerator) Generate() error {
-	for _, t := range g.templates {
-		statement := t.Render(g.iface)
-		err := g.strategy.Write(statement, t)
-		if err != nil {
-			return fmt.Errorf("write error: %v", err)
-		}
-	}
-	return nil
-}
-*/

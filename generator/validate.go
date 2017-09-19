@@ -1,8 +1,6 @@
 package generator
 
 import (
-	"errors"
-
 	"fmt"
 
 	"github.com/devimteam/microgen/util"
@@ -10,10 +8,6 @@ import (
 )
 
 func ValidateInterface(iface *types.Interface) error {
-	if iface.Name == "" {
-		return errors.New("unnamed interface")
-	}
-
 	var errs []error
 	for _, m := range iface.Methods {
 		errs = append(errs, validateFunction(m)...)
@@ -22,17 +16,20 @@ func ValidateInterface(iface *types.Interface) error {
 }
 
 func validateFunction(fn *types.Function) (errs []error) {
-	if fn.Name == "" {
-		errs = append(errs, errors.New("unnamed function"))
-	}
 	for _, param := range fn.Args {
 		if param.Name == "" {
 			errs = append(errs, fmt.Errorf("%s: unnamed argument of type %s", fn.Name, param.Type.String()))
+		}
+		if param.Type.IsInterface {
+			errs = append(errs, fmt.Errorf("%s: argument error: raw interface (%s) type is not allowed, declare it as type", fn.Name, param.Type.String()))
 		}
 	}
 	for _, param := range fn.Results {
 		if param.Name == "" {
 			errs = append(errs, fmt.Errorf("%s: unnamed result of type %s", fn.Name, param.Type.String()))
+		}
+		if param.Type.IsInterface {
+			errs = append(errs, fmt.Errorf("%s: result error: raw interface (%s) type is not allowed, declare it as type", fn.Name, param.Type.String()))
 		}
 	}
 	return

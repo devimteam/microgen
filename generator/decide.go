@@ -17,7 +17,7 @@ const (
 	GRPCRegAddr        = "// @grpc-addr"
 )
 
-func Decide(iface *types.Interface, force bool, importPackageName, absOutPath string) (units []*generationUnit, err error) {
+func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, absOutPath string) (units []*generationUnit, err error) {
 	importPackagePath, err := resolvePackagePath(absOutPath)
 	if err != nil {
 		return nil, err

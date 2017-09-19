@@ -110,14 +110,14 @@ func TestTemplates(t *testing.T) {
 			if buf.String() != string(out[:]) {
 				t.Errorf("Got:\n/////////\n%s\n/////////\nExpected:\n/////////\n%s\n/////////", buf.String(), string(out[:]))
 				t.Errorf("1: Got(bytes), 2: Expected(bytes):\n/////////\n1: %v\n2: %v\n/////////", buf.Bytes(), out[:])
-				x, y, _ := findDifference(buf.String(), string(out[:]))
-				t.Errorf("%d:%d", x, y)
+				x, y, z, line := findDifference(buf.String(), string(out[:]))
+				t.Errorf("line:pos:raw %d:%d:%d %d!=%d %v\n`%s`", x+1, y+1, z, buf.Bytes()[z], out[z], len(buf.String()) == len(string(out[:])), line)
 			}
 		})
 	}
 }
 
-func findDifference(first, second string) (line int, pos int, raw int) {
+func findDifference(first, second string) (line int, pos int, raw int, strLine string) {
 	for i, sym := range first {
 		if first[i] != second[i] {
 			return
@@ -125,9 +125,11 @@ func findDifference(first, second string) (line int, pos int, raw int) {
 		if sym == '\n' {
 			line += 1
 			pos = 0
+			strLine = ""
 		}
 		pos += 1
 		raw += 1
+		strLine += string(sym)
 	}
-	return 0, 0, 0
+	return 0, 0, 0, ""
 }

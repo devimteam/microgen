@@ -46,10 +46,6 @@ func structFieldName(field *types.Variable) *Statement {
 	return Id(util.ToUpperFirst(field.Name))
 }
 
-func converterStructName(signature *types.Function) string {
-	return signature.Name + "Converter"
-}
-
 // Remove from function fields context if it is first in slice
 func removeContextIfFirst(fields []types.Variable) []types.Variable {
 	if len(fields) > 0 && fields[0].Type.Import != nil && fields[0].Type.Import.Package == PackagePathContext {

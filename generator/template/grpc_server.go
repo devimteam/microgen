@@ -38,21 +38,28 @@ func pathToConverter(servicePath string) string {
 //		package transportgrpc
 //
 //		import (
-//			transportlayer "github.com/devimteam/go-kit/transportlayer/grpc"
+//			svc "github.com/devimteam/microgen/test/svc"
+//			protobuf "github.com/devimteam/microgen/test/svc/transport/converter/protobuf"
+//			grpc "github.com/go-kit/kit/transport/grpc"
 //			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //			context "golang.org/x/net/context"
 //		)
 //
-//		type server struct {
-//			ts transportlayer.Server
+//		type stringServiceServer struct {
+//			count grpc.Handler
 //		}
 //
-//		func NewServer(endpoints []transportlayer.Endpoint) stringsvc.StringServiceServer {
-//			return &server{transportlayer.NewServer(endpoints)}
+//		func NewGRPCServer(endpoints *svc.Endpoints, opts ...grpc.ServerOption) stringsvc.StringServiceServer {
+//			return &stringServiceServer{count: grpc.NewServer(
+//				endpoints.CountEndpoint,
+//				protobuf.DecodeCountRequest,
+//				protobuf.EncodeCountResponse,
+//				opts...,
+//			)}
 //		}
 //
-//		func (s *server) Count(ctx context.Context, req *stringsvc.CountRequest) (*stringsvc.CountResponse, error) {
-//			_, resp, err := s.ts.Serve(ctx, req)
+//		func (s *stringServiceServer) Count(ctx context.Context, req *stringsvc.CountRequest) (*stringsvc.CountResponse, error) {
+//			_, resp, err := s.count.ServeGRPC(ctx, req)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -109,8 +116,8 @@ func (t *gRPCServerTemplate) ChooseMethod() (write_method.Method, error) {
 
 // Render service interface method for grpc server.
 //
-//		func (s *server) Count(ctx context.Context, req *stringsvc.CountRequest) (*stringsvc.CountResponse, error) {
-//			_, resp, err := s.ts.Serve(ctx, req)
+//		func (s *stringServiceServer) Count(ctx context.Context, req *stringsvc.CountRequest) (*stringsvc.CountResponse, error) {
+//			_, resp, err := s.count.ServeGRPC(ctx, req)
 //			if err != nil {
 //				return nil, err
 //			}
@@ -128,7 +135,7 @@ func (t *gRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.
 
 // Render service method body for grpc server.
 //
-//		_, resp, err := s.ts.Serve(ctx, req)
+//		_, resp, err := s.count.ServeGRPC(ctx, req)
 //		if err != nil {
 //			return nil, err
 //		}
