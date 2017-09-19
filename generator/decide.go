@@ -32,11 +32,11 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 		GRPCRegAddr:              fetchMetaInfo(GRPCRegAddr, iface.Docs),
 	}
 
-	exch, err := NewGenUnit(template.NewExchangeTemplate(info), absOutPath, force)
+	exch, err := NewGenUnit(template.NewExchangeTemplate(info), absOutPath)
 	if err != nil {
 		return nil, err
 	}
-	endp, err := NewGenUnit(template.NewEndpointsTemplate(info), absOutPath, force)
+	endp, err := NewGenUnit(template.NewEndpointsTemplate(info), absOutPath)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 			return nil, fmt.Errorf("unexpected tag %s", tag)
 		}
 		for _, t := range templates {
-			unit, err := NewGenUnit(t, absOutPath, force)
+			unit, err := NewGenUnit(t, absOutPath)
 			if err != nil {
 				return nil, err
 			}

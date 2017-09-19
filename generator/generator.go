@@ -16,23 +16,21 @@ type generationUnit struct {
 
 	writeMethod write_strategy.Strategy
 	absOutPath  string
-	force       bool
 }
 
-func NewGenUnit(tmpl template.Template, outPath string, force bool) (*generationUnit, error) {
+func NewGenUnit(tmpl template.Template, outPath string) (*generationUnit, error) {
 	err := tmpl.Prepare()
 	if err != nil {
 		return nil, fmt.Errorf("%s: prepare error: %v", tmpl.DefaultPath(), err)
 	}
-	method, err := tmpl.ChooseStrategy()
+	strategy, err := tmpl.ChooseStrategy()
 	if err != nil {
 		return nil, err
 	}
 	return &generationUnit{
 		template:    tmpl,
 		absOutPath:  outPath,
-		writeMethod: method,
-		force:       force,
+		writeMethod: strategy,
 	}, nil
 }
 
