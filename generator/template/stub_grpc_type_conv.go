@@ -3,6 +3,8 @@ package template
 import (
 	"fmt"
 
+	"os"
+
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
@@ -65,6 +67,7 @@ func converterProtoToBody(field *types.Variable) Code {
 type stubGRPCTypeConverterTemplate struct {
 	Info                      *GenerationInfo
 	alreadyRenderedConverters []string
+	state                     WriteStrategyState
 }
 
 func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
@@ -87,8 +90,7 @@ func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
 //		}
 //
 func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
-	f := NewFile(t.Info.ServiceImportPackageName)
-	f.PackageComment(FileHeader)
+	f := &Statement{}
 
 	for _, signature := range t.Info.Iface.Methods {
 		args := append(removeContextIfFirst(signature.Args), removeContextIfFirst(signature.Results)...)
@@ -102,7 +104,17 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 		}
 	}
 
-	return f
+	if t.state == AppendStrat {
+		return f
+	}
+
+	file := NewFile(t.Info.ServiceImportPackageName)
+	file.PackageComment(FileHeader)
+	file.PackageComment(`It is better for you if you do not change functions names!`)
+	file.PackageComment(`This file will never be overwritten.`)
+	file.Add(f)
+
+	return file
 }
 
 func (stubGRPCTypeConverterTemplate) DefaultPath() string {
@@ -117,7 +129,12 @@ func (t *stubGRPCTypeConverterTemplate) Prepare() error {
 }
 
 func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
+	if err := util.TryToOpenFile(t.Info.AbsOutPath, t.DefaultPath()); os.IsNotExist(err) {
+		t.state = FileStrat
+		return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
+	}
+	t.state = AppendStrat
+	return write_strategy.AppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render stub method for golang to protobuf converter.

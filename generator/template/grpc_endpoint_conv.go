@@ -1,13 +1,13 @@
 package template
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
-	"fmt"
 )
 
 var (
@@ -20,7 +20,12 @@ var (
 )
 
 type gRPCEndpointConverterTemplate struct {
-	Info *GenerationInfo
+	Info             *GenerationInfo
+	requestEncoders  []*types.Function
+	requestDecoders  []*types.Function
+	responseEncoders []*types.Function
+	responseDecoders []*types.Function
+	state            WriteStrategyState
 }
 
 func NewGRPCEndpointConverterTemplate(info *GenerationInfo) Template {
@@ -98,18 +103,31 @@ func encodeResponseName(f *types.Function) string {
 //		}
 //
 func (t *gRPCEndpointConverterTemplate) Render() write_strategy.Renderer {
-	f := NewFile(t.Info.ServiceImportPackageName)
-	f.PackageComment(FileHeader)
+	f := &Statement{}
 
-	for _, signature := range t.Info.Iface.Methods {
+	for _, signature := range t.requestEncoders {
 		f.Line().Add(t.encodeRequest(signature))
+	}
+	for _, signature := range t.responseEncoders {
 		f.Line().Add(t.encodeResponse(signature))
+	}
+	for _, signature := range t.requestDecoders {
 		f.Line().Add(t.decodeRequest(signature))
+	}
+	for _, signature := range t.responseDecoders {
 		f.Line().Add(t.decodeResponse(signature))
-		f.Line()
 	}
 
-	return f
+	if t.state == AppendStrat {
+		return f
+	}
+
+	file := NewFile(t.Info.ServiceImportPackageName)
+	file.PackageComment(FileHeader)
+	file.PackageComment(`Please, do not change functions names!`)
+	file.Add(f)
+
+	return file
 }
 
 // Returns FieldTypeToProto.
@@ -161,26 +179,49 @@ func (t *gRPCEndpointConverterTemplate) Prepare() error {
 	if t.Info.ProtobufPackage == "" {
 		return fmt.Errorf("protobuf package is empty")
 	}
+	for _, fn := range t.Info.Iface.Methods {
+		t.requestDecoders = append(t.requestDecoders, fn)
+		t.requestEncoders = append(t.requestEncoders, fn)
+		t.responseDecoders = append(t.responseDecoders, fn)
+		t.responseEncoders = append(t.responseEncoders, fn)
+	}
 	return nil
 }
 
 func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	var strategy write_strategy.Strategy
 	if err := util.TryToOpenFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
-		strategy = write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath())
-	} else if _, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath())); err != nil {
-		return nil, err
-	} else {
-		//dryFile := t.ShouldGenerate()
-
+		t.state = FileStrat
+		return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
 	}
-	return strategy, nil
-}
+	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
+	if err != nil {
+		return nil, err
+	}
 
-func (t *gRPCEndpointConverterTemplate) ShouldGenerate() *types.File {
-	dryCode := t.Render()
-	dryCode.Render(nil)
-	return nil
+	// Remove already generated functions from generation lists
+	for i, fn := range t.requestEncoders {
+		if f := util.FindFunctionByName(file.Functions, encodeRequestName(fn)); f != nil {
+			t.requestEncoders = append(t.requestEncoders[:i], t.requestEncoders[i+1:]...)
+		}
+	}
+	for i, fn := range t.requestDecoders {
+		if f := util.FindFunctionByName(file.Functions, decodeRequestName(fn)); f != nil {
+			t.requestDecoders = append(t.requestDecoders[:i], t.requestDecoders[i+1:]...)
+		}
+	}
+	for i, fn := range t.responseEncoders {
+		if f := util.FindFunctionByName(file.Functions, encodeResponseName(fn)); f != nil {
+			t.responseEncoders = append(t.responseEncoders[:i], t.responseEncoders[i+1:]...)
+		}
+	}
+	for i, fn := range t.responseDecoders {
+		if f := util.FindFunctionByName(file.Functions, decodeResponseName(fn)); f != nil {
+			t.responseDecoders = append(t.responseDecoders[:i], t.responseDecoders[i+1:]...)
+		}
+	}
+
+	t.state = AppendStrat
+	return write_strategy.AppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Renders type conversion (if need) to default protobuf types.

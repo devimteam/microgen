@@ -44,3 +44,12 @@ func TryToOpenFile(absPath, relPath string) error {
 	}
 	return nil
 }
+
+func FindFunctionByName(fns []types.Function, name string) *types.Function {
+	for i := range fns {
+		if fns[i].Name == name {
+			return &fns[i]
+		}
+	}
+	return nil
+}
