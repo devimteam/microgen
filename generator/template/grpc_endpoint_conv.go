@@ -34,19 +34,19 @@ func NewGRPCEndpointConverterTemplate(info *GenerationInfo) Template {
 	}
 }
 
-func decodeRequestName(f *types.Function) string {
+func requestDecodeName(f *types.Function) string {
 	return "Decode" + f.Name + "Request"
 }
 
-func decodeResponseName(f *types.Function) string {
+func responseDecodeName(f *types.Function) string {
 	return "Decode" + f.Name + "Response"
 }
 
-func encodeRequestName(f *types.Function) string {
+func requestEncodeName(f *types.Function) string {
 	return "Encode" + f.Name + "Request"
 }
 
-func encodeResponseName(f *types.Function) string {
+func responseEncodeName(f *types.Function) string {
 	return "Encode" + f.Name + "Response"
 }
 
@@ -198,30 +198,23 @@ func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 		return nil, err
 	}
 
-	// Remove already generated functions from generation lists
-	for i, fn := range t.requestEncoders {
-		if f := util.FindFunctionByName(file.Functions, encodeRequestName(fn)); f != nil {
-			t.requestEncoders = append(t.requestEncoders[:i], t.requestEncoders[i+1:]...)
-		}
-	}
-	for i, fn := range t.requestDecoders {
-		if f := util.FindFunctionByName(file.Functions, decodeRequestName(fn)); f != nil {
-			t.requestDecoders = append(t.requestDecoders[:i], t.requestDecoders[i+1:]...)
-		}
-	}
-	for i, fn := range t.responseEncoders {
-		if f := util.FindFunctionByName(file.Functions, encodeResponseName(fn)); f != nil {
-			t.responseEncoders = append(t.responseEncoders[:i], t.responseEncoders[i+1:]...)
-		}
-	}
-	for i, fn := range t.responseDecoders {
-		if f := util.FindFunctionByName(file.Functions, decodeResponseName(fn)); f != nil {
-			t.responseDecoders = append(t.responseDecoders[:i], t.responseDecoders[i+1:]...)
-		}
-	}
+	RemoveAlreadyExistingFunctions(file.Functions, &t.requestEncoders, requestEncodeName)
+	RemoveAlreadyExistingFunctions(file.Functions, &t.requestDecoders, requestDecodeName)
+	RemoveAlreadyExistingFunctions(file.Functions, &t.responseEncoders, responseEncodeName)
+	RemoveAlreadyExistingFunctions(file.Functions, &t.responseDecoders, responseDecodeName)
 
 	t.state = AppendStrat
 	return write_strategy.AppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+}
+
+func RemoveAlreadyExistingFunctions(existing []types.Function, generating *[]*types.Function, nameFormer func(*types.Function) string) {
+	x := (*generating)[:0]
+	for _, fn := range *generating {
+		if f := util.FindFunctionByName(existing, nameFormer(fn)); f == nil {
+			x = append(x, fn)
+		}
+	}
+	*generating = x
 }
 
 // Renders type conversion (if need) to default protobuf types.
@@ -304,7 +297,7 @@ func (t *gRPCEndpointConverterTemplate) convertCustomType(structName, converterN
 //
 func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function) *Statement {
 	methodParams := removeContextIfFirst(signature.Args)
-	return Line().Func().Id(encodeRequestName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(requestEncodeName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
 				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ServiceImportPath, requestStructName(signature)))
@@ -321,7 +314,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 				}
 			})), Nil())
 		},
-	)
+	).Line()
 }
 
 // Renders function for encoding response, golang type converts to proto type.
@@ -340,7 +333,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 //
 func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function) *Statement {
 	methodResults := removeContextIfFirst(signature.Results)
-	return Line().Func().Id(encodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(responseEncodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
 				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.Info.ServiceImportPath, responseStructName(signature)))
@@ -357,7 +350,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 				}
 			})), Nil())
 		},
-	)
+	).Line()
 }
 
 // Renders function for decoding request, proto type converts to golang type.
@@ -372,7 +365,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 //
 func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function) *Statement {
 	methodParams := removeContextIfFirst(signature.Args)
-	return Line().Func().Id(decodeRequestName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(requestDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
 				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature)))
@@ -389,7 +382,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 				}
 			})), Nil())
 		},
-	)
+	).Line()
 }
 
 // Renders function for decoding response, proto type converts to golang type.
@@ -408,7 +401,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 //
 func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function) *Statement {
 	methodResults := removeContextIfFirst(signature.Results)
-	return Line().Func().Id(decodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(responseDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
 				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)))
@@ -425,5 +418,5 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 				}
 			})), Nil())
 		},
-	)
+	).Line()
 }

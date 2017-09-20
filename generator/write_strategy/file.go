@@ -3,6 +3,7 @@ package write_strategy
 import (
 	"bytes"
 	"fmt"
+	"go/format"
 	"io/ioutil"
 	"os"
 	"path"
@@ -48,7 +49,11 @@ func (s newFileStrategy) Save(f Renderer, filename string) error {
 	if err := f.Render(buf); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filename, buf.Bytes(), 0644); err != nil {
+	formatted, err := format.Source(buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("error when format source: %v", err)
+	}
+	if err := ioutil.WriteFile(filename, formatted, 0644); err != nil {
 		return err
 	}
 	return nil
@@ -107,16 +112,28 @@ func (s appendFileStrategy) Write(renderer Renderer) error {
 	return nil
 }
 
+// This hack needs for normal code formatting.
+// It makes formatter think, that declared code is top-level.
+// Without this hack formatter adds separators to beginning of every line,
+// thinking that provided code from the middle of code.
+const formatTrick = "package T\n"
+
 func (s appendFileStrategy) Save(renderer Renderer, filename string) error {
 	buf := &bytes.Buffer{}
 	if err := renderer.Render(buf); err != nil {
 		return err
 	}
+	// Use trick for top-level formatting.
+	formatted, err := format.Source(append([]byte(formatTrick), buf.Bytes()...))
+	if err != nil {
+		return fmt.Errorf("error when format source: %v", err)
+	}
+
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	if _, err = f.Write(buf.Bytes()); err != nil {
+	if _, err = f.Write(formatted[len(formatTrick):]); err != nil {
 		return err
 	}
 	return nil

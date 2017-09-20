@@ -64,7 +64,6 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 func fetchMetaInfo(tag string, comments []string) string {
 	for _, comment := range comments {
 		if len(comment) > len(tag) && strings.HasPrefix(comment, tag) {
-			fmt.Println(comment[len(tag)+1:])
 			return comment[len(tag)+1:]
 		}
 	}

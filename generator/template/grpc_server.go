@@ -91,8 +91,8 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
-							Line().Qual(pathToConverter(t.Info.ServiceImportPath), decodeRequestName(m)),
-							Line().Qual(pathToConverter(t.Info.ServiceImportPath), encodeResponseName(m)),
+							Line().Qual(pathToConverter(t.Info.ServiceImportPath), requestDecodeName(m)),
+							Line().Qual(pathToConverter(t.Info.ServiceImportPath), responseEncodeName(m)),
 							Line().Id("opts").Op("...").Line(),
 						)
 				}
