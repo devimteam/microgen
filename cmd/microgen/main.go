@@ -45,7 +45,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	units, err := generator.ListTemplatesForGen(i, *flagForce, info.Name, *flagOutputDir)
+	units, err := generator.ListTemplatesForGen(i, *flagForce, info.Name, *flagOutputDir, *flagFileName)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

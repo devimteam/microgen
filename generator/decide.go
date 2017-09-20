@@ -18,8 +18,12 @@ const (
 	GRPCRegAddr        = "// @grpc-addr"
 )
 
-func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, absOutPath string) (units []*generationUnit, err error) {
+func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, absOutPath, sourcePath string) (units []*generationUnit, err error) {
 	importPackagePath, err := resolvePackagePath(absOutPath)
+	if err != nil {
+		return nil, err
+	}
+	absSourcePath, err := filepath.Abs(sourcePath)
 	if err != nil {
 		return nil, err
 	}
@@ -29,10 +33,14 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 		Force:                    force,
 		Iface:                    iface,
 		AbsOutPath:               absOutPath,
+		SourceFilePath:           absSourcePath,
 		ProtobufPackage:          fetchMetaInfo(ProtobufTag, iface.Docs),
 		GRPCRegAddr:              fetchMetaInfo(GRPCRegAddr, iface.Docs),
 	}
-
+	stubSvc, err := NewGenUnit(template.NewStubInterfaceTemplate(info), absOutPath)
+	if err != nil {
+		return nil, err
+	}
 	exch, err := NewGenUnit(template.NewExchangeTemplate(info), absOutPath)
 	if err != nil {
 		return nil, err
@@ -41,7 +49,7 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 	if err != nil {
 		return nil, err
 	}
-	units = append(units, exch, endp)
+	units = append(units, stubSvc, exch, endp)
 
 	genTags := util.FetchTags(iface.Docs, MicrogenGeneralTag)
 	for _, tag := range genTags {
