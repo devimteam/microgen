@@ -15,7 +15,7 @@ var (
 	flagFileName  = flag.String("file", "service.go", "Name of file where described interface definition")
 	flagOutputDir = flag.String("out", ".", "Output directory")
 	flagHelp      = flag.Bool("help", false, "Show help")
-	flagInit      = flag.Bool("init", false, "Generate stub methods for converters")
+	flagForce     = flag.Bool("force", false, "Overwrite all files, as it generates for the first time")
 )
 
 func init() {
@@ -45,7 +45,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	units, err := generator.ListTemplatesForGen(i, *flagInit, info.Name, *flagOutputDir)
+	units, err := generator.ListTemplatesForGen(i, *flagForce, info.Name, *flagOutputDir)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
