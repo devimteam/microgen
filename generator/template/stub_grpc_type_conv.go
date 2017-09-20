@@ -96,9 +96,11 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 		args := append(removeContextIfFirst(signature.Args), removeContextIfFirst(signature.Results)...)
 		for _, field := range args {
 			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(&field.Type, 0), t.alreadyRenderedConverters) {
-				f.Add(t.stubConverterToProto(&field)).Line().Line()
+				f.Line().Add(t.stubConverterToProto(&field)).Line()
 				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, typeToProto(&field.Type, 0))
-				f.Add(t.stubConverterProtoTo(&field)).Line().Line()
+			}
+			if _, ok := protoTypeToGolang("", &field); !ok && !util.IsInStringSlice(protoToType(&field.Type, 0), t.alreadyRenderedConverters) {
+				f.Line().Add(t.stubConverterProtoTo(&field)).Line()
 				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, protoToType(&field.Type, 0))
 			}
 		}
