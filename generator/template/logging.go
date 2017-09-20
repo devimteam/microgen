@@ -67,7 +67,7 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 //		}
 //
 func (t *loggingTemplate) Render() write_strategy.Renderer {
-	f := NewFile(t.Info.ServiceImportPackageName)
+	f := NewFile("middleware")
 	f.PackageComment(FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 

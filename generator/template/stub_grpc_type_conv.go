@@ -110,7 +110,7 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 		return f
 	}
 
-	file := NewFile(t.Info.ServiceImportPackageName)
+	file := NewFile("protobuf")
 	file.PackageComment(FileHeader)
 	file.PackageComment(`It is better for you if you do not change functions names!`)
 	file.PackageComment(`This file will never be overwritten.`)

@@ -122,7 +122,7 @@ func (t *gRPCEndpointConverterTemplate) Render() write_strategy.Renderer {
 		return f
 	}
 
-	file := NewFile(t.Info.ServiceImportPackageName)
+	file := NewFile("protobuf")
 	file.PackageComment(FileHeader)
 	file.PackageComment(`Please, do not change functions names!`)
 	file.Add(f)

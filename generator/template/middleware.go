@@ -30,7 +30,7 @@ func NewMiddlewareTemplate(info *GenerationInfo) Template {
 //		type Middleware func(svc.StringService) svc.StringService
 //
 func (t *middlewareTemplate) Render() write_strategy.Renderer {
-	f := NewFile(t.Info.ServiceImportPackageName)
+	f := NewFile("middleware")
 	f.PackageComment(FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)
