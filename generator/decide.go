@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/devimteam/microgen/generator/template"
+	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 )
 
@@ -42,7 +43,7 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 	}
 	units = append(units, exch, endp)
 
-	genTags := fetchTags(iface.Docs)
+	genTags := util.FetchTags(iface.Docs, MicrogenGeneralTag)
 	for _, tag := range genTags {
 		templates := tagToTemplate(tag, info)
 		if templates == nil {
@@ -97,15 +98,6 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 		)
 	}
 	return nil
-}
-
-func fetchTags(strs []string) (tags []string) {
-	for _, comment := range strs {
-		if strings.HasPrefix(comment, MicrogenGeneralTag) {
-			tags = append(tags, strings.Split(strings.Replace(comment[len(MicrogenGeneralTag):], " ", "", -1), ",")...)
-		}
-	}
-	return
 }
 
 func resolvePackagePath(outPath string) (string, error) {

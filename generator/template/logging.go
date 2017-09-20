@@ -1,20 +1,23 @@
 package template
 
 import (
+	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 	. "github.com/vetcher/jennifer/jen"
-	"github.com/devimteam/microgen/generator/write_strategy"
 )
 
 const (
 	loggerVarName            = "logger"
 	nextVarName              = "next"
 	serviceLoggingStructName = "serviceLogging"
+
+	logIgnoreTag = "//!log"
 )
 
 type loggingTemplate struct {
-	Info *GenerationInfo
+	Info         *GenerationInfo
+	ignoreParams map[string][]string
 }
 
 func NewLoggingTemplate(info *GenerationInfo) Template {
@@ -82,7 +85,7 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 	// Render functions
 	for _, signature := range t.Info.Iface.Methods {
 		f.Line()
-		f.Add(loggingFunc(signature)).Line()
+		f.Add(t.loggingFunc(signature)).Line()
 	}
 
 	return f
@@ -92,7 +95,11 @@ func (loggingTemplate) DefaultPath() string {
 	return "./middleware/logging.go"
 }
 
-func (loggingTemplate) Prepare() error {
+func (t *loggingTemplate) Prepare() error {
+	t.ignoreParams = make(map[string][]string)
+	for _, fn := range t.Info.Iface.Methods {
+		t.ignoreParams[fn.Name] = util.FetchTags(fn.Docs, logIgnoreTag)
+	}
 	return nil
 }
 
@@ -137,9 +144,9 @@ func (t *loggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func loggingFunc(signature *types.Function) *Statement {
+func (t *loggingTemplate) loggingFunc(signature *types.Function) *Statement {
 	return methodDefinition(serviceLoggingStructName, signature).
-		BlockFunc(loggingFuncBody(signature))
+		BlockFunc(t.loggingFuncBody(signature))
 }
 
 // Render logging function body with request/response and time tracking.
@@ -153,13 +160,13 @@ func loggingFunc(signature *types.Function) *Statement {
 //		}(time.Now())
 //		return s.next.Count(ctx, text, symbol)
 //
-func loggingFuncBody(signature *types.Function) func(g *Group) {
+func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
 			Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
 				Line().Lit("method"), Lit(signature.Name),
-				Add(paramsNameAndValue(removeContextIfFirst(signature.Args))),
-				Add(paramsNameAndValue(removeContextIfFirst(signature.Results))),
+				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Args), signature.Name)),
+				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Results), signature.Name)),
 				Line().Lit("took"), Qual(PackagePathTime, "Since").Call(Id("begin")),
 			),
 		).Call(Qual(PackagePathTime, "Now").Call())
@@ -174,10 +181,13 @@ func loggingFuncBody(signature *types.Function) func(g *Group) {
 // 		"result", result,
 //		"count", count,
 //
-func paramsNameAndValue(fields []types.Variable) *Statement {
+func (t *loggingTemplate) paramsNameAndValue(fields []types.Variable, functionName string) *Statement {
 	return ListFunc(func(g *Group) {
+		ignore := t.ignoreParams[functionName]
 		for _, field := range fields {
-			g.Line().List(Lit(field.Name), Id(field.Name))
+			if !util.IsInStringSlice(field.Name, ignore) {
+				g.Line().List(Lit(field.Name), Id(field.Name))
+			}
 		}
 	})
 }
