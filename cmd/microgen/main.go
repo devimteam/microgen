@@ -30,30 +30,30 @@ func main() {
 
 	info, err := util.ParseFile(*flagFileName)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("fatal:", err)
 		os.Exit(1)
 	}
 
 	i := findInterface(info)
 	if i == nil {
-		fmt.Println("could not find interface with @microgen tag")
+		fmt.Println("fatal: could not find interface with @microgen tag")
 		os.Exit(1)
 	}
 
 	if err := generator.ValidateInterface(i); err != nil {
-		fmt.Println(err)
+		fmt.Println("fatal:", err)
 		os.Exit(1)
 	}
 
 	units, err := generator.ListTemplatesForGen(i, *flagForce, info.Name, *flagOutputDir, *flagFileName)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("fatal:", err)
 		os.Exit(1)
 	}
 	for _, unit := range units {
 		err := unit.Generate()
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("fatal:", err)
 			os.Exit(1)
 		}
 	}

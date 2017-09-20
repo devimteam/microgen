@@ -16,6 +16,18 @@ const (
 	JsonbPackage                  = "github.com/sas1024/gorm-jsonb/jsonb"
 )
 
+type stubGRPCTypeConverterTemplate struct {
+	Info                      *GenerationInfo
+	alreadyRenderedConverters []string
+	state                     WriteStrategyState
+}
+
+func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
+	return &stubGRPCTypeConverterTemplate{
+		Info: info.Duplicate(),
+	}
+}
+
 func specialTypeConverter(p *types.Type) *Statement {
 	// error -> string
 	if p.Name == "error" && p.Import == nil {
@@ -62,18 +74,6 @@ func converterProtoToBody(field *types.Variable) Code {
 		s.Panic(Lit("method not provided"))
 	}
 	return s
-}
-
-type stubGRPCTypeConverterTemplate struct {
-	Info                      *GenerationInfo
-	alreadyRenderedConverters []string
-	state                     WriteStrategyState
-}
-
-func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
-	return &stubGRPCTypeConverterTemplate{
-		Info: info.Duplicate(),
-	}
 }
 
 // Render whole file with protobuf converters.
