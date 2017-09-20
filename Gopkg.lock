@@ -25,12 +25,6 @@
   packages = ["context","context/ctxhttp"]
   revision = "66aacef3dd8a676686c7ae3716979581e8b03c47"
 
-[[projects]]
-  branch = "master"
-  name = "google.golang.org/api"
-  packages = ["drive/v3","gensupport","googleapi","googleapi/internal/uritemplates"]
-  revision = "4cbdde7d4ee4bb5f6d6da987a182c3f1dfeb9cd6"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1

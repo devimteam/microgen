@@ -65,12 +65,12 @@ func TestTemplates(t *testing.T) {
 		},
 		{
 			TestName:    "Middleware",
-			Template:    &template.middlewareTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
+			Template:    &template.middlewareTemplate{PackagePath: "github.com/devimteam/microgen/example/svc"},
 			OutFilePath: "middleware.go.txt",
 		},
 		{
 			TestName:    "Logging",
-			Template:    &template.loggingTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
+			Template:    &template.loggingTemplate{PackagePath: "github.com/devimteam/microgen/example/svc"},
 			OutFilePath: "logging.go.txt",
 		},
 		{
@@ -80,17 +80,17 @@ func TestTemplates(t *testing.T) {
 		},
 		{
 			TestName:    "GRPC Client",
-			Template:    &template.gRPCClientTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
+			Template:    &template.gRPCClientTemplate{PackagePath: "github.com/devimteam/microgen/example/svc"},
 			OutFilePath: "grpc_client.go.txt",
 		},
 		{
 			TestName:    "GRPC Converter",
-			Template:    &template.gRPCEndpointConverterTemplate{PackagePath: "github.com/devimteam/microgen/test/svc", ServicePackageName: "stringsvc"},
+			Template:    &template.gRPCEndpointConverterTemplate{PackagePath: "github.com/devimteam/microgen/example/svc", ServicePackageName: "stringsvc"},
 			OutFilePath: "grpc_converters.go.txt",
 		},
 		{
 			TestName:    "GRPC Type Converter",
-			Template:    &template.stubGRPCTypeConverterTemplate{PackagePath: "github.com/devimteam/microgen/test/svc"},
+			Template:    &template.stubGRPCTypeConverterTemplate{PackagePath: "github.com/devimteam/microgen/example/svc"},
 			OutFilePath: "grpc_type.go.txt",
 		},
 	}

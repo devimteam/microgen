@@ -34,7 +34,7 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 //
 //		import (
 //			context "context"
-//			svc "github.com/devimteam/microgen/test/svc"
+//			svc "github.com/devimteam/microgen/example/svc"
 //			log "github.com/go-kit/kit/log"
 //			time "time"
 //		)

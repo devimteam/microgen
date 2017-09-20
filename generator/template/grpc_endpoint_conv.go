@@ -58,7 +58,7 @@ func responseEncodeName(f *types.Function) string {
 //
 //		import (
 //			context "context"
-//			svc "github.com/devimteam/microgen/test/svc"
+//			svc "github.com/devimteam/microgen/example/svc"
 //			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //		)
 //

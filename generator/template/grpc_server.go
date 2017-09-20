@@ -39,8 +39,8 @@ func pathToConverter(servicePath string) string {
 //		package transportgrpc
 //
 //		import (
-//			svc "github.com/devimteam/microgen/test/svc"
-//			protobuf "github.com/devimteam/microgen/test/svc/transport/converter/protobuf"
+//			svc "github.com/devimteam/microgen/example/svc"
+//			protobuf "github.com/devimteam/microgen/example/svc/transport/converter/protobuf"
 //			grpc "github.com/go-kit/kit/transport/grpc"
 //			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //			context "golang.org/x/net/context"
