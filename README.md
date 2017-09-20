@@ -69,6 +69,7 @@ type StringService interface {
 #### !log
 This tag is used for logging middleware, when some arguments or results should not be logged, e.g. passwords or files.
 If `context.Context` is first, it ignored by default.
+Provide parameters names, separated by comma, to exclude them from logs.
 Example:
 ```go
 // @microgen logging
