@@ -65,7 +65,7 @@ func (exchangeTemplate) Prepare() error {
 }
 
 func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Renders exchanges that represents requests and responses.

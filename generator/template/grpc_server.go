@@ -121,7 +121,7 @@ func (t *gRPCServerTemplate) Prepare() error {
 }
 
 func (t *gRPCServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render service interface method for grpc server.

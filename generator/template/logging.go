@@ -104,7 +104,7 @@ func (t *loggingTemplate) Prepare() error {
 }
 
 func (t *loggingTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render body for new logging middleware.

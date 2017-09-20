@@ -133,7 +133,7 @@ func (t *stubGRPCTypeConverterTemplate) Prepare() error {
 func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 	if err := util.TryToOpenFile(t.Info.AbsOutPath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
-		return write_strategy.NewFileMethod(t.Info.AbsOutPath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 	}
 	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
 	if err != nil {
@@ -145,7 +145,7 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 	}
 
 	t.state = AppendStrat
-	return write_strategy.AppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render stub method for golang to protobuf converter.

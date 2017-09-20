@@ -12,12 +12,12 @@ import (
 
 const MkdirPermissions = 0777
 
-type newFileStrategy struct {
+type createFileStrategy struct {
 	absPath string
 	relPath string
 }
 
-func (s newFileStrategy) Write(renderer Renderer) error {
+func (s createFileStrategy) Write(renderer Renderer) error {
 	outpath, err := filepath.Abs(filepath.Join(s.absPath, s.relPath))
 	if err != nil {
 		return fmt.Errorf("unable to resolve path: %v", err)
@@ -44,7 +44,7 @@ func (s newFileStrategy) Write(renderer Renderer) error {
 }
 
 // Copied from original github.com/dave/jennifer/jen.go func Save()
-func (s newFileStrategy) Save(f Renderer, filename string) error {
+func (s createFileStrategy) Save(f Renderer, filename string) error {
 	buf := &bytes.Buffer{}
 	if err := f.Render(buf); err != nil {
 		return err
@@ -59,8 +59,8 @@ func (s newFileStrategy) Save(f Renderer, filename string) error {
 	return nil
 }
 
-func NewFileMethod(absPath, relPath string) Strategy {
-	return newFileStrategy{
+func NewCreateFileStrategy(absPath, relPath string) Strategy {
+	return createFileStrategy{
 		absPath: absPath,
 		relPath: relPath,
 	}
@@ -71,7 +71,7 @@ type appendFileStrategy struct {
 	relPath string
 }
 
-func AppendToFileStrategy(absPath, relPath string) Strategy {
+func NewAppendToFileStrategy(absPath, relPath string) Strategy {
 	return appendFileStrategy{
 		absPath: absPath,
 		relPath: relPath,
