@@ -132,7 +132,11 @@ func (t *gRPCEndpointConverterTemplate) Render() write_strategy.Renderer {
 
 // Returns FieldTypeToProto.
 func typeToProto(field *types.Type, depth int) string {
-	methodName := util.ToUpperFirst(field.Name)
+	methodName := ""
+	if field.Import != nil {
+		methodName += util.ToUpperFirst(field.Import.Alias)
+	}
+	methodName += util.ToUpperFirst(field.Name)
 	if field.IsPointer {
 		methodName += "Ptr"
 	}
@@ -155,6 +159,9 @@ func protoToType(field *types.Type, depth int) string {
 	methodName := ""
 	if depth == 0 {
 		methodName += "ProtoTo"
+	}
+	if field.Import != nil {
+		methodName += util.ToUpperFirst(field.Import.Alias)
 	}
 	methodName += util.ToUpperFirst(field.Name)
 	if field.IsPointer {

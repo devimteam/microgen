@@ -71,7 +71,7 @@ func converterProtoToBody(field *types.Variable) Code {
 	case "ProtoToByteList":
 		s.Return().List(Id("proto"+util.ToLowerFirst(field.Name)), Nil())
 	default:
-		s.Panic(Lit("method not provided"))
+		s.Panic(Lit("function not provided"))
 	}
 	return s
 }
