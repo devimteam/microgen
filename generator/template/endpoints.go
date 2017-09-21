@@ -126,15 +126,17 @@ func serviceEndpointMethod(signature *types.Function) *Statement {
 //		return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //
 func serviceEndpointMethodBody(signature *types.Function) func(g *Group) {
+	reqName := endpointExchange("request", signature)
+	respName := endpointExchange("response", signature)
 	return func(g *Group) {
-		g.Id("_req").Op(":=").Id(requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))
-		g.List(Id("_resp"), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id("_req"))
+		g.Id(reqName).Op(":=").Id(requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))
+		g.List(Id(respName), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id(reqName))
 		g.If(Err().Op("!=").Nil()).Block(
 			Return(),
 		)
 		g.ReturnFunc(func(group *Group) {
 			for _, field := range signature.Results {
-				group.Id("_resp").Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(&field))
+				group.Id(respName).Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(&field))
 			}
 		})
 	}
@@ -204,4 +206,8 @@ func createEndpoint(signature *types.Function, info *GenerationInfo) *Statement 
 	return Func().
 		Id(endpointStructName(signature.Name)).Params(Id("svc").Id(info.Iface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
 		Block(createEndpointBody(signature))
+}
+
+func endpointExchange(base string, fn *types.Function) string {
+	return "endpoint" + util.ToUpperFirst(fn.Name) + util.ToUpperFirst(base)
 }
