@@ -14,6 +14,7 @@ import (
 const (
 	GolangProtobufPtypesTimestamp = "github.com/golang/protobuf/ptypes/timestamp"
 	JsonbPackage                  = "github.com/sas1024/gorm-jsonb/jsonb"
+	GolangProtobufPtypes          = "github.com/golang/protobuf/ptypes"
 )
 
 type stubGRPCTypeConverterTemplate struct {
@@ -35,7 +36,7 @@ func specialTypeConverter(p *types.Type) *Statement {
 	}
 	// time.Time -> timestamp.Timestamp
 	if p.Name == "Time" && p.Import != nil && p.Import.Package == "time" {
-		return (&Statement{}).Qual(GolangProtobufPtypesTimestamp, "Timestamp")
+		return (&Statement{}).Op("*").Qual(GolangProtobufPtypesTimestamp, "Timestamp")
 	}
 	// jsonb.JSONB -> string
 	if p.Name == "JSONB" && p.Import != nil && p.Import.Package == JsonbPackage {
@@ -54,6 +55,8 @@ func converterToProtoBody(field *types.Variable) Code {
 		s.Return().List(Id(util.ToLowerFirst(field.Name)).Dot("Error").Call(), Nil())
 	case "ByteListToProto":
 		s.Return().List(Id(util.ToLowerFirst(field.Name)), Nil())
+	case "TimeTimeToProto":
+		s.Return().Qual(GolangProtobufPtypes, "TimestampProto").Call(Id(field.Name))
 	default:
 		s.Panic(Lit("method not provided"))
 	}
@@ -70,6 +73,8 @@ func converterProtoToBody(field *types.Variable) Code {
 		s.Return().List(Qual("errors", "New").Call(Id("proto"+util.ToUpperFirst(field.Name))), Nil())
 	case "ProtoToByteList":
 		s.Return().List(Id("proto"+util.ToLowerFirst(field.Name)), Nil())
+	case "ProtoToTimeTime":
+		s.Return().Qual(GolangProtobufPtypes, "Timestamp").Call(Id("proto" + util.ToUpperFirst(field.Name)))
 	default:
 		s.Panic(Lit("function not provided"))
 	}
