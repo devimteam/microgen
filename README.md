@@ -1,6 +1,7 @@
 # Microgen
 
-Tool to generate microservices, based on [go-kit](https://gokit.io/), by specified service interface.
+Tool to generate microservices, based on [go-kit](https://gokit.io/), by specified service interface.  
+The goal is to generate code for service which not fun to write but it should be written.
 
 ## Install
 ```
@@ -15,7 +16,6 @@ microgen tool search in file first `type * interface` with docs, that contains `
 
 generation parameters provides through ["tags"](#tags) in interface docs after general `// @microgen` tag (space before @ __required__).
 
-microgen is stable, so you can generate without flag `-init` any time your interface changed (e.g. added new method)
 ### Options
 
 | Name   | Default    | Description                                                                   |
@@ -27,7 +27,7 @@ microgen is stable, so you can generate without flag `-init` any time your inter
 
 \* __Required option__
 
-## Markers
+### Markers
 Markers is a general tags, that participate in generation process.
 Typical syntax is: `// @<tag-name>:`
 
@@ -65,11 +65,11 @@ type StringService interface {
 ```
 `@grpc-addr` tag is optional, but required for `grpc-client` generation.  
 
-## Method's tags
+### Method's tags
 #### !log
-This tag is used for logging middleware, when some arguments or results should not be logged, e.g. passwords or files.
-If `context.Context` is first, it ignored by default.
-Provide parameters names, separated by comma, to exclude them from logs.
+This tag is used for logging middleware, when some arguments or results should not be logged, e.g. passwords or files.  
+If `context.Context` is first, it ignored by default.  
+Provide parameters names, separated by comma, to exclude them from logs.  
 Example:
 ```go
 // @microgen logging
@@ -79,7 +79,7 @@ type FileService interface {
 }
 ```
 
-## Tags
+### Tags
 All allowed tags for customize generation provided here.
 
 | Tag         | Description                                                                            |
@@ -113,7 +113,7 @@ type StringService interface {
 }
 ```
 2. Open command line next to your `service.go`.
-3. Enter `microgen -init`. __*__
+3. Enter `microgen`. __*__
 4. You should see something like that:
 ```
 exchanges.go
@@ -132,10 +132,14 @@ All files successfully generated
 
 __*__ `GOPATH/bin` should be in your PATH.
 
-### Interface declaration rules
+## Interface declaration rules
 For correct generation, please, follow rules below.
 
 * All interface method's arguments and results should be named and should be different (name duplicating unacceptable).
 * First argument of each method should be of type `context.Context` (from [standard library](https://golang.org/pkg/context/)).
 * Method results should contain at least one variable of `error` type.
+---
+* Name of _protobuf_ service should be the same, as interface name.
+* Function names in _protobuf_ should be the same, as in interface.
+* Message names in _protobuf_ should be named `<FunctionName>Request` or `<FunctionName>Response` for request/response message respectively.
 * Field names in _protobuf_ messages should be the same, as in interface methods (_protobuf_ - snake_case, interface - camelCase).
