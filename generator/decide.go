@@ -82,9 +82,9 @@ func fetchMetaInfo(tag string, comments []string) string {
 func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.Template) {
 	switch tag {
 	case "middleware":
-		return []template.Template{template.NewMiddlewareTemplate(info)}
+		return append(tmpls, template.NewMiddlewareTemplate(info))
 	case "logging":
-		return []template.Template{template.NewLoggingTemplate(info)}
+		return append(tmpls, template.NewLoggingTemplate(info))
 	case "grpc":
 		return append(tmpls,
 			template.NewGRPCClientTemplate(info),
@@ -103,6 +103,11 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 			template.NewGRPCServerTemplate(info),
 			template.NewGRPCEndpointConverterTemplate(info),
 			template.NewStubGRPCTypeConverterTemplate(info),
+		)
+	case "http":
+		return append(tmpls,
+			template.NewHttpServerTemplate(info),
+			template.NewHttpConverterTemplate(info),
 		)
 	}
 	return nil

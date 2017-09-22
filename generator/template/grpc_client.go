@@ -65,8 +65,8 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 						Line().Id("conn"),
 						Line().Lit(t.Info.GRPCRegAddr),
 						Line().Lit(m.Name),
-						Line().Qual(pathToConverter(t.Info.ServiceImportPath), requestEncodeName(m)),
-						Line().Qual(pathToConverter(t.Info.ServiceImportPath), responseDecodeName(m)),
+						Line().Qual(pathToProtobufConverter(t.Info.ServiceImportPath), requestEncodeName(m)),
+						Line().Qual(pathToProtobufConverter(t.Info.ServiceImportPath), responseDecodeName(m)),
 						Line().Add(t.replyType(m)),
 						Line().Id("opts").Op("...").Line(),
 					).Dot("Endpoint").Call()

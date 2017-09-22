@@ -13,9 +13,13 @@ func ToUpperFirst(s string) string {
 }
 
 func ToSnakeCase(s string) string {
-	for i := 0; i < len(s); i++ {
+	for i := range s {
 		if unicode.IsUpper(rune(s[i])) {
-			s = strings.Join([]string{s[:i], ToLowerFirst(s[i:])}, "_")
+			if i != 0 {
+				s = strings.Join([]string{s[:i], ToLowerFirst(s[i:])}, "_")
+			} else {
+				s = ToLowerFirst(s)
+			}
 		}
 	}
 	return s

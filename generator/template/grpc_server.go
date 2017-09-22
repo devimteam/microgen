@@ -28,7 +28,7 @@ func privateServerStructName(iface *types.Interface) string {
 	return util.ToLowerFirst(iface.Name) + "Server"
 }
 
-func pathToConverter(servicePath string) string {
+func pathToProtobufConverter(servicePath string) string {
 	return filepath.Join(servicePath, "transport/converter/protobuf")
 }
 
@@ -91,8 +91,8 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
-							Line().Qual(pathToConverter(t.Info.ServiceImportPath), requestDecodeName(m)),
-							Line().Qual(pathToConverter(t.Info.ServiceImportPath), responseEncodeName(m)),
+							Line().Qual(pathToProtobufConverter(t.Info.ServiceImportPath), requestDecodeName(m)),
+							Line().Qual(pathToProtobufConverter(t.Info.ServiceImportPath), responseEncodeName(m)),
 							Line().Id("opts").Op("...").Line(),
 						)
 				}

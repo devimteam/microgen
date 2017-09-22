@@ -205,23 +205,13 @@ func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 		return nil, err
 	}
 
-	RemoveAlreadyExistingFunctions(file.Functions, &t.requestEncoders, requestEncodeName)
-	RemoveAlreadyExistingFunctions(file.Functions, &t.requestDecoders, requestDecodeName)
-	RemoveAlreadyExistingFunctions(file.Functions, &t.responseEncoders, responseEncodeName)
-	RemoveAlreadyExistingFunctions(file.Functions, &t.responseDecoders, responseDecodeName)
+	removeAlreadyExistingFunctions(file.Functions, &t.requestEncoders, requestEncodeName)
+	removeAlreadyExistingFunctions(file.Functions, &t.requestDecoders, requestDecodeName)
+	removeAlreadyExistingFunctions(file.Functions, &t.responseEncoders, responseEncodeName)
+	removeAlreadyExistingFunctions(file.Functions, &t.responseDecoders, responseDecodeName)
 
 	t.state = AppendStrat
 	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
-}
-
-func RemoveAlreadyExistingFunctions(existing []types.Function, generating *[]*types.Function, nameFormer func(*types.Function) string) {
-	x := (*generating)[:0]
-	for _, fn := range *generating {
-		if f := util.FindFunctionByName(existing, nameFormer(fn)); f == nil {
-			x = append(x, fn)
-		}
-	}
-	*generating = x
 }
 
 // Renders type conversion (if need) to default protobuf types.
