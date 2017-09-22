@@ -103,7 +103,7 @@ func fieldType(field *types.Type) *Statement {
 		c.Op("*")
 	}
 	if field.IsMap {
-		m := field.Map()
+		m := field.Map
 		return c.Map(fieldType(&m.Key)).Add(fieldType(&m.Value))
 	}
 	if field.Import != nil {

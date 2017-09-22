@@ -20,7 +20,7 @@ func isInterface(p *types.Type) bool {
 		return true
 	}
 	if p.IsMap {
-		return isInterface(&p.Map().Key) || isInterface(&p.Map().Value)
+		return isInterface(&p.Map.Key) || isInterface(&p.Map.Value)
 	}
 	return false
 }

@@ -195,7 +195,7 @@ func (t *stubGRPCTypeConverterTemplate) protoFieldType(field *types.Type) *State
 	}
 
 	if field.IsMap {
-		m := field.Map()
+		m := field.Map
 		return c.Map(t.protoFieldType(&m.Key)).Add(t.protoFieldType(&m.Value))
 	}
 	protoType := field.Name

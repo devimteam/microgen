@@ -10,8 +10,8 @@
 [[projects]]
   name = "github.com/vetcher/godecl"
   packages = [".","types"]
-  revision = "b6905f3182d19d957d9d535b50603f93b07c75ed"
-  version = "v0.1.0"
+  revision = "c1b80c561eb666b0e9b27a1f0737a1e4c29a0db7"
+  version = "v0.2.0"
 
 [[projects]]
   branch = "master"
@@ -19,15 +19,9 @@
   packages = ["jen"]
   revision = "55d079354d5a11ea904466c6148d986c76441c44"
 
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/net"
-  packages = ["context","context/ctxhttp"]
-  revision = "66aacef3dd8a676686c7ae3716979581e8b03c47"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "380c606c268742bbbc7121428ffac2ef78b9af9b26911819ec9b134760bf9a5e"
+  inputs-digest = "26e451b8df5f7df65c095423b217eccfba780a60b9adf51275b654717a7576f7"
   solver-name = "gps-cdcl"
   solver-version = 1
