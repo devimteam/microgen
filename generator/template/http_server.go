@@ -35,7 +35,7 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
-	f.Func().Id("New"+util.ToUpperFirst(t.Info.Iface.Name)+"HTTPHandler").Params(
+	f.Func().Id("NewHTTPHandler").Params(
 		Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints"),
 		Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ServerOption"),
 	).Params(

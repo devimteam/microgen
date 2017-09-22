@@ -107,6 +107,17 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 	case "http":
 		return append(tmpls,
 			template.NewHttpServerTemplate(info),
+			template.NewHttpClientTemplate(info),
+			template.NewHttpConverterTemplate(info),
+		)
+	case "http-server":
+		return append(tmpls,
+			template.NewHttpServerTemplate(info),
+			template.NewHttpConverterTemplate(info),
+		)
+	case "http-client":
+		return append(tmpls,
+			template.NewHttpClientTemplate(info),
 			template.NewHttpConverterTemplate(info),
 		)
 	}
