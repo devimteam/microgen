@@ -130,14 +130,12 @@ func serviceEndpointMethodBody(signature *types.Function) func(g *Group) {
 	respName := endpointExchange("response", signature)
 	return func(g *Group) {
 		g.Id(reqName).Op(":=").Id(requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))
-		g.List(Id(respName), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id(reqName))
-		g.If(Err().Op("!=").Nil()).Block(
-			Return(),
-		)
+		g.List(Id(respName), Id(nameOfLastResultError(signature))).Op(":=").Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id(reqName))
 		g.ReturnFunc(func(group *Group) {
-			for _, field := range signature.Results {
+			for _, field := range removeErrorIfLast(signature.Results) {
 				group.Id(respName).Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(&field))
 			}
+			group.Id(nameOfLastResultError(signature))
 		})
 	}
 }
@@ -183,8 +181,8 @@ func createEndpointBody(signature *types.Function) *Statement {
 			}))
 
 		g.Return(
-			Op("&").Id(responseStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Results))),
-			Nil(),
+			Op("&").Id(responseStructName(signature)).Values(dictByVariables(removeErrorIfLast(signature.Results))),
+			Id(nameOfLastResultError(signature)),
 		)
 	}))
 }

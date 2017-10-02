@@ -41,7 +41,7 @@ func main() {
 	}
 
 	if err := generator.ValidateInterface(i); err != nil {
-		fmt.Println("fatal:", err)
+		fmt.Println("validation:", err)
 		os.Exit(1)
 	}
 

@@ -163,7 +163,7 @@ func (t *loggingTemplate) loggingFunc(signature *types.Function) *Statement {
 func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
-			Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
+			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
 				Line().Lit("method"), Lit(signature.Name),
 				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Args), signature.Name)),
 				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Results), signature.Name)),
@@ -171,7 +171,7 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 			),
 		).Call(Qual(PackagePathTime, "Now").Call())
 
-		g.Return().Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
+		g.Return().Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
 	}
 }
 

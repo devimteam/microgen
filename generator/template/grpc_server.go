@@ -25,7 +25,7 @@ func serverStructName(iface *types.Interface) string {
 }
 
 func privateServerStructName(iface *types.Interface) string {
-	return util.ToLowerFirst(iface.Name) + "Server"
+	return util.ToLower(iface.Name) + "Server"
 }
 
 func pathToConverter(servicePath string) string {
@@ -136,7 +136,7 @@ func (t *gRPCServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 //
 func (t *gRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.Interface) *Statement {
 	return Func().
-		Params(Id(util.FirstLowerChar(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
+		Params(Id(util.LastUpperOrFirst(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
 		Id(signature.Name).
 		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature))).
 		Params(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)), Error()).
@@ -155,7 +155,7 @@ func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 	return func(g *Group) {
 		g.List(Id("_"), Id("resp"), Err()).
 			Op(":=").
-			Id(util.FirstLowerChar(privateServerStructName(i))).Dot(util.ToLowerFirst(signature.Name)).Dot("ServeGRPC").Call(Id("ctx"), Id("req"))
+			Id(util.LastUpperOrFirst(privateServerStructName(i))).Dot(util.ToLowerFirst(signature.Name)).Dot("ServeGRPC").Call(Id("ctx"), Id("req"))
 
 		g.If(Err().Op("!=").Nil()).Block(
 			Return().List(Nil(), Err()),

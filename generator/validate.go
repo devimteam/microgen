@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 
+	"github.com/devimteam/microgen/generator/template"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 )
@@ -25,9 +26,17 @@ func isInterface(p *types.Type) bool {
 	return false
 }
 
+// Rules:
+// * First argument is context.Context.
+// * Last result is error.
+// * All params have names.
+// * Parameter is not a raw interface (e.g. interface{Get() error})
 func validateFunction(fn *types.Function) (errs []error) {
-	if len(fn.Args) == 0 || (fn.Args[0].Type.Name != "Context" && fn.Args[0].Type.Import.Package != "context") {
+	if !template.IsContextFirst(fn.Args) {
 		errs = append(errs, fmt.Errorf("%s: first argument should be of type context.Context", fn.Name))
+	}
+	if !template.IsErrorLast(fn.Results) {
+		errs = append(errs, fmt.Errorf("%s: last result should be of type error", fn.Name))
 	}
 	for _, param := range fn.Args {
 		if param.Name == "" {
