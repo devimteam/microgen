@@ -131,6 +131,11 @@ func serviceEndpointMethodBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
 		g.Id(reqName).Op(":=").Id(requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))
 		g.List(Id(respName), Id(nameOfLastResultError(signature))).Op(":=").Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id(reqName))
+		g.If(Id(nameOfLastResultError(signature)).Op("!=").Nil().Op("&&").
+			Qual(PackagePathGoogleGRPC, "Code").Call(Id(nameOfLastResultError(signature))).Op("==").Qual(PackagePathGoogleGRPCCodes, "Internal")).Block(
+			Id(nameOfLastResultError(signature)).Op("=").Qual("errors", "New").Call(Qual(PackagePathGoogleGRPC, "ErrorDesc").Call(Id(nameOfLastResultError(signature)))),
+			Return(),
+		)
 		g.ReturnFunc(func(group *Group) {
 			for _, field := range removeErrorIfLast(signature.Results) {
 				group.Id(respName).Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(&field))

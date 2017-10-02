@@ -12,6 +12,7 @@ const (
 	PackagePathGoKitLog           = "github.com/go-kit/kit/log"
 	PackagePathTime               = "time"
 	PackagePathGoogleGRPC         = "google.golang.org/grpc"
+	PackagePathGoogleGRPCCodes    = "google.golang.org/grpc/codes"
 	PackagePathNetContext         = "golang.org/x/net/context"
 	PackagePathGoKitTransportGRPC = "github.com/go-kit/kit/transport/grpc"
 
