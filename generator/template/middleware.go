@@ -1,16 +1,22 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
+	"github.com/devimteam/microgen/generator/write_strategy"
+	. "github.com/devimteam/jennifer/jen"
 )
 
 const (
 	MiddlewareTypeName = "Middleware"
 )
 
-type MiddlewareTemplate struct {
-	PackagePath string
+type middlewareTemplate struct {
+	Info *GenerationInfo
+}
+
+func NewMiddlewareTemplate(info *GenerationInfo) Template {
+	return &middlewareTemplate{
+		Info: info,
+	}
 }
 
 // Render middleware decorator
@@ -19,16 +25,26 @@ type MiddlewareTemplate struct {
 //		// Please, do not edit.
 //		package middleware
 //
-//		import svc "github.com/devimteam/microgen/test/svc"
+//		import svc "github.com/devimteam/microgen/example/svc"
 //
 //		type Middleware func(svc.StringService) svc.StringService
 //
-func (t MiddlewareTemplate) Render(i *parser.Interface) *File {
+func (t *middlewareTemplate) Render() write_strategy.Renderer {
 	f := NewFile("middleware")
-	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.PackagePath, i.Name)).Qual(t.PackagePath, i.Name)
+	f.PackageComment(FileHeader)
+	f.PackageComment(`Please, do not edit.`)
+	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)
 	return f
 }
 
-func (MiddlewareTemplate) Path() string {
+func (middlewareTemplate) DefaultPath() string {
 	return "./middleware/middleware.go"
+}
+
+func (middlewareTemplate) Prepare() error {
+	return nil
+}
+
+func (t *middlewareTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }

@@ -1,19 +1,29 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
+	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
+	. "github.com/devimteam/jennifer/jen"
 )
 
 const (
 	loggerVarName            = "logger"
 	nextVarName              = "next"
 	serviceLoggingStructName = "serviceLogging"
+
+	logIgnoreTag = "logs-ignore"
 )
 
-type LoggingTemplate struct {
-	PackagePath string
+type loggingTemplate struct {
+	Info         *GenerationInfo
+	ignoreParams map[string][]string
+}
+
+func NewLoggingTemplate(info *GenerationInfo) Template {
+	return &loggingTemplate{
+		Info: info,
+	}
 }
 
 // Render all logging.go file.
@@ -24,7 +34,7 @@ type LoggingTemplate struct {
 //
 //		import (
 //			context "context"
-//			svc "github.com/devimteam/microgen/test/svc"
+//			svc "github.com/devimteam/microgen/example/svc"
 //			log "github.com/go-kit/kit/log"
 //			time "time"
 //		)
@@ -56,31 +66,45 @@ type LoggingTemplate struct {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func (t LoggingTemplate) Render(i *parser.Interface) *File {
+func (t *loggingTemplate) Render() write_strategy.Renderer {
 	f := NewFile("middleware")
+	f.PackageComment(FileHeader)
+	f.PackageComment(`Please, do not edit.`)
 
 	f.Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
-		Block(t.newLoggingBody(i))
+		Block(t.newLoggingBody(t.Info.Iface))
 
 	f.Line()
 
 	// Render type logger
 	f.Type().Id(serviceLoggingStructName).Struct(
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.PackagePath, i.Name),
+		Id(nextVarName).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name),
 	)
 
 	// Render functions
-	for _, signature := range i.FuncSignatures {
+	for _, signature := range t.Info.Iface.Methods {
 		f.Line()
-		f.Add(loggingFunc(signature))
+		f.Add(t.loggingFunc(signature)).Line()
 	}
 
 	return f
 }
 
-func (LoggingTemplate) Path() string {
+func (loggingTemplate) DefaultPath() string {
 	return "./middleware/logging.go"
+}
+
+func (t *loggingTemplate) Prepare() error {
+	t.ignoreParams = make(map[string][]string)
+	for _, fn := range t.Info.Iface.Methods {
+		t.ignoreParams[fn.Name] = util.FetchTags(fn.Docs, TagMark+logIgnoreTag)
+	}
+	return nil
+}
+
+func (t *loggingTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render body for new logging middleware.
@@ -92,11 +116,11 @@ func (LoggingTemplate) Path() string {
 //			}
 //		}
 //
-func (t LoggingTemplate) newLoggingBody(i *parser.Interface) *Statement {
+func (t *loggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.PackagePath, i.Name),
+		Id(nextVarName).Qual(t.Info.ServiceImportPath, i.Name),
 	).Params(
-		Qual(t.PackagePath, i.Name),
+		Qual(t.Info.ServiceImportPath, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(serviceLoggingStructName).Values(
 			Dict{
@@ -120,9 +144,9 @@ func (t LoggingTemplate) newLoggingBody(i *parser.Interface) *Statement {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func loggingFunc(signature *parser.FuncSignature) *Statement {
+func (t *loggingTemplate) loggingFunc(signature *types.Function) *Statement {
 	return methodDefinition(serviceLoggingStructName, signature).
-		BlockFunc(loggingFuncBody(signature))
+		BlockFunc(t.loggingFuncBody(signature))
 }
 
 // Render logging function body with request/response and time tracking.
@@ -136,18 +160,18 @@ func loggingFunc(signature *parser.FuncSignature) *Statement {
 //		}(time.Now())
 //		return s.next.Count(ctx, text, symbol)
 //
-func loggingFuncBody(signature *parser.FuncSignature) func(g *Group) {
+func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
-			Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
+			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
 				Line().Lit("method"), Lit(signature.Name),
-				Add(paramsNameAndValue(removeContextIfFirst(signature.Params))),
-				Add(paramsNameAndValue(removeContextIfFirst(signature.Results))),
+				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Args), signature.Name)),
+				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Results), signature.Name)),
 				Line().Lit("took"), Qual(PackagePathTime, "Since").Call(Id("begin")),
 			),
 		).Call(Qual(PackagePathTime, "Now").Call())
 
-		g.Return().Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Params))
+		g.Return().Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
 	}
 }
 
@@ -157,10 +181,13 @@ func loggingFuncBody(signature *parser.FuncSignature) func(g *Group) {
 // 		"result", result,
 //		"count", count,
 //
-func paramsNameAndValue(fields []*parser.FuncField) *Statement {
+func (t *loggingTemplate) paramsNameAndValue(fields []types.Variable, functionName string) *Statement {
 	return ListFunc(func(g *Group) {
+		ignore := t.ignoreParams[functionName]
 		for _, field := range fields {
-			g.Line().List(Lit(field.Name), Id(field.Name))
+			if !util.IsInStringSlice(field.Name, ignore) {
+				g.Line().List(Lit(field.Name), Id(field.Name))
+			}
 		}
 	})
 }

@@ -3,26 +3,21 @@
 package transportgrpc
 
 import (
-	transportlayer "github.com/devimteam/go-kit/transportlayer"
-	grpc1 "github.com/devimteam/go-kit/transportlayer/grpc"
 	svc "github.com/devimteam/microgen/test/svc"
 	protobuf "github.com/devimteam/microgen/test/svc/transport/converter/protobuf"
+	grpc1 "github.com/go-kit/kit/transport/grpc"
+	stringsvc "gitlab.devim.team/protobuf/stringsvc"
 	grpc "google.golang.org/grpc"
 )
 
-func NewClient(conn *grpc.ClientConn) svc.StringService {
-	endpoints := []transportlayer.Endpoint{
-		transportlayer.NewEndpoint(
-			"Count",
-			nil,
-			transportlayer.WithConverter(protobuf.CountConverter),
-		),
-	}
-	return svc.NewClient(
-		grpc1.NewClient(
-			"devim.string.protobuf.StringService",
-			conn,
-			endpoints,
-		),
-	)
+func NewGRPCClient(conn *grpc.ClientConn, opts ...grpc1.ClientOption) svc.StringService {
+	return svc.Endpoints{CountEndpoint: grpc1.NewClient(
+		conn,
+		"devim.string.protobuf.StringService",
+		"Count",
+		protobuf.EncodeCountRequest,
+		protobuf.DecodeCountResponse,
+		stringsvc.CountResponse{},
+		opts...,
+	).Endpoint()}
 }

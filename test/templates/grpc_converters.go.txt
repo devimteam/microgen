@@ -4,47 +4,46 @@ package protobuf
 
 import (
 	context "context"
-	grpc "github.com/devimteam/go-kit/transportlayer/grpc"
 	svc "github.com/devimteam/microgen/test/svc"
 	stringsvc "gitlab.devim.team/protobuf/stringsvc"
 )
 
-var CountConverter = &grpc.EndpointConverter{
-	func(_ context.Context, request interface{}) (interface{}, error) {
-		req := request.(*svc.CountRequest)
-		return &stringsvc.CountRequest{
-			Symbol: req.Symbol,
-			Text:   req.Text,
-		}, nil
-	},
-	func(_ context.Context, response interface{}) (interface{}, error) {
-		resp := response.(*svc.CountResponse)
-		respPositions, err := IntListToProto(resp.Positions)
-		if err != nil {
-			return nil, err
-		}
-		return &stringsvc.CountResponse{
-			Count:     int64(resp.Count),
-			Positions: respPositions,
-		}, nil
-	},
-	func(_ context.Context, request interface{}) (interface{}, error) {
-		req := request.(*stringsvc.CountRequest)
-		return &svc.CountRequest{
-			Symbol: string(req.Symbol),
-			Text:   string(req.Text),
-		}, nil
-	},
-	func(_ context.Context, response interface{}) (interface{}, error) {
-		resp := response.(*stringsvc.CountResponse)
-		respPositions, err := ProtoToIntList(resp.Positions)
-		if err != nil {
-			return nil, err
-		}
-		return &svc.CountResponse{
-			Count:     int(resp.Count),
-			Positions: respPositions,
-		}, nil
-	},
-	stringsvc.CountResponse{},
+func EncodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(*svc.CountRequest)
+	return &stringsvc.CountRequest{
+		Symbol: req.Symbol,
+		Text:   req.Text,
+	}, nil
+}
+
+func EncodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(*svc.CountResponse)
+	respPositions, err := IntListToProto(resp.Positions)
+	if err != nil {
+		return nil, err
+	}
+	return &stringsvc.CountResponse{
+		Count:     int64(resp.Count),
+		Positions: respPositions,
+	}, nil
+}
+
+func DecodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(*stringsvc.CountRequest)
+	return &svc.CountRequest{
+		Symbol: string(req.Symbol),
+		Text:   string(req.Text),
+	}, nil
+}
+
+func DecodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(*stringsvc.CountResponse)
+	respPositions, err := ProtoToIntList(resp.Positions)
+	if err != nil {
+		return nil, err
+	}
+	return &svc.CountResponse{
+		Count:     int(resp.Count),
+		Positions: respPositions,
+	}, nil
 }

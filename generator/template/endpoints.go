@@ -1,12 +1,20 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
+	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
+	. "github.com/devimteam/jennifer/jen"
 )
 
-type EndpointsTemplate struct {
+type endpointsTemplate struct {
+	Info *GenerationInfo
+}
+
+func NewEndpointsTemplate(info *GenerationInfo) Template {
+	return &endpointsTemplate{
+		Info: info,
+	}
 }
 
 func endpointStructName(str string) string {
@@ -51,28 +59,38 @@ func endpointStructName(str string) string {
 //			}
 //		}
 //
-func (EndpointsTemplate) Render(i *parser.Interface) *File {
-	f := NewFile(i.PackageName)
+func (t *endpointsTemplate) Render() write_strategy.Renderer {
+	f := NewFile(t.Info.ServiceImportPackageName)
+	f.PackageComment(FileHeader)
+	f.PackageComment(`Please, do not edit.`)
 
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {
-		for _, signature := range i.FuncSignatures {
+		for _, signature := range t.Info.Iface.Methods {
 			g.Id(endpointStructName(signature.Name)).Qual(PackagePathGoKitEndpoint, "Endpoint")
 		}
-	})
+	}).Line()
 
-	for _, signature := range i.FuncSignatures {
-		f.Add(serviceEndpointMethod(signature)).Line()
+	for _, signature := range t.Info.Iface.Methods {
+		f.Add(serviceEndpointMethod(signature)).Line().Line()
 	}
 	f.Line()
-	for _, signature := range i.FuncSignatures {
-		f.Add(createEndpoint(signature, i)).Line()
+	for _, signature := range t.Info.Iface.Methods {
+		f.Add(createEndpoint(signature, t.Info)).Line().Line()
 	}
 
 	return f
 }
 
-func (EndpointsTemplate) Path() string {
+func (endpointsTemplate) DefaultPath() string {
 	return "./endpoints.go"
+}
+
+func (endpointsTemplate) Prepare() error {
+	return nil
+}
+
+func (t *endpointsTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Render full endpoints method.
@@ -89,7 +107,7 @@ func (EndpointsTemplate) Path() string {
 //			return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //		}
 //
-func serviceEndpointMethod(signature *parser.FuncSignature) *Statement {
+func serviceEndpointMethod(signature *types.Function) *Statement {
 	return methodDefinition("Endpoints", signature).
 		BlockFunc(serviceEndpointMethodBody(signature))
 }
@@ -106,24 +124,29 @@ func serviceEndpointMethod(signature *parser.FuncSignature) *Statement {
 //		}
 //		return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //
-func serviceEndpointMethodBody(signature *parser.FuncSignature) func(g *Group) {
+func serviceEndpointMethodBody(signature *types.Function) func(g *Group) {
+	reqName := endpointExchange("request", signature)
+	respName := endpointExchange("response", signature)
 	return func(g *Group) {
-		g.Id("req").Op(":=").Id(requestStructName(signature)).Values(dictByFuncFields(removeContextIfFirst(signature.Params)))
-		g.List(Id("resp"), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id("req"))
-		g.If(Err().Op("!=").Nil()).Block(
+		g.Id(reqName).Op(":=").Id(requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))
+		g.List(Id(respName), Id(nameOfLastResultError(signature))).Op(":=").Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id(reqName))
+		g.If(Id(nameOfLastResultError(signature)).Op("!=").Nil().Op("&&").
+			Qual(PackagePathGoogleGRPC, "Code").Call(Id(nameOfLastResultError(signature))).Op("==").Qual(PackagePathGoogleGRPCCodes, "Internal")).Block(
+			Id(nameOfLastResultError(signature)).Op("=").Qual("errors", "New").Call(Qual(PackagePathGoogleGRPC, "ErrorDesc").Call(Id(nameOfLastResultError(signature)))),
 			Return(),
 		)
 		g.ReturnFunc(func(group *Group) {
-			for _, field := range signature.Results {
-				group.Id("resp").Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(field))
+			for _, field := range removeErrorIfLast(signature.Results) {
+				group.Id(respName).Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(&field))
 			}
+			group.Id(nameOfLastResultError(signature))
 		})
 	}
 }
 
 // For custom ctx in service interface (e.g. context or ctxxx).
-func firstArgName(signature *parser.FuncSignature) string {
-	return util.ToLowerFirst(signature.Params[0].Name)
+func firstArgName(signature *types.Function) string {
+	return util.ToLowerFirst(signature.Args[0].Name)
 }
 
 // Render new Endpoint body.
@@ -137,7 +160,7 @@ func firstArgName(signature *parser.FuncSignature) string {
 //			}, nil
 //		}
 //
-func createEndpointBody(signature *parser.FuncSignature) *Statement {
+func createEndpointBody(signature *types.Function) *Statement {
 	return Return(Func().Params(
 		Id(firstArgName(signature)).Qual("context", "Context"),
 		Id("request").Interface(),
@@ -145,9 +168,9 @@ func createEndpointBody(signature *parser.FuncSignature) *Statement {
 		Interface(),
 		Error(),
 	).BlockFunc(func(g *Group) {
-		methodParams := removeContextIfFirst(signature.Params)
+		methodParams := removeContextIfFirst(signature.Args)
 		if len(methodParams) > 0 {
-			g.Id("req").Op(":=").Id("request").Assert(Op("*").Id(requestStructName(signature)))
+			g.Id("_req").Op(":=").Id("request").Assert(Op("*").Id(requestStructName(signature)))
 		}
 
 		g.Add(paramNames(signature.Results).
@@ -157,13 +180,13 @@ func createEndpointBody(signature *parser.FuncSignature) *Statement {
 			CallFunc(func(g *Group) {
 				g.Add(Id(firstArgName(signature)))
 				for _, field := range methodParams {
-					g.Add(Id("req").Dot(util.ToUpperFirst(field.Name)))
+					g.Add(Id("_req").Dot(util.ToUpperFirst(field.Name)))
 				}
 			}))
 
 		g.Return(
-			Op("&").Id(responseStructName(signature)).Values(dictByFuncFields(removeContextIfFirst(signature.Results))),
-			Nil(),
+			Op("&").Id(responseStructName(signature)).Values(dictByVariables(removeErrorIfLast(signature.Results))),
+			Id(nameOfLastResultError(signature)),
 		)
 	}))
 }
@@ -181,8 +204,12 @@ func createEndpointBody(signature *parser.FuncSignature) *Statement {
 //			}
 //		}
 //
-func createEndpoint(signature *parser.FuncSignature, svcInterface *parser.Interface) *Statement {
+func createEndpoint(signature *types.Function, info *GenerationInfo) *Statement {
 	return Func().
-		Id(endpointStructName(signature.Name)).Params(Id("svc").Id(svcInterface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
+		Id(endpointStructName(signature.Name)).Params(Id("svc").Id(info.Iface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
 		Block(createEndpointBody(signature))
+}
+
+func endpointExchange(base string, fn *types.Function) string {
+	return "endpoint" + util.ToUpperFirst(fn.Name) + util.ToUpperFirst(base)
 }

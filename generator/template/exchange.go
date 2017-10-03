@@ -1,18 +1,26 @@
 package template
 
 import (
-	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/parser"
+	"github.com/devimteam/microgen/generator/write_strategy"
+	"github.com/vetcher/godecl/types"
+	. "github.com/devimteam/jennifer/jen"
 )
 
-type ExchangeTemplate struct {
+type exchangeTemplate struct {
+	Info *GenerationInfo
 }
 
-func requestStructName(signature *parser.FuncSignature) string {
+func NewExchangeTemplate(info *GenerationInfo) Template {
+	return &exchangeTemplate{
+		Info: info,
+	}
+}
+
+func requestStructName(signature *types.Function) string {
 	return signature.Name + "Request"
 }
 
-func responseStructName(signature *parser.FuncSignature) string {
+func responseStructName(signature *types.Function) string {
 	return signature.Name + "Response"
 }
 
@@ -33,19 +41,29 @@ func responseStructName(signature *parser.FuncSignature) string {
 //  	Err error         `json:"err"`
 //  }
 //
-func (ExchangeTemplate) Render(i *parser.Interface) *File {
-	f := NewFile(i.PackageName)
+func (t *exchangeTemplate) Render() write_strategy.Renderer {
+	f := NewFile(t.Info.ServiceImportPackageName)
+	f.PackageComment(FileHeader)
+	f.PackageComment(`Please, do not edit.`)
 
-	for _, signature := range i.FuncSignatures {
-		f.Add(exchange(requestStructName(signature), signature.Params))
-		f.Add(exchange(responseStructName(signature), signature.Results))
+	for _, signature := range t.Info.Iface.Methods {
+		f.Add(exchange(requestStructName(signature), removeContextIfFirst(signature.Args))).Line()
+		f.Add(exchange(responseStructName(signature), removeErrorIfLast(signature.Results))).Line()
 	}
 
 	return f
 }
 
-func (ExchangeTemplate) Path() string {
+func (exchangeTemplate) DefaultPath() string {
 	return "./exchanges.go"
+}
+
+func (exchangeTemplate) Prepare() error {
+	return nil
+}
+
+func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 // Renders exchanges that represents requests and responses.
@@ -54,10 +72,10 @@ func (ExchangeTemplate) Path() string {
 //  	Visit *entity.Visit `json:"visit"`
 //  }
 //
-func exchange(name string, params []*parser.FuncField) Code {
+func exchange(name string, params []types.Variable) Code {
 	return Type().Id(name).StructFunc(func(g *Group) {
-		for _, param := range removeContextIfFirst(params) {
-			g.Add(structField(param))
+		for _, param := range params {
+			g.Add(structField(&param))
 		}
 	}).Line()
 }

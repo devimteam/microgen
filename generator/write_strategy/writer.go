@@ -1,17 +1,18 @@
-package generator
+package write_strategy
 
+/*
 import (
 	"fmt"
 	"io"
 
-	"github.com/dave/jennifer/jen"
+	"github.com/devimteam/microgen/generator/template"
 )
 
 type writerStrategy struct {
 	writer io.Writer
 }
 
-func (s writerStrategy) Write(f *jen.File, t Template) error {
+func (s writerStrategy) Write(f template.Renderer, t template.Template) error {
 	err := f.Render(s.writer)
 	if err != nil {
 		return fmt.Errorf("render error: %v", err)
@@ -19,8 +20,9 @@ func (s writerStrategy) Write(f *jen.File, t Template) error {
 	return nil
 }
 
-func NewWriterStrategy(writer io.Writer) Strategy {
+func NewWriterStrategy(writer io.Writer) template.Strategy {
 	return writerStrategy{
 		writer: writer,
 	}
 }
+*/
