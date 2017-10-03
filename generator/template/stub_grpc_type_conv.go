@@ -8,7 +8,7 @@ import (
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/vetcher/jennifer/jen"
+	. "github.com/devimteam/jennifer/jen"
 )
 
 const (

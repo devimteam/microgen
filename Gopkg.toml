@@ -21,8 +21,8 @@
 #  version = "2.4.0"
 
 [[constraint]]
-  name = "github.com/vetcher/jennifer"
-  branch = "master"
+  name = "github.com/devimteam/jennifer"
+  version = "0.15.0"
 
 [[constraint]]
   name = "github.com/vetcher/godecl"

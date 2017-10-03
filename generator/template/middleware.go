@@ -2,7 +2,7 @@ package template
 
 import (
 	"github.com/devimteam/microgen/generator/write_strategy"
-	. "github.com/vetcher/jennifer/jen"
+	. "github.com/devimteam/jennifer/jen"
 )
 
 const (
