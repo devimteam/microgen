@@ -12,7 +12,7 @@ const (
 	nextVarName              = "next"
 	serviceLoggingStructName = "serviceLogging"
 
-	logIgnoreTag = "//!log"
+	logIgnoreTag = "logs-ignore"
 )
 
 type loggingTemplate struct {
@@ -22,7 +22,7 @@ type loggingTemplate struct {
 
 func NewLoggingTemplate(info *GenerationInfo) Template {
 	return &loggingTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 
@@ -98,7 +98,7 @@ func (loggingTemplate) DefaultPath() string {
 func (t *loggingTemplate) Prepare() error {
 	t.ignoreParams = make(map[string][]string)
 	for _, fn := range t.Info.Iface.Methods {
-		t.ignoreParams[fn.Name] = util.FetchTags(fn.Docs, logIgnoreTag)
+		t.ignoreParams[fn.Name] = util.FetchTags(fn.Docs, TagMark+logIgnoreTag)
 	}
 	return nil
 }

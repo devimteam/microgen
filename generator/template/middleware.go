@@ -15,7 +15,7 @@ type middlewareTemplate struct {
 
 func NewMiddlewareTemplate(info *GenerationInfo) Template {
 	return &middlewareTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 

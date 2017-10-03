@@ -66,7 +66,7 @@ type StringService interface {
 `@grpc-addr` tag is optional, but required for `grpc-client` generation.  
 
 ### Method's tags
-#### !log
+#### @logs-ignore
 This tag is used for logging middleware, when some arguments or results should not be logged, e.g. passwords or files.  
 If `context.Context` is first, it ignored by default.  
 Provide parameters names, separated by comma, to exclude them from logs.  
@@ -74,7 +74,7 @@ Example:
 ```go
 // @microgen logging
 type FileService interface {
-    //!log data
+    // @logs-ignore data
     UploadFile(ctx context.Context, name string, data []byte) (link string, err error)
 }
 ```
@@ -137,7 +137,7 @@ For correct generation, please, follow rules below.
 
 * All interface method's arguments and results should be named and should be different (name duplicating unacceptable).
 * First argument of each method should be of type `context.Context` (from [standard library](https://golang.org/pkg/context/)).
-* Method results should contain at least one variable of `error` type.
+* Last result should should be `error` type.
 ---
 * Name of _protobuf_ service should be the same, as interface name.
 * Function names in _protobuf_ should be the same, as in interface.

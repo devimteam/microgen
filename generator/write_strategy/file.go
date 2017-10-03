@@ -10,7 +10,14 @@ import (
 	"path/filepath"
 )
 
-const MkdirPermissions = 0777
+const (
+	MkdirPermissions = 0777
+
+	// This hack needs for normal code formatting.
+	// It makes formatter think, that declared code is top-level.
+	// Without this hack formatter adds separators (tabs) to beginning of every line.
+	formatTrick = "package T\n"
+)
 
 type createFileStrategy struct {
 	absPath string
@@ -111,12 +118,6 @@ func (s appendFileStrategy) Write(renderer Renderer) error {
 	fmt.Println("A", filepath.Join(s.absPath, s.relPath))
 	return nil
 }
-
-// This hack needs for normal code formatting.
-// It makes formatter think, that declared code is top-level.
-// Without this hack formatter adds separators to beginning of every line,
-// thinking that provided code from the middle of code.
-const formatTrick = "package T\n"
 
 func (s appendFileStrategy) Save(renderer Renderer, filename string) error {
 	buf := &bytes.Buffer{}

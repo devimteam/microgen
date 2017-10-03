@@ -11,9 +11,8 @@ type exchangeTemplate struct {
 }
 
 func NewExchangeTemplate(info *GenerationInfo) Template {
-	infoCopy := info.Duplicate()
 	return &exchangeTemplate{
-		Info: infoCopy,
+		Info: info,
 	}
 }
 

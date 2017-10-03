@@ -50,19 +50,19 @@ func ToLower(str string) string {
 	if len(str) > 0 && unicode.IsLower(rune(str[0])) {
 		return str
 	}
-	var i int
-	for ; i < len(str); i++ {
+	for i := range str {
 		if unicode.IsLower(rune(str[i])) {
-			// If str[0] IsUpper and str[1] IsLower think str[1] IsUpper
+			// Case, when only first char is upper.
 			if i == 1 {
-				i = 2
+				return strings.ToLower(str[:1]) + str[1:]
 			}
-			break
+			return strings.ToLower(str[:i-1]) + str[i-1:]
 		}
 	}
-	return strings.ToLower(str[:i-1]) + str[i-1:]
+	return strings.ToLower(str)
 }
 
+// Return last upper char in string or first char if no upper characters founded.
 func LastUpperOrFirst(str string) string {
 	for i := len(str) - 1; i >= 0; i-- {
 		if unicode.IsUpper(rune(str[i])) {

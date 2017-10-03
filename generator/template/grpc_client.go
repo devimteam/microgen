@@ -14,7 +14,7 @@ type gRPCClientTemplate struct {
 
 func NewGRPCClientTemplate(info *GenerationInfo) Template {
 	return &gRPCClientTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 

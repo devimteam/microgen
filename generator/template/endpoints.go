@@ -12,9 +12,8 @@ type endpointsTemplate struct {
 }
 
 func NewEndpointsTemplate(info *GenerationInfo) Template {
-	infoCopy := info.Duplicate()
 	return &endpointsTemplate{
-		Info: infoCopy,
+		Info: info,
 	}
 }
 

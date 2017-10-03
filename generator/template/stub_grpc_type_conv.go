@@ -25,7 +25,7 @@ type stubGRPCTypeConverterTemplate struct {
 
 func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
 	return &stubGRPCTypeConverterTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 
@@ -136,7 +136,7 @@ func (t *stubGRPCTypeConverterTemplate) Prepare() error {
 }
 
 func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.TryToOpenFile(t.Info.AbsOutPath, t.DefaultPath()); os.IsNotExist(err) {
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 	}

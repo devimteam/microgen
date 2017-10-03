@@ -21,9 +21,8 @@ type stubInterfaceTemplate struct {
 }
 
 func NewStubInterfaceTemplate(info *GenerationInfo) Template {
-	infoCopy := info.Duplicate()
 	return &stubInterfaceTemplate{
-		Info: infoCopy,
+		Info: info,
 	}
 }
 
@@ -72,7 +71,7 @@ func (stubInterfaceTemplate) DefaultPath() string {
 }
 
 func (t *stubInterfaceTemplate) Prepare() error {
-	if err := util.TryToOpenFile(t.Info.SourceFilePath, t.DefaultPath()); os.IsNotExist(err) {
+	if err := util.StatFile(t.Info.SourceFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		fmt.Println("warning:", err)
 		return nil
 	}

@@ -71,7 +71,7 @@ func findInterface(file *types.File) *types.Interface {
 
 func docsContainMicrogenTag(strs []string) bool {
 	for _, str := range strs {
-		if strings.HasPrefix(str, generator.MicrogenGeneralTag) {
+		if strings.HasPrefix(str, generator.TagMark+generator.MicrogenGeneralTag) {
 			return true
 		}
 	}

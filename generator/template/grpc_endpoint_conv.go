@@ -30,7 +30,7 @@ type gRPCEndpointConverterTemplate struct {
 
 func NewGRPCEndpointConverterTemplate(info *GenerationInfo) Template {
 	return &gRPCEndpointConverterTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 
@@ -196,7 +196,7 @@ func (t *gRPCEndpointConverterTemplate) Prepare() error {
 }
 
 func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.TryToOpenFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 	}
