@@ -79,6 +79,9 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 // Renders reply type argument
 // 		stringsvc.CountResponse{}
 func (t *gRPCClientTemplate) replyType(signature *types.Function) *Statement {
+	if len(removeErrorIfLast(signature.Results)) == 0 {
+		return Qual(PackagePathEmptyProtobuf, "Empty").Values()
+	}
 	return Qual(t.Info.ProtobufPackage, responseStructName(signature)).Values()
 }
 

@@ -314,14 +314,22 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(t.Info.ProtobufPackage, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
-				for _, field := range methodParams {
-					req, _ := golangTypeToProto("req", &field)
-					dict[structFieldName(&field)] = Line().Add(req)
-				}
-			})), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams), Nil())
 		},
 	).Line()
+}
+
+//PackagePathEmptyProtobuf
+func (t *gRPCEndpointConverterTemplate) grpcEndpointConvReturn(fn *types.Function, methodParams []types.Variable) *Statement {
+	if len(methodParams) == 0 {
+		return Op("&").Qual(PackagePathEmptyProtobuf, "Empty").Values()
+	}
+	return Op("&").Qual(t.Info.ProtobufPackage, requestStructName(fn)).Values(DictFunc(func(dict Dict) {
+		for _, field := range methodParams {
+			req, _ := golangTypeToProto("req", &field)
+			dict[structFieldName(&field)] = Line().Add(req)
+		}
+	}))
 }
 
 // Renders function for encoding response, golang type converts to proto type.

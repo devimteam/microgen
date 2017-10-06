@@ -22,6 +22,7 @@ const (
 	PackagePathIOUtil             = "io/ioutil"
 	PackagePathStrings            = "strings"
 	PackagePathUrl                = "net/url"
+	PackagePathEmptyProtobuf      = "github.com/golang/protobuf/ptypes/empty"
 
 	TagMark = "// @"
 

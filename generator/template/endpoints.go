@@ -129,7 +129,7 @@ func serviceEndpointMethodBody(fn *types.Function) func(g *Group) {
 	respName := endpointExchange("response", fn)
 	return func(g *Group) {
 		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByVariables(removeContextIfFirst(fn.Args)))
-		g.List(Id(nameOrAnonIfEmptyList(respName, fn.Results)), Id(nameOfLastResultError(fn))).Op(":=").Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(fn)), Op("&").Id(reqName))
+		g.Add(endpointResponse(respName, fn)).Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(fn)), Op("&").Id(reqName))
 		g.If(Id(nameOfLastResultError(fn)).Op("!=").Nil().Op("&&").
 			Qual(PackagePathGoogleGRPC, "Code").Call(Id(nameOfLastResultError(fn))).Op("==").Qual(PackagePathGoogleGRPCCodes, "Internal")).Block(
 			Id(nameOfLastResultError(fn)).Op("=").Qual("errors", "New").Call(Qual(PackagePathGoogleGRPC, "ErrorDesc").Call(Id(nameOfLastResultError(fn)))),
@@ -145,11 +145,11 @@ func serviceEndpointMethodBody(fn *types.Function) func(g *Group) {
 }
 
 // Helper func for `serviceEndpointMethodBody`
-func nameOrAnonIfEmptyList(name string, list []types.Variable) string {
-	if len(list) > 0 {
-		return name
+func endpointResponse(respName string, fn *types.Function) *Statement {
+	if len(removeErrorIfLast(fn.Results)) > 0 {
+		return List(Id(respName), Id(nameOfLastResultError(fn))).Op(":=")
 	}
-	return "_"
+	return List(Id("_"), Id(nameOfLastResultError(fn))).Op("=")
 }
 
 // For custom ctx in service interface (e.g. context or ctxxx).

@@ -36,7 +36,7 @@ func (t *httpConverterTemplate) DefaultPath() string {
 }
 
 func (t *httpConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.TryToOpenFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 	}
@@ -57,7 +57,7 @@ func (t *httpConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error
 		}
 		if file.Functions[i].Name == defaultRequestEncoderName {
 			t.isDefaultEncoderRequestExist = true
-			break
+			continue
 		}
 		if t.isDefaultEncoderRequestExist && t.isDefaultEncoderResponseExist {
 			break

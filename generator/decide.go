@@ -53,6 +53,7 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 	units = append(units, stubSvc, exch, endp)
 
 	genTags := util.FetchTags(iface.Docs, TagMark+MicrogenGeneralTag)
+	fmt.Println("Tags:", strings.Join(genTags, ", "))
 	for _, tag := range genTags {
 		templates := tagToTemplate(tag, info)
 		if templates == nil {

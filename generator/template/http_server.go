@@ -53,6 +53,7 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 				),
 			)
 		}
+		g.Return(Id("handler"))
 	})
 
 	return f

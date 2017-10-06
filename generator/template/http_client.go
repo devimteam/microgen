@@ -56,7 +56,7 @@ func (t *httpClientTemplate) clientBody() *Statement {
 		Block(
 			Return(Nil(), Err()),
 		).
-		Line().Return(Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(
+		Line().Return(Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(
 		func(d Dict) {
 			for _, fn := range t.Info.Iface.Methods {
 				d[Id(endpointStructName(fn.Name))] = Qual(PackagePathGoKitTransportHTTP, "NewClient").Call(
