@@ -14,7 +14,7 @@ type httpServerTemplate struct {
 
 func NewHttpServerTemplate(info *GenerationInfo) Template {
 	return &httpServerTemplate{
-		Info: info,
+		Info: info.Copy(),
 	}
 }
 
@@ -23,10 +23,17 @@ func (t *httpServerTemplate) DefaultPath() string {
 }
 
 func (t *httpServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); !t.Info.Force && err == nil {
+		return nil, nil
+	}
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 func (t *httpServerTemplate) Prepare() error {
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
+	if util.IsInStringSlice("http", tags) || util.IsInStringSlice("http-server", tags) {
+		t.Info.Force = true
+	}
 	return nil
 }
 

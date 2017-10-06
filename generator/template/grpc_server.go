@@ -1,7 +1,6 @@
 package template
 
 import (
-	"fmt"
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
@@ -16,7 +15,7 @@ type gRPCServerTemplate struct {
 
 func NewGRPCServerTemplate(info *GenerationInfo) Template {
 	return &gRPCServerTemplate{
-		Info: info,
+		Info: info.Copy(),
 	}
 }
 
@@ -115,12 +114,20 @@ func (gRPCServerTemplate) DefaultPath() string {
 
 func (t *gRPCServerTemplate) Prepare() error {
 	if t.Info.ProtobufPackage == "" {
-		return fmt.Errorf("protobuf package is empty")
+		return ProtobufEmptyError
+	}
+
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
+	if util.IsInStringSlice("grpc", tags) || util.IsInStringSlice("grpc-server", tags) {
+		t.Info.Force = true
 	}
 	return nil
 }
 
 func (t *gRPCServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); !t.Info.Force && err == nil {
+		return nil, nil
+	}
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 

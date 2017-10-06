@@ -3,6 +3,7 @@ package template
 import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
+	"github.com/devimteam/microgen/util"
 )
 
 type httpClientTemplate struct {
@@ -11,7 +12,7 @@ type httpClientTemplate struct {
 
 func NewHttpClientTemplate(info *GenerationInfo) Template {
 	return &httpClientTemplate{
-		Info: info,
+		Info: info.Copy(),
 	}
 }
 
@@ -20,10 +21,17 @@ func (t *httpClientTemplate) DefaultPath() string {
 }
 
 func (t *httpClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); !t.Info.Force && err == nil {
+		return nil, nil
+	}
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 func (t *httpClientTemplate) Prepare() error {
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
+	if util.IsInStringSlice("http", tags) || util.IsInStringSlice("http-client", tags) {
+		t.Info.Force = true
+	}
 	return nil
 }
 

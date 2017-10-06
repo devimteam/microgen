@@ -1,7 +1,6 @@
 package template
 
 import (
-	"fmt"
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
@@ -184,7 +183,7 @@ func (gRPCEndpointConverterTemplate) DefaultPath() string {
 
 func (t *gRPCEndpointConverterTemplate) Prepare() error {
 	if t.Info.ProtobufPackage == "" {
-		return fmt.Errorf("protobuf package is empty")
+		return ProtobufEmptyError
 	}
 	for _, fn := range t.Info.Iface.Methods {
 		t.requestDecoders = append(t.requestDecoders, fn)
