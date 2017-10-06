@@ -29,7 +29,7 @@ func ParseFile(filename string) (*types.File, error) {
 	return info, nil
 }
 
-func TryToOpenFile(absPath, relPath string) error {
+func StatFile(absPath, relPath string) error {
 	outpath, err := filepath.Abs(filepath.Join(absPath, relPath))
 	if err != nil {
 		return fmt.Errorf("unable to resolve path: %v", err)
