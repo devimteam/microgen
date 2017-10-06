@@ -68,7 +68,7 @@ type StringService interface {
 ### Method's tags
 #### @logs-ignore
 This tag is used for logging middleware, when some arguments or results should not be logged, e.g. passwords or files.  
-If `context.Context` is first, it ignored by default.  
+If `context.Context` is first argument, it ignored by default.
 Provide parameters names, separated by comma, to exclude them from logs.  
 Example:
 ```go
@@ -89,6 +89,9 @@ All allowed tags for customize generation provided here.
 | grpc-client | Generates client for grpc transport with request/response encoders/decoders            |
 | grpc-server | Generates server for grpc transport with request/response encoders/decoders            |
 | grpc        | Generates client and server for grpc transport with request/response encoders/decoders |
+| http-client | Generates client for http transport with request/response encoders/decoders            |
+| http-server | Generates server for http transport with request/response encoders/decoders            |
+| http        | Generates client and server for http transport with request/response encoders/decoders |
 
 ## Example
 Follow this short guide to try microgen tool.
@@ -109,7 +112,6 @@ import (
 type StringService interface {
     Uppercase(ctx context.Context, str string) (ans string, err error)
     Count(ctx context.Context, text string, symbol string) (count int, positions []int)
-    TestCase(ctx context.Context, comments []*drive.Comment) (err error)
 }
 ```
 2. Open command line next to your `service.go`.
