@@ -17,6 +17,9 @@ const (
 	// It makes formatter think, that declared code is top-level.
 	// Without this hack formatter adds separators (tabs) to beginning of every line.
 	formatTrick = "package T\n"
+
+	NewFileMark    = "New"
+	AppendFileMark = "Add"
 )
 
 type createFileStrategy struct {
@@ -46,7 +49,7 @@ func (s createFileStrategy) Write(renderer Renderer) error {
 	if err != nil {
 		return fmt.Errorf("error when save file: %v", err)
 	}
-	fmt.Println("new", filepath.Join(s.absPath, s.relPath))
+	fmt.Println(NewFileMark, filepath.Join(s.absPath, s.relPath))
 	return nil
 }
 
@@ -115,7 +118,7 @@ func (s appendFileStrategy) Write(renderer Renderer) error {
 	if err != nil {
 		return fmt.Errorf("error when save file: %v", err)
 	}
-	fmt.Println("add", filepath.Join(s.absPath, s.relPath))
+	fmt.Println(AppendFileMark, filepath.Join(s.absPath, s.relPath))
 	return nil
 }
 

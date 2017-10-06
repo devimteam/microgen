@@ -20,8 +20,8 @@ type Generator interface {
 type generationUnit struct {
 	template template.Template
 
-	writeMethod write_strategy.Strategy
-	absOutPath  string
+	writeStrategy write_strategy.Strategy
+	absOutPath    string
 }
 
 func NewGenUnit(tmpl template.Template, outPath string) (*generationUnit, error) {
@@ -34,9 +34,9 @@ func NewGenUnit(tmpl template.Template, outPath string) (*generationUnit, error)
 		return nil, err
 	}
 	return &generationUnit{
-		template:    tmpl,
-		absOutPath:  outPath,
-		writeMethod: strategy,
+		template:      tmpl,
+		absOutPath:    outPath,
+		writeStrategy: strategy,
 	}, nil
 }
 
@@ -44,11 +44,11 @@ func (g *generationUnit) Generate() error {
 	if g.template == nil {
 		return EmptyTemplateError
 	}
-	if g.writeMethod == nil {
+	if g.writeStrategy == nil {
 		return EmptyStrategyError
 	}
 	code := g.template.Render()
-	err := g.writeMethod.Write(code)
+	err := g.writeStrategy.Write(code)
 	if err != nil {
 		return fmt.Errorf("write error: %v", err)
 	}
