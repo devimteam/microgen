@@ -191,7 +191,7 @@ func methodDefinition(obj string, signature *types.Function) *Statement {
 		Params(funcDefinitionParams(signature.Results))
 }
 
-// Remove from generating functions that already in existing
+// Remove from generating functions that already in existing.
 func removeAlreadyExistingFunctions(existing []types.Function, generating *[]*types.Function, nameFormer func(*types.Function) string) {
 	x := (*generating)[:0]
 	for _, fn := range *generating {
