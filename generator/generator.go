@@ -1,10 +1,16 @@
 package generator
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/devimteam/microgen/generator/write_strategy"
+)
+
+var (
+	EmptyTemplateError = errors.New("empty template")
+	EmptyStrategyError = errors.New("empty strategy")
 )
 
 type Generator interface {
@@ -35,6 +41,12 @@ func NewGenUnit(tmpl template.Template, outPath string) (*generationUnit, error)
 }
 
 func (g *generationUnit) Generate() error {
+	if g.template == nil {
+		return EmptyTemplateError
+	}
+	if g.writeMethod == nil {
+		return EmptyStrategyError
+	}
 	code := g.template.Render()
 	err := g.writeMethod.Write(code)
 	if err != nil {
