@@ -1,10 +1,10 @@
 package template
 
 import (
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/vetcher/jennifer/jen"
 )
 
 type endpointsTemplate struct {
@@ -12,9 +12,8 @@ type endpointsTemplate struct {
 }
 
 func NewEndpointsTemplate(info *GenerationInfo) Template {
-	infoCopy := info.Duplicate()
 	return &endpointsTemplate{
-		Info: infoCopy,
+		Info: info,
 	}
 }
 
@@ -125,21 +124,32 @@ func serviceEndpointMethod(signature *types.Function) *Statement {
 //		}
 //		return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //
-func serviceEndpointMethodBody(signature *types.Function) func(g *Group) {
-	reqName := endpointExchange("request", signature)
-	respName := endpointExchange("response", signature)
+func serviceEndpointMethodBody(fn *types.Function) func(g *Group) {
+	reqName := endpointExchange("request", fn)
+	respName := endpointExchange("response", fn)
 	return func(g *Group) {
-		g.Id(reqName).Op(":=").Id(requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))
-		g.List(Id(respName), Err()).Op(":=").Id(util.FirstLowerChar("Endpoint")).Dot(endpointStructName(signature.Name)).Call(Id(firstArgName(signature)), Op("&").Id(reqName))
-		g.If(Err().Op("!=").Nil()).Block(
+		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByVariables(removeContextIfFirst(fn.Args)))
+		g.List(Id(nameOrAnonIfEmptyList(respName, fn.Results)), Id(nameOfLastResultError(fn))).Op(":=").Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(fn)), Op("&").Id(reqName))
+		g.If(Id(nameOfLastResultError(fn)).Op("!=").Nil().Op("&&").
+			Qual(PackagePathGoogleGRPC, "Code").Call(Id(nameOfLastResultError(fn))).Op("==").Qual(PackagePathGoogleGRPCCodes, "Internal")).Block(
+			Id(nameOfLastResultError(fn)).Op("=").Qual("errors", "New").Call(Qual(PackagePathGoogleGRPC, "ErrorDesc").Call(Id(nameOfLastResultError(fn)))),
 			Return(),
 		)
 		g.ReturnFunc(func(group *Group) {
-			for _, field := range signature.Results {
-				group.Id(respName).Assert(Op("*").Id(responseStructName(signature))).Op(".").Add(structFieldName(&field))
+			for _, field := range removeErrorIfLast(fn.Results) {
+				group.Id(respName).Assert(Op("*").Id(responseStructName(fn))).Op(".").Add(structFieldName(&field))
 			}
+			group.Id(nameOfLastResultError(fn))
 		})
 	}
+}
+
+// Helper func for `serviceEndpointMethodBody`
+func nameOrAnonIfEmptyList(name string, list []types.Variable) string {
+	if len(list) > 0 {
+		return name
+	}
+	return "_"
 }
 
 // For custom ctx in service interface (e.g. context or ctxxx).
@@ -183,8 +193,8 @@ func createEndpointBody(signature *types.Function) *Statement {
 			}))
 
 		g.Return(
-			Op("&").Id(responseStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Results))),
-			Nil(),
+			Op("&").Id(responseStructName(signature)).Values(dictByVariables(removeErrorIfLast(signature.Results))),
+			Id(nameOfLastResultError(signature)),
 		)
 	}))
 }

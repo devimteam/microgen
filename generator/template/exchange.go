@@ -1,9 +1,9 @@
 package template
 
 import (
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/vetcher/godecl/types"
-	. "github.com/vetcher/jennifer/jen"
 )
 
 type exchangeTemplate struct {
@@ -11,9 +11,8 @@ type exchangeTemplate struct {
 }
 
 func NewExchangeTemplate(info *GenerationInfo) Template {
-	infoCopy := info.Duplicate()
 	return &exchangeTemplate{
-		Info: infoCopy,
+		Info: info,
 	}
 }
 
@@ -48,8 +47,8 @@ func (t *exchangeTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(`Please, do not edit.`)
 
 	for _, signature := range t.Info.Iface.Methods {
-		f.Add(exchange(requestStructName(signature), signature.Args)).Line()
-		f.Add(exchange(responseStructName(signature), signature.Results)).Line()
+		f.Add(exchange(requestStructName(signature), removeContextIfFirst(signature.Args))).Line()
+		f.Add(exchange(responseStructName(signature), removeErrorIfLast(signature.Results))).Line()
 	}
 
 	return f
@@ -75,7 +74,7 @@ func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 //
 func exchange(name string, params []types.Variable) Code {
 	return Type().Id(name).StructFunc(func(g *Group) {
-		for _, param := range removeContextIfFirst(params) {
+		for _, param := range params {
 			g.Add(structField(&param))
 		}
 	}).Line()

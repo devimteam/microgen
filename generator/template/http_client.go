@@ -1,8 +1,8 @@
 package template
 
 import (
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	. "github.com/vetcher/jennifer/jen"
 )
 
 type httpClientTemplate struct {
@@ -11,7 +11,7 @@ type httpClientTemplate struct {
 
 func NewHttpClientTemplate(info *GenerationInfo) Template {
 	return &httpClientTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 

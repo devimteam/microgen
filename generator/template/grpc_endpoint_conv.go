@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/vetcher/jennifer/jen"
 )
 
 var (
@@ -30,7 +30,7 @@ type gRPCEndpointConverterTemplate struct {
 
 func NewGRPCEndpointConverterTemplate(info *GenerationInfo) Template {
 	return &gRPCEndpointConverterTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 
@@ -196,7 +196,7 @@ func (t *gRPCEndpointConverterTemplate) Prepare() error {
 }
 
 func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.TryToOpenFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 	}
@@ -205,13 +205,23 @@ func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 		return nil, err
 	}
 
-	removeAlreadyExistingFunctions(file.Functions, &t.requestEncoders, requestEncodeName)
-	removeAlreadyExistingFunctions(file.Functions, &t.requestDecoders, requestDecodeName)
-	removeAlreadyExistingFunctions(file.Functions, &t.responseEncoders, responseEncodeName)
-	removeAlreadyExistingFunctions(file.Functions, &t.responseDecoders, responseDecodeName)
+	RemoveAlreadyExistingFunctions(file.Functions, &t.requestEncoders, requestEncodeName)
+	RemoveAlreadyExistingFunctions(file.Functions, &t.requestDecoders, requestDecodeName)
+	RemoveAlreadyExistingFunctions(file.Functions, &t.responseEncoders, responseEncodeName)
+	RemoveAlreadyExistingFunctions(file.Functions, &t.responseDecoders, responseDecodeName)
 
 	t.state = AppendStrat
 	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+}
+
+func RemoveAlreadyExistingFunctions(existing []types.Function, generating *[]*types.Function, nameFormer func(*types.Function) string) {
+	x := (*generating)[:0]
+	for _, fn := range *generating {
+		if f := util.FindFunctionByName(existing, nameFormer(fn)); f == nil {
+			x = append(x, fn)
+		}
+	}
+	*generating = x
 }
 
 // Renders type conversion (if need) to default protobuf types.
@@ -329,7 +339,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 //		}
 //
 func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function) *Statement {
-	methodResults := removeContextIfFirst(signature.Results)
+	methodResults := removeErrorIfLast(signature.Results)
 	return Line().Func().Id(responseEncodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {
@@ -397,7 +407,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 //		}
 //
 func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function) *Statement {
-	methodResults := removeContextIfFirst(signature.Results)
+	methodResults := removeErrorIfLast(signature.Results)
 	return Line().Func().Id(responseDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) > 0 {

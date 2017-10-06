@@ -2,6 +2,11 @@
 
 
 [[projects]]
+  name = "github.com/dave/jennifer"
+  packages = ["jen"]
+  revision = "97587ff16f680f25594335a26c03ef6a1b7311b7"
+
+[[projects]]
   name = "github.com/fatih/structtag"
   packages = ["."]
   revision = "da3d9ab5b78fdc25d3a7614853b085200bd10da9"
@@ -13,15 +18,9 @@
   revision = "c1b80c561eb666b0e9b27a1f0737a1e4c29a0db7"
   version = "v0.2.0"
 
-[[projects]]
-  branch = "master"
-  name = "github.com/vetcher/jennifer"
-  packages = ["jen"]
-  revision = "55d079354d5a11ea904466c6148d986c76441c44"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "26e451b8df5f7df65c095423b217eccfba780a60b9adf51275b654717a7576f7"
+  inputs-digest = "cb466591eb9481e98e2d4a8e7595823a6f8e2e8f2420652534919a448524a126"
   solver-name = "gps-cdcl"
   solver-version = 1

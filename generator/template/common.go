@@ -1,9 +1,9 @@
 package template
 
 import (
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/vetcher/jennifer/jen"
 )
 
 const (
@@ -12,6 +12,7 @@ const (
 	PackagePathGoKitLog           = "github.com/go-kit/kit/log"
 	PackagePathTime               = "time"
 	PackagePathGoogleGRPC         = "google.golang.org/grpc"
+	PackagePathGoogleGRPCCodes    = "google.golang.org/grpc/codes"
 	PackagePathNetContext         = "golang.org/x/net/context"
 	PackagePathGoKitTransportGRPC = "github.com/go-kit/kit/transport/grpc"
 	PackagePathHttp               = "net/http"
@@ -28,8 +29,7 @@ const (
 type WriteStrategyState int
 
 const (
-	_ WriteStrategyState = iota
-	FileStrat
+	FileStrat WriteStrategyState = iota + 1
 	AppendStrat
 )
 
@@ -45,30 +45,45 @@ type GenerationInfo struct {
 	GRPCRegAddr     string
 }
 
-func (info GenerationInfo) Duplicate() *GenerationInfo {
-	return &GenerationInfo{
-		Iface: info.Iface,
-		Force: info.Force,
-		ServiceImportPackageName: info.ServiceImportPackageName,
-		ServiceImportPath:        info.ServiceImportPath,
-		AbsOutPath:               info.AbsOutPath,
-		SourceFilePath:           info.SourceFilePath,
-
-		GRPCRegAddr:     info.GRPCRegAddr,
-		ProtobufPackage: info.ProtobufPackage,
-	}
-}
-
 func structFieldName(field *types.Variable) *Statement {
 	return Id(util.ToUpperFirst(field.Name))
 }
 
 // Remove from function fields context if it is first in slice
 func removeContextIfFirst(fields []types.Variable) []types.Variable {
-	if len(fields) > 0 && fields[0].Type.Import != nil && fields[0].Type.Import.Package == PackagePathContext {
+	if IsContextFirst(fields) {
 		return fields[1:]
 	}
 	return fields
+}
+
+func IsContextFirst(fields []types.Variable) bool {
+	return len(fields) > 0 &&
+		fields[0].Type.Import != nil &&
+		fields[0].Type.Import.Package == PackagePathContext &&
+		fields[0].Type.Name == "Context"
+}
+
+// Remove from function fields error if it is last in slice
+func removeErrorIfLast(fields []types.Variable) []types.Variable {
+	if IsErrorLast(fields) {
+		return fields[:len(fields)-1]
+	}
+	return fields
+}
+
+func IsErrorLast(fields []types.Variable) bool {
+	return len(fields) > 0 &&
+		fields[len(fields)-1].Type.Import == nil &&
+		fields[len(fields)-1].Type.Name == "error"
+}
+
+// Return name of error, if error is last result, else return `err`
+func nameOfLastResultError(fn *types.Function) string {
+	if IsErrorLast(fn.Results) {
+		return fn.Results[len(fn.Results)-1].Name
+	}
+	return "err"
 }
 
 // Renders struct field.
@@ -153,7 +168,7 @@ func paramNames(fields []types.Variable) *Statement {
 //
 func methodDefinition(obj string, signature *types.Function) *Statement {
 	return Func().
-		Params(Id(util.FirstLowerChar(obj)).Op("*").Id(obj)).
+		Params(Id(util.LastUpperOrFirst(obj)).Op("*").Id(obj)).
 		Id(signature.Name).
 		Params(funcDefinitionParams(signature.Args)).
 		Params(funcDefinitionParams(signature.Results))

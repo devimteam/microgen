@@ -2,12 +2,12 @@ package template
 
 import (
 	"path/filepath"
+	"fmt"
 
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/vetcher/jennifer/jen"
-	"fmt"
 )
 
 type gRPCServerTemplate struct {
@@ -16,7 +16,7 @@ type gRPCServerTemplate struct {
 
 func NewGRPCServerTemplate(info *GenerationInfo) Template {
 	return &gRPCServerTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 
@@ -25,10 +25,10 @@ func serverStructName(iface *types.Interface) string {
 }
 
 func privateServerStructName(iface *types.Interface) string {
-	return util.ToLowerFirst(iface.Name) + "Server"
+	return util.ToLower(iface.Name) + "Server"
 }
 
-func pathToProtobufConverter(servicePath string) string {
+func pathToConverter(servicePath string) string {
 	return filepath.Join(servicePath, "transport/converter/protobuf")
 }
 
@@ -91,8 +91,8 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
-							Line().Qual(pathToProtobufConverter(t.Info.ServiceImportPath), requestDecodeName(m)),
-							Line().Qual(pathToProtobufConverter(t.Info.ServiceImportPath), responseEncodeName(m)),
+							Line().Qual(pathToConverter(t.Info.ServiceImportPath), requestDecodeName(m)),
+							Line().Qual(pathToConverter(t.Info.ServiceImportPath), responseEncodeName(m)),
 							Line().Id("opts").Op("...").Line(),
 						)
 				}
@@ -136,7 +136,7 @@ func (t *gRPCServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 //
 func (t *gRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.Interface) *Statement {
 	return Func().
-		Params(Id(util.FirstLowerChar(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
+		Params(Id(util.LastUpperOrFirst(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
 		Id(signature.Name).
 		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature))).
 		Params(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)), Error()).
@@ -155,7 +155,7 @@ func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 	return func(g *Group) {
 		g.List(Id("_"), Id("resp"), Err()).
 			Op(":=").
-			Id(util.FirstLowerChar(privateServerStructName(i))).Dot(util.ToLowerFirst(signature.Name)).Dot("ServeGRPC").Call(Id("ctx"), Id("req"))
+			Id(util.LastUpperOrFirst(privateServerStructName(i))).Dot(util.ToLowerFirst(signature.Name)).Dot("ServeGRPC").Call(Id("ctx"), Id("req"))
 
 		g.If(Err().Op("!=").Nil()).Block(
 			Return().List(Nil(), Err()),

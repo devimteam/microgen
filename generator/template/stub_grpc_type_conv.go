@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/vetcher/jennifer/jen"
 )
 
 const (
@@ -25,7 +25,7 @@ type stubGRPCTypeConverterTemplate struct {
 
 func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
 	return &stubGRPCTypeConverterTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 
@@ -58,7 +58,7 @@ func converterToProtoBody(field *types.Variable) Code {
 	case "TimeTimeToProto":
 		s.Return().Qual(GolangProtobufPtypes, "TimestampProto").Call(Id(field.Name))
 	default:
-		s.Panic(Lit("method not provided"))
+		s.Panic(Lit("function not provided"))
 	}
 	return s
 }
@@ -136,7 +136,7 @@ func (t *stubGRPCTypeConverterTemplate) Prepare() error {
 }
 
 func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.TryToOpenFile(t.Info.AbsOutPath, t.DefaultPath()); os.IsNotExist(err) {
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 	}
@@ -162,7 +162,7 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 func (t *stubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variable) *Statement {
 	return Func().Id(typeToProto(&field.Type, 0)).
 		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(&field.Type))).
-		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(&field.Type)), Id("conv"+util.ToUpperFirst(field.Name)+"Err").Error()).
+		Params(Add(t.protoFieldType(&field.Type)), Error()).
 		Block(converterToProtoBody(field))
 }
 
@@ -175,7 +175,7 @@ func (t *stubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variab
 func (t *stubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variable) *Statement {
 	return Func().Id(protoToType(&field.Type, 0)).
 		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(&field.Type))).
-		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(&field.Type)), Id("conv"+util.ToUpperFirst(field.Name)+"Err").Error()).
+		Params(Add(fieldType(&field.Type)), Error()).
 		Block(converterProtoToBody(field))
 }
 

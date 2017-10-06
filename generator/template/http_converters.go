@@ -3,10 +3,10 @@ package template
 import (
 	"path/filepath"
 
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/vetcher/jennifer/jen"
 )
 
 const (
@@ -27,7 +27,7 @@ type httpConverterTemplate struct {
 
 func NewHttpConverterTemplate(info *GenerationInfo) Template {
 	return &httpConverterTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 

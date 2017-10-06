@@ -1,10 +1,10 @@
 package template
 
 import (
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/vetcher/jennifer/jen"
 )
 
 const (
@@ -12,7 +12,7 @@ const (
 	nextVarName              = "next"
 	serviceLoggingStructName = "serviceLogging"
 
-	logIgnoreTag = "//!log"
+	logIgnoreTag = "logs-ignore"
 )
 
 type loggingTemplate struct {
@@ -22,7 +22,7 @@ type loggingTemplate struct {
 
 func NewLoggingTemplate(info *GenerationInfo) Template {
 	return &loggingTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 
@@ -98,7 +98,7 @@ func (loggingTemplate) DefaultPath() string {
 func (t *loggingTemplate) Prepare() error {
 	t.ignoreParams = make(map[string][]string)
 	for _, fn := range t.Info.Iface.Methods {
-		t.ignoreParams[fn.Name] = util.FetchTags(fn.Docs, logIgnoreTag)
+		t.ignoreParams[fn.Name] = util.FetchTags(fn.Docs, TagMark+logIgnoreTag)
 	}
 	return nil
 }
@@ -163,7 +163,7 @@ func (t *loggingTemplate) loggingFunc(signature *types.Function) *Statement {
 func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
-			Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
+			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
 				Line().Lit("method"), Lit(signature.Name),
 				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Args), signature.Name)),
 				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Results), signature.Name)),
@@ -171,7 +171,7 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 			),
 		).Call(Qual(PackagePathTime, "Now").Call())
 
-		g.Return().Id(util.FirstLowerChar(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
+		g.Return().Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
 	}
 }
 

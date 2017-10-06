@@ -3,9 +3,9 @@ package template
 import (
 	"path/filepath"
 
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	. "github.com/vetcher/jennifer/jen"
 )
 
 type httpServerTemplate struct {
@@ -14,7 +14,7 @@ type httpServerTemplate struct {
 
 func NewHttpServerTemplate(info *GenerationInfo) Template {
 	return &httpServerTemplate{
-		Info: info.Duplicate(),
+		Info: info,
 	}
 }
 
