@@ -3,11 +3,10 @@ package template
 import (
 	"path/filepath"
 
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/devimteam/jennifer/jen"
-	"fmt"
 )
 
 type gRPCServerTemplate struct {
@@ -16,7 +15,7 @@ type gRPCServerTemplate struct {
 
 func NewGRPCServerTemplate(info *GenerationInfo) Template {
 	return &gRPCServerTemplate{
-		Info: info,
+		Info: info.Copy(),
 	}
 }
 
@@ -115,12 +114,20 @@ func (gRPCServerTemplate) DefaultPath() string {
 
 func (t *gRPCServerTemplate) Prepare() error {
 	if t.Info.ProtobufPackage == "" {
-		return fmt.Errorf("protobuf package is empty")
+		return ProtobufEmptyError
+	}
+
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
+	if util.IsInStringSlice("grpc", tags) || util.IsInStringSlice("grpc-server", tags) {
+		t.Info.Force = true
 	}
 	return nil
 }
 
 func (t *gRPCServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); !t.Info.Force && err == nil {
+		return nil, nil
+	}
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
@@ -138,9 +145,33 @@ func (t *gRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.
 	return Func().
 		Params(Id(util.LastUpperOrFirst(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
 		Id(signature.Name).
-		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature))).
-		Params(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)), Error()).
+		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Add(t.grpcServerReqStruct(signature))).
+		Params(t.grpcServerRespStruct(signature), Error()).
 		BlockFunc(t.grpcServerFuncBody(signature, i))
+}
+
+// Special case for empty request
+// Render
+//		*empty.Empty
+// or
+//		*stringsvc.CountRequest
+func (t *gRPCServerTemplate) grpcServerReqStruct(fn *types.Function) *Statement {
+	if len(removeContextIfFirst(fn.Args)) == 0 {
+		return Op("*").Qual(PackagePathEmptyProtobuf, "Empty")
+	}
+	return Op("*").Qual(t.Info.ProtobufPackage, requestStructName(fn))
+}
+
+// Special case for empty response
+// Render
+//		*empty.Empty
+// or
+//		*stringsvc.CountResponse
+func (t *gRPCServerTemplate) grpcServerRespStruct(fn *types.Function) *Statement {
+	if len(removeErrorIfLast(fn.Results)) == 0 {
+		return Op("*").Qual(PackagePathEmptyProtobuf, "Empty")
+	}
+	return Op("*").Qual(t.Info.ProtobufPackage, responseStructName(fn))
 }
 
 // Render service method body for grpc server.
@@ -161,6 +192,6 @@ func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 			Return().List(Nil(), Err()),
 		)
 
-		g.Return().List(Id("resp").Assert(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature))), Nil())
+		g.Return().List(Id("resp").Assert(t.grpcServerRespStruct(signature)), Nil())
 	}
 }

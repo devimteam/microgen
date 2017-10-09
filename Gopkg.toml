@@ -21,8 +21,8 @@
 #  version = "2.4.0"
 
 [[constraint]]
-  name = "github.com/devimteam/jennifer"
-  version = "0.15.0"
+  name = "github.com/dave/jennifer"
+  revision = "97587ff16f680f25594335a26c03ef6a1b7311b7"
 
 [[constraint]]
   name = "github.com/vetcher/godecl"

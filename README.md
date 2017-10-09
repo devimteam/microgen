@@ -63,12 +63,15 @@ type StringService interface {
     ServiceMethod()
 }
 ```
-`@grpc-addr` tag is optional, but required for `grpc-client` generation.  
+`@grpc-addr` tag is optional, but required for `grpc-client` generation.
+#### @force
+Use force command for provided tags anyway. Useful, when you want to generate again after changing service methods.
+Used by default for `middleware` and `logging`.
 
 ### Method's tags
 #### @logs-ignore
 This tag is used for logging middleware, when some arguments or results should not be logged, e.g. passwords or files.  
-If `context.Context` is first, it ignored by default.  
+If `context.Context` is first argument, it ignored by default.
 Provide parameters names, separated by comma, to exclude them from logs.  
 Example:
 ```go
@@ -82,13 +85,16 @@ type FileService interface {
 ### Tags
 All allowed tags for customize generation provided here.
 
-| Tag         | Description                                                                            |
-|:------------|:---------------------------------------------------------------------------------------|
-| middleware  | General application middleware interface                                               |
-| logging     | Middleware that writes to logger all request/response information with handled time    |
-| grpc-client | Generates client for grpc transport with request/response encoders/decoders            |
-| grpc-server | Generates server for grpc transport with request/response encoders/decoders            |
-| grpc        | Generates client and server for grpc transport with request/response encoders/decoders |
+| Tag         | Description                                                                                                                   |
+|:------------|:------------------------------------------------------------------------------------------------------------------------------|
+| middleware  | General application middleware interface. Generates every time.                                                               |
+| logging     | Middleware that writes to logger all request/response information with handled time. Generates every time.                    |
+| grpc-client | Generates client for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
+| grpc-server | Generates server for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
+| grpc        | Generates client and server for grpc transport with request/response encoders/decoders. Do not generates again if file exist. |
+| http-client | Generates client for http transport with request/response encoders/decoders. Do not generates again if file exist.            |
+| http-server | Generates server for http transport with request/response encoders/decoders. Do not generates again if file exist.            |
+| http        | Generates client and server for http transport with request/response encoders/decoders. Do not generates again if file exist. |
 
 ## Example
 Follow this short guide to try microgen tool.
@@ -109,7 +115,6 @@ import (
 type StringService interface {
     Uppercase(ctx context.Context, str string) (ans string, err error)
     Count(ctx context.Context, text string, symbol string) (count int, positions []int)
-    TestCase(ctx context.Context, comments []*drive.Comment) (err error)
 }
 ```
 2. Open command line next to your `service.go`.

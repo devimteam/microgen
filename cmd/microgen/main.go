@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/devimteam/microgen/generator"
 	"github.com/devimteam/microgen/util"
@@ -50,13 +51,19 @@ func main() {
 		fmt.Println("fatal:", err)
 		os.Exit(1)
 	}
-	for _, unit := range units {
-		err := unit.Generate()
-		if err != nil {
-			fmt.Println("fatal:", err)
-			os.Exit(1)
-		}
+	var wg sync.WaitGroup
+	wg.Add(len(units))
+	for _, x := range units {
+		unit := x
+		go func() {
+			defer wg.Done()
+			err := unit.Generate()
+			if err != nil && err != generator.EmptyStrategyError {
+				fmt.Println("fatal:", err)
+			}
+		}()
 	}
+	wg.Wait()
 	fmt.Println("All files successfully generated")
 }
 

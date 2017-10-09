@@ -1,11 +1,17 @@
 package template
 
 import (
-	"fmt"
+	"errors"
 
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
+	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/devimteam/jennifer/jen"
+)
+
+var (
+	GRPCAddrEmptyError = errors.New("grpc server address is empty")
+	ProtobufEmptyError = errors.New("protobuf package is empty")
 )
 
 type gRPCClientTemplate struct {
@@ -14,7 +20,7 @@ type gRPCClientTemplate struct {
 
 func NewGRPCClientTemplate(info *GenerationInfo) Template {
 	return &gRPCClientTemplate{
-		Info: info,
+		Info: info.Copy(),
 	}
 }
 
@@ -79,6 +85,9 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 // Renders reply type argument
 // 		stringsvc.CountResponse{}
 func (t *gRPCClientTemplate) replyType(signature *types.Function) *Statement {
+	if len(removeErrorIfLast(signature.Results)) == 0 {
+		return Qual(PackagePathEmptyProtobuf, "Empty").Values()
+	}
 	return Qual(t.Info.ProtobufPackage, responseStructName(signature)).Values()
 }
 
@@ -88,14 +97,22 @@ func (gRPCClientTemplate) DefaultPath() string {
 
 func (t *gRPCClientTemplate) Prepare() error {
 	if t.Info.GRPCRegAddr == "" {
-		return fmt.Errorf("grpc server address is empty")
+		return GRPCAddrEmptyError
 	}
 	if t.Info.ProtobufPackage == "" {
-		return fmt.Errorf("protobuf package is empty")
+		return ProtobufEmptyError
+	}
+
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
+	if util.IsInStringSlice("grpc", tags) || util.IsInStringSlice("grpc-client", tags) {
+		t.Info.Force = true
 	}
 	return nil
 }
 
 func (t *gRPCClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); !t.Info.Force && err == nil {
+		return nil, nil
+	}
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
