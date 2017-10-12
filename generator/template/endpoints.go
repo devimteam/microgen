@@ -130,11 +130,12 @@ func serviceEndpointMethodBody(fn *types.Function) func(g *Group) {
 	return func(g *Group) {
 		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByVariables(removeContextIfFirst(fn.Args)))
 		g.Add(endpointResponse(respName, fn)).Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(fn)), Op("&").Id(reqName))
-		g.If(Id(nameOfLastResultError(fn)).Op("!=").Nil().Op("&&").
-			Qual(PackagePathGoogleGRPC, "Code").Call(Id(nameOfLastResultError(fn))).Op("==").Qual(PackagePathGoogleGRPCCodes, "Internal")).Block(
-			Id(nameOfLastResultError(fn)).Op("=").Qual("errors", "New").Call(Qual(PackagePathGoogleGRPC, "ErrorDesc").Call(Id(nameOfLastResultError(fn)))),
-			Return(),
-		)
+		g.If(Id(nameOfLastResultError(fn)).Op("!=").Nil().Block(
+			If(Qual(PackagePathGoogleGRPC, "Code").Call(Id(nameOfLastResultError(fn))).Op("==").Qual(PackagePathGoogleGRPCCodes, "Internal").Op("||").
+				Qual(PackagePathGoogleGRPC, "Code").Call(Id(nameOfLastResultError(fn))).Op("==").Qual(PackagePathGoogleGRPCCodes, "Unknown").Block(
+				Id(nameOfLastResultError(fn)).Op("=").Qual("errors", "New").Call(Qual(PackagePathGoogleGRPC, "ErrorDesc").Call(Id(nameOfLastResultError(fn)))),
+			)).Line().Return(),
+		))
 		g.ReturnFunc(func(group *Group) {
 			for _, field := range removeErrorIfLast(fn.Results) {
 				group.Id(respName).Assert(Op("*").Id(responseStructName(fn))).Op(".").Add(structFieldName(&field))
