@@ -13,7 +13,7 @@ const (
 	serviceLoggingStructName = "serviceLogging"
 
 	logIgnoreTag = "logs-ignore"
-	lenTag       = "len"
+	lenTag       = "logs-len"
 )
 
 type loggingTemplate struct {
