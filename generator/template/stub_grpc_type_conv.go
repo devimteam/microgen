@@ -72,7 +72,7 @@ func converterProtoToBody(field *types.Variable) Code {
 		).Line()
 		s.Return().List(Qual("errors", "New").Call(Id("proto"+util.ToUpperFirst(field.Name))), Nil())
 	case "ProtoToByteList":
-		s.Return().List(Id("proto"+util.ToLowerFirst(field.Name)), Nil())
+		s.Return().List(Id("proto"+util.ToUpperFirst(field.Name)), Nil())
 	case "ProtoToTimeTime":
 		s.Return().Qual(GolangProtobufPtypes, "Timestamp").Call(Id("proto" + util.ToUpperFirst(field.Name)))
 	default:
@@ -98,7 +98,7 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 	f := &Statement{}
 
 	for _, signature := range t.Info.Iface.Methods {
-		args := append(removeContextIfFirst(signature.Args), removeContextIfFirst(signature.Results)...)
+		args := append(removeContextIfFirst(signature.Args), removeErrorIfLast(signature.Results)...)
 		for _, field := range args {
 			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(&field.Type, 0), t.alreadyRenderedConverters) {
 				f.Line().Add(t.stubConverterToProto(&field)).Line()

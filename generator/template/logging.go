@@ -13,11 +13,13 @@ const (
 	serviceLoggingStructName = "serviceLogging"
 
 	logIgnoreTag = "logs-ignore"
+	lenTag       = "len"
 )
 
 type loggingTemplate struct {
 	Info         *GenerationInfo
 	ignoreParams map[string][]string
+	lenParams    map[string][]string
 }
 
 func NewLoggingTemplate(info *GenerationInfo) Template {
@@ -97,8 +99,10 @@ func (loggingTemplate) DefaultPath() string {
 
 func (t *loggingTemplate) Prepare() error {
 	t.ignoreParams = make(map[string][]string)
+	t.lenParams = make(map[string][]string)
 	for _, fn := range t.Info.Iface.Methods {
 		t.ignoreParams[fn.Name] = util.FetchTags(fn.Docs, TagMark+logIgnoreTag)
+		t.lenParams[fn.Name] = util.FetchTags(fn.Docs, TagMark+lenTag)
 	}
 	return nil
 }
@@ -184,9 +188,13 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 func (t *loggingTemplate) paramsNameAndValue(fields []types.Variable, functionName string) *Statement {
 	return ListFunc(func(g *Group) {
 		ignore := t.ignoreParams[functionName]
+		lenParams := t.lenParams[functionName]
 		for _, field := range fields {
 			if !util.IsInStringSlice(field.Name, ignore) {
 				g.Line().List(Lit(field.Name), Id(field.Name))
+			}
+			if util.IsInStringSlice(field.Name, lenParams) {
+				g.Line().List(Lit("len("+field.Name+")"), Len(Id(field.Name)))
 			}
 		}
 	})
