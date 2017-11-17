@@ -8,6 +8,8 @@ import (
 	"github.com/devimteam/microgen/generator/write_strategy"
 )
 
+const Version = template.Version
+
 var (
 	EmptyTemplateError = errors.New("empty template")
 	EmptyStrategyError = errors.New("empty strategy")

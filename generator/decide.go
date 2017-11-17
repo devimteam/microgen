@@ -122,6 +122,8 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 			template.NewHttpClientTemplate(info),
 			template.NewHttpConverterTemplate(info),
 		)
+	case "recover":
+		return append(tmpls, template.NewRecoverTemplate(info))
 	}
 	return nil
 }

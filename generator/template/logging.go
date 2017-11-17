@@ -73,7 +73,8 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
-	f.Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
+	f.Comment("ServiceLogging writes params, results and working time of method call to provided logger after its execution.").
+		Line().Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newLoggingBody(t.Info.Iface))
 
 	f.Line()

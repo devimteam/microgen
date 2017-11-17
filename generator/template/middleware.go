@@ -33,7 +33,8 @@ func (t *middlewareTemplate) Render() write_strategy.Renderer {
 	f := NewFile("middleware")
 	f.PackageComment(FileHeader)
 	f.PackageComment(`Please, do not edit.`)
-	f.Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)
+	f.Comment("Service middleware").
+		Line().Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)
 	return f
 }
 
