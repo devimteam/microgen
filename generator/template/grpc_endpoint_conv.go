@@ -1,13 +1,12 @@
 package template
 
 import (
-	"fmt"
 	"path/filepath"
 
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
-	. "github.com/devimteam/jennifer/jen"
 )
 
 var (
@@ -184,7 +183,7 @@ func (gRPCEndpointConverterTemplate) DefaultPath() string {
 
 func (t *gRPCEndpointConverterTemplate) Prepare() error {
 	if t.Info.ProtobufPackage == "" {
-		return fmt.Errorf("protobuf package is empty")
+		return ProtobufEmptyError
 	}
 	for _, fn := range t.Info.Iface.Methods {
 		t.requestDecoders = append(t.requestDecoders, fn)
@@ -205,23 +204,13 @@ func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 		return nil, err
 	}
 
-	RemoveAlreadyExistingFunctions(file.Functions, &t.requestEncoders, requestEncodeName)
-	RemoveAlreadyExistingFunctions(file.Functions, &t.requestDecoders, requestDecodeName)
-	RemoveAlreadyExistingFunctions(file.Functions, &t.responseEncoders, responseEncodeName)
-	RemoveAlreadyExistingFunctions(file.Functions, &t.responseDecoders, responseDecodeName)
+	removeAlreadyExistingFunctions(file.Functions, &t.requestEncoders, requestEncodeName)
+	removeAlreadyExistingFunctions(file.Functions, &t.requestDecoders, requestDecodeName)
+	removeAlreadyExistingFunctions(file.Functions, &t.responseEncoders, responseEncodeName)
+	removeAlreadyExistingFunctions(file.Functions, &t.responseDecoders, responseDecodeName)
 
 	t.state = AppendStrat
 	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
-}
-
-func RemoveAlreadyExistingFunctions(existing []types.Function, generating *[]*types.Function, nameFormer func(*types.Function) string) {
-	x := (*generating)[:0]
-	for _, fn := range *generating {
-		if f := util.FindFunctionByName(existing, nameFormer(fn)); f == nil {
-			x = append(x, fn)
-		}
-	}
-	*generating = x
 }
 
 // Renders type conversion (if need) to default protobuf types.
@@ -314,14 +303,22 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 					}
 				}
 			}
-			group.Return().List(Op("&").Qual(t.Info.ProtobufPackage, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
-				for _, field := range methodParams {
-					req, _ := golangTypeToProto("req", &field)
-					dict[structFieldName(&field)] = Line().Add(req)
-				}
-			})), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams), Nil())
 		},
 	).Line()
+}
+
+//PackagePathEmptyProtobuf
+func (t *gRPCEndpointConverterTemplate) grpcEndpointConvReturn(fn *types.Function, methodParams []types.Variable) *Statement {
+	if len(methodParams) == 0 {
+		return Op("&").Qual(PackagePathEmptyProtobuf, "Empty").Values()
+	}
+	return Op("&").Qual(t.Info.ProtobufPackage, requestStructName(fn)).Values(DictFunc(func(dict Dict) {
+		for _, field := range methodParams {
+			req, _ := golangTypeToProto("req", &field)
+			dict[structFieldName(&field)] = Line().Add(req)
+		}
+	}))
 }
 
 // Renders function for encoding response, golang type converts to proto type.

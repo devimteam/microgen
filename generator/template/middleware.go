@@ -1,8 +1,8 @@
 package template
 
 import (
+	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	. "github.com/devimteam/jennifer/jen"
 )
 
 const (

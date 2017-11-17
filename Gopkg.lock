@@ -2,10 +2,9 @@
 
 
 [[projects]]
-  name = "github.com/devimteam/jennifer"
+  name = "github.com/dave/jennifer"
   packages = ["jen"]
-  revision = "55d079354d5a11ea904466c6148d986c76441c44"
-  version = "v0.15.0"
+  revision = "97587ff16f680f25594335a26c03ef6a1b7311b7"
 
 [[projects]]
   name = "github.com/fatih/structtag"
@@ -22,6 +21,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "747c3fa966994bc5e06bcc0761ba6528d345c9aefbf6d856f4203e3783d59a01"
+  inputs-digest = "cb466591eb9481e98e2d4a8e7595823a6f8e2e8f2420652534919a448524a126"
   solver-name = "gps-cdcl"
   solver-version = 1
