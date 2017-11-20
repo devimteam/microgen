@@ -82,6 +82,18 @@ type FileService interface {
 }
 ```
 
+#### @logs-len
+This tag is used for logging middleware. It prints length of parameters.
+Example:  
+```go
+// @microgen logging
+type FileService interface {
+    // @logs-ignore data
+    // @logs-len data
+    UploadFile(ctx context.Context, name string, data []byte) (link string, err error)
+}
+```
+
 ### Tags
 All allowed tags for customize generation provided here.
 
