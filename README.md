@@ -33,7 +33,7 @@ Typical syntax is: `// @<tag-name>:`
 
 #### @microgen
 Main tag for microgen tool. Microgen scan file for the first interface which docs contains this tag.  
-To add templates for generation, add their tags, separated by comma after `@microgen:`
+To add templates for generation, add their [tags](#tags), separated by comma after `@microgen:`
 Example:
 ```go
 // @microgen middleware, logging

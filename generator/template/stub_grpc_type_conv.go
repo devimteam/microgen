@@ -210,6 +210,9 @@ func (t *stubGRPCTypeConverterTemplate) protoFieldType(field *types.Type) *State
 	} else {
 		c.Id(protoType)
 	}
+	if field.IsInterface {
+		c.Interface()
+	}
 
 	return c
 }

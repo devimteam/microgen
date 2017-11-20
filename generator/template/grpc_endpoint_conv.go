@@ -147,6 +147,9 @@ func typeToProto(field *types.Type, depth int) string {
 		m := field.Map
 		methodName += typeToProto(&m.Key, 1) + typeToProto(&m.Value, 1)
 	}
+	if field.IsInterface {
+		methodName += "Interface"
+	}
 	if depth == 0 {
 		methodName += "ToProto"
 	}
@@ -173,6 +176,9 @@ func protoToType(field *types.Type, depth int) string {
 		methodName += "Map"
 		m := field.Map
 		methodName += protoToType(&m.Key, 1) + protoToType(&m.Value, 1)
+	}
+	if field.IsInterface {
+		methodName += "Interface"
 	}
 	return methodName
 }

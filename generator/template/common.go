@@ -153,8 +153,19 @@ func fieldType(field *types.Type) *Statement {
 	} else {
 		c.Id(field.Name)
 	}
+	if field.IsInterface {
+		mhds := interfaceType(field.Interface)
+		c.Interface(mhds...)
+	}
 
 	return c
+}
+
+func interfaceType(p *types.Interface) (code []Code) {
+	for _, x := range p.Methods {
+		code = append(code, functionDefinition(x))
+	}
+	return
 }
 
 // Renders key/value pairs wrapped in Dict for provided fields.
@@ -189,7 +200,15 @@ func paramNames(fields []types.Variable) *Statement {
 func methodDefinition(obj string, signature *types.Function) *Statement {
 	return Func().
 		Params(Id(util.LastUpperOrFirst(obj)).Op("*").Id(obj)).
-		Id(signature.Name).
+		Add(functionDefinition(signature))
+}
+
+// Render full method definition with receiver, method name, args and results.
+//
+//		func Count(ctx context.Context, text string, symbol string) (count int)
+//
+func functionDefinition(signature *types.Function) *Statement {
+	return Id(signature.Name).
 		Params(funcDefinitionParams(signature.Args)).
 		Params(funcDefinitionParams(signature.Results))
 }
