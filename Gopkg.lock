@@ -13,14 +13,14 @@
   version = "v0.1.0"
 
 [[projects]]
-  branch = "develop"
   name = "github.com/vetcher/godecl"
   packages = [".","types"]
-  revision = "25d0b2b8ca97fe91c1c7acf7e9f1c0a9db4f37f9"
+  revision = "53591e911755ce91b17b2b6d1599c4dc4a548130"
+  version = "v1.0.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "039c2ae06b350e1f948d71b2d3d9be311b1e4af4c89859114cc9bab2f2b94d69"
+  inputs-digest = "b60fbe869d836593f0a4a4caf4284298f050a3acc241b396539119f144346528"
   solver-name = "gps-cdcl"
   solver-version = 1
