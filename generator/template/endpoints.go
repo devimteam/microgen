@@ -189,7 +189,11 @@ func createEndpointBody(signature *types.Function) *Statement {
 			CallFunc(func(g *Group) {
 				g.Add(Id(firstArgName(signature)))
 				for _, field := range methodParams {
-					g.Add(Id("_req").Dot(util.ToUpperFirst(field.Name)))
+					v := Dot(util.ToUpperFirst(field.Name))
+					if types.IsEllipsis(field.Type) {
+						v.Op("...")
+					}
+					g.Add(Id("_req").Add(v))
 				}
 			}))
 

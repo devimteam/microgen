@@ -8,6 +8,8 @@ The goal is to generate code for service which not fun to write but it should be
 go get -u github.com/devimteam/microgen/cmd/microgen
 ```
 
+Note: If you have problems with building microgen, please, install [dep](https://github.com/golang/dep) and use `dep ensure` command to install correct versions of dependencies ([#29](https://github.com/devimteam/microgen/issues/29)).
+
 ## Usage
 ``` sh
 microgen [OPTIONS]
@@ -33,7 +35,7 @@ Typical syntax is: `// @<tag-name>:`
 
 #### @microgen
 Main tag for microgen tool. Microgen scan file for the first interface which docs contains this tag.  
-To add templates for generation, add their tags, separated by comma after `@microgen:`
+To add templates for generation, add their [tags](#tags), separated by comma after `@microgen:`
 Example:
 ```go
 // @microgen middleware, logging
@@ -82,6 +84,18 @@ type FileService interface {
 }
 ```
 
+#### @logs-len
+This tag is used for logging middleware. It prints length of parameters.
+Example:  
+```go
+// @microgen logging
+type FileService interface {
+    // @logs-ignore data
+    // @logs-len data
+    UploadFile(ctx context.Context, name string, data []byte) (link string, err error)
+}
+```
+
 ### Tags
 All allowed tags for customize generation provided here.
 
@@ -89,6 +103,7 @@ All allowed tags for customize generation provided here.
 |:------------|:------------------------------------------------------------------------------------------------------------------------------|
 | middleware  | General application middleware interface. Generates every time.                                                               |
 | logging     | Middleware that writes to logger all request/response information with handled time. Generates every time.                    |
+| recover     | Middleware that recovers panics and writes errors to logger. Generates every time.                                            |
 | grpc-client | Generates client for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | grpc-server | Generates server for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | grpc        | Generates client and server for grpc transport with request/response encoders/decoders. Do not generates again if file exist. |
@@ -148,3 +163,22 @@ For correct generation, please, follow rules below.
 * Function names in _protobuf_ should be the same, as in interface.
 * Message names in _protobuf_ should be named `<FunctionName>Request` or `<FunctionName>Response` for request/response message respectively.
 * Field names in _protobuf_ messages should be the same, as in interface methods (_protobuf_ - snake_case, interface - camelCase).
+
+## Dependency
+After generation your service may depend on this packages:
+```
+    "net/http"      // for http purposes
+    "bytes"
+    "encoding/json" // for http purposes
+    "io/ioutil"
+    "strings"
+    "net/url"       // for http purposes
+    "fmt"
+    "context"
+    "time"          // for logging
+
+    "google.golang.org/grpc"                    // for grpc purposes
+    "golang.org/x/net/context"
+    "github.com/go-kit/kit"                     // for grpc purposes
+    "github.com/golang/protobuf/ptypes/empty"   // for grpc purposes
+```

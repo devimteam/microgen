@@ -81,7 +81,8 @@ func (t *stubInterfaceTemplate) Prepare() error {
 
 	// Remove already provided service methods
 	for i := range file.Methods {
-		if file.Methods[i].Receiver.Type.Name == util.ToLowerFirst(t.Info.Iface.Name) && file.Methods[i].Receiver.Type.Import == nil {
+		name := types.TypeName(file.Methods[i].Receiver.Type)
+		if name != nil && *name == util.ToLowerFirst(t.Info.Iface.Name) && types.TypeImport(file.Methods[i].Receiver.Type) == nil {
 			t.alreadyRenderedMethods = append(t.alreadyRenderedMethods, file.Methods[i].Name)
 		}
 	}

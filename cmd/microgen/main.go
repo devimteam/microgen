@@ -12,6 +12,8 @@ import (
 	"github.com/vetcher/godecl/types"
 )
 
+const Version = generator.Version
+
 var (
 	flagFileName  = flag.String("file", "service.go", "Name of file where described interface definition")
 	flagOutputDir = flag.String("out", ".", "Output directory")
@@ -24,6 +26,7 @@ func init() {
 }
 
 func main() {
+	fmt.Println("@microgen", Version)
 	if *flagHelp || *flagFileName == "" {
 		flag.Usage()
 		os.Exit(0)
