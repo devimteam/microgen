@@ -20,6 +20,7 @@ const (
 
 	NewFileMark    = "New"
 	AppendFileMark = "Add"
+	IgnoreFileMark = "Ign"
 )
 
 type createFileStrategy struct {
