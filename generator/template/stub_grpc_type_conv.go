@@ -60,6 +60,8 @@ func converterToProtoBody(field *types.Variable) Code {
 		s.Return().List(Id(util.ToLowerFirst(field.Name)), Nil())
 	case "TimeTimeToProto":
 		s.Return().Qual(GolangProtobufPtypes, "TimestampProto").Call(Id(field.Name))
+	case "ListStringToProto", "SliceStringToProto":
+		s.Return().List(Id(util.ToLowerFirst(field.Name)), Nil())
 	default:
 		s.Panic(Lit("function not provided"))
 	}
@@ -78,6 +80,8 @@ func converterProtoToBody(field *types.Variable) Code {
 		s.Return().List(Id("proto"+util.ToUpperFirst(field.Name)), Nil())
 	case "ProtoToTimeTime":
 		s.Return().Qual(GolangProtobufPtypes, "Timestamp").Call(Id("proto" + util.ToUpperFirst(field.Name)))
+	case "ProtoToListString", "ProtoToSliceString":
+		s.Return().List(Id("proto"+util.ToUpperFirst(field.Name)), Nil())
 	default:
 		s.Panic(Lit("function not provided"))
 	}
