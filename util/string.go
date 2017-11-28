@@ -12,18 +12,28 @@ func ToUpperFirst(s string) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
-func ToSnakeCase(s string) string {
-	for i := range s {
-		if unicode.IsUpper(rune(s[i])) {
-			if i != 0 {
-				s = strings.Join([]string{s[:i], ToLowerFirst(s[i:])}, "_")
-			} else {
-				s = ToLowerFirst(s)
+// Works only with english symbols.
+func toSomeCase(sep string) func(string) string {
+	return func(s string) string {
+		for i := range s {
+			if unicode.IsUpper(rune(s[i])) {
+				if i != 0 {
+					s = strings.Join([]string{s[:i], ToLowerFirst(s[i:])}, sep)
+				} else {
+					s = ToLowerFirst(s)
+				}
 			}
 		}
+		return s
 	}
-	return s
 }
+
+var (
+	// Works only with english symbols.
+	ToSnakeCase = toSomeCase("_")
+	// Works only with english symbols.
+	ToURLSnakeCase = toSomeCase("-")
+)
 
 func ToLowerFirst(s string) string {
 	if len(s) == 0 {

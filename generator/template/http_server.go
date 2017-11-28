@@ -83,7 +83,7 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 		g.Id("handler").Op(":=").Qual(PackagePathHttp, "NewServeMux").Call()
 		for _, fn := range t.Info.Iface.Methods {
 			g.Id("handler").Dot("Handle").Call(
-				Lit("/"+util.ToSnakeCase(fn.Name)),
+				Lit("/"+util.ToURLSnakeCase(fn.Name)),
 				Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeRequestName(fn)),
