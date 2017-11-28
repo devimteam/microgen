@@ -16,16 +16,6 @@ func ValidateInterface(iface *types.Interface) error {
 	return util.ComposeErrors(errs)
 }
 
-func isInterface(p *types.Type) bool {
-	if p.IsInterface {
-		return true
-	}
-	if p.IsMap {
-		return isInterface(&p.Map.Key) || isInterface(&p.Map.Value)
-	}
-	return false
-}
-
 // Rules:
 // * First argument is context.Context.
 // * Last result is error.

@@ -1,6 +1,8 @@
 package template
 
 import (
+	"strings"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
@@ -78,10 +80,11 @@ func removeContextIfFirst(fields []types.Variable) []types.Variable {
 }
 
 func IsContextFirst(fields []types.Variable) bool {
-	return len(fields) > 0 &&
-		fields[0].Type.Import != nil &&
-		fields[0].Type.Import.Package == PackagePathContext &&
-		fields[0].Type.Name == "Context"
+	name := types.TypeName(fields[0].Type)
+	return name != nil && len(fields) > 0 &&
+		types.TypeImport(fields[0].Type) != nil &&
+		types.TypeImport(fields[0].Type).Package == PackagePathContext &&
+		*name == "Context"
 }
 
 // Remove from function fields error if it is last in slice
@@ -93,9 +96,10 @@ func removeErrorIfLast(fields []types.Variable) []types.Variable {
 }
 
 func IsErrorLast(fields []types.Variable) bool {
-	return len(fields) > 0 &&
-		fields[len(fields)-1].Type.Import == nil &&
-		fields[len(fields)-1].Type.Name == "error"
+	name := types.TypeName(fields[len(fields)-1].Type)
+	return name != nil && len(fields) > 0 &&
+		types.TypeImport(fields[len(fields)-1].Type) == nil &&
+		*name == "error"
 }
 
 // Return name of error, if error is last result, else return `err`
@@ -112,8 +116,11 @@ func nameOfLastResultError(fn *types.Function) string {
 //
 func structField(field *types.Variable) *Statement {
 	s := structFieldName(field)
-	s.Add(fieldType(&field.Type))
+	s.Add(fieldType(field.Type, false))
 	s.Tag(map[string]string{"json": util.ToSnakeCase(field.Name)})
+	if types.IsEllipsis(field.Type) {
+		s.Comment("This field was defined with ellipsis (...).")
+	}
 	return s
 }
 
@@ -125,7 +132,7 @@ func funcDefinitionParams(fields []types.Variable) *Statement {
 	c := &Statement{}
 	c.ListFunc(func(g *Group) {
 		for _, field := range fields {
-			g.Id(util.ToLowerFirst(field.Name)).Add(fieldType(&field.Type))
+			g.Id(util.ToLowerFirst(field.Name)).Add(fieldType(field.Type, true))
 		}
 	})
 	return c
@@ -135,29 +142,44 @@ func funcDefinitionParams(fields []types.Variable) *Statement {
 //
 //  	*repository.Visit
 //
-func fieldType(field *types.Type) *Statement {
+func fieldType(field types.Type, useEllipsis bool) *Statement {
 	c := &Statement{}
-	if field.IsArray {
-		c.Index()
+	for field != nil {
+		switch f := field.(type) {
+		case types.TImport:
+			if f.Import != nil {
+				c.Qual(f.Import.Package, "")
+			}
+			field = f.Next
+		case types.TName:
+			c.Id(f.TypeName)
+			field = nil
+		case types.TArray:
+			if f.IsSlice {
+				c.Index()
+			} else if f.ArrayLen > 0 {
+				c.Index(Lit(f.ArrayLen))
+			}
+			field = f.Next
+		case types.TMap:
+			return c.Map(fieldType(f.Key, false)).Add(fieldType(f.Value, false))
+		case types.TPointer:
+			c.Op(strings.Repeat("*", f.NumberOfPointers))
+			field = f.Next
+		case types.TInterface:
+			mhds := interfaceType(f.Interface)
+			return c.Interface(mhds...)
+		case types.TEllipsis:
+			if useEllipsis {
+				c.Op("...")
+			} else {
+				c.Index()
+			}
+			field = f.Next
+		default:
+			return c
+		}
 	}
-
-	if field.IsPointer {
-		c.Op("*")
-	}
-	if field.IsMap {
-		m := field.Map
-		return c.Map(fieldType(&m.Key)).Add(fieldType(&m.Value))
-	}
-	if field.Import != nil {
-		c.Qual(field.Import.Package, field.Name)
-	} else {
-		c.Id(field.Name)
-	}
-	if field.IsInterface {
-		mhds := interfaceType(field.Interface)
-		c.Interface(mhds...)
-	}
-
 	return c
 }
 
@@ -188,7 +210,11 @@ func dictByVariables(fields []types.Variable) Dict {
 func paramNames(fields []types.Variable) *Statement {
 	var list []Code
 	for _, field := range fields {
-		list = append(list, Id(util.ToLowerFirst(field.Name)))
+		v := Id(util.ToLowerFirst(field.Name))
+		if types.IsEllipsis(field.Type) {
+			v.Op("...")
+		}
+		list = append(list, v)
 	}
 	return List(list...)
 }

@@ -1,6 +1,7 @@
 package template
 
 import (
+	"fmt"
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
@@ -129,56 +130,100 @@ func (t *gRPCEndpointConverterTemplate) Render() write_strategy.Renderer {
 	return file
 }
 
+const (
+	_pointer   = "Ptr"
+	_list      = "List"
+	_slice     = "List"
+	_map       = "Map"
+	_interface = "Interface"
+	_toProto   = "ToProto"
+	_protoTo   = "ProtoTo"
+)
+
 // Returns FieldTypeToProto.
-func typeToProto(field *types.Type, depth int) string {
+func typeToProto(field types.Type, depth int) string {
 	methodName := ""
-	if field.Import != nil {
-		methodName += util.ToUpperFirst(field.Import.Name)
-	}
-	methodName += util.ToUpperFirst(field.Name)
-	if field.IsPointer {
-		methodName += "Ptr"
-	}
-	if field.IsArray {
-		methodName += "List"
-	}
-	if field.IsMap {
-		methodName += "Map"
-		m := field.Map
-		methodName += typeToProto(&m.Key, 1) + typeToProto(&m.Value, 1)
-	}
-	if field.IsInterface {
-		methodName += "Interface"
+Loop:
+	for field != nil {
+		switch f := field.(type) {
+		case types.TImport:
+			if f.Import != nil {
+				methodName += util.ToUpperFirst(f.Import.Name)
+			}
+			field = f.Next
+		case types.TName:
+			methodName += util.ToUpperFirst(f.TypeName)
+			field = nil
+		case types.TArray:
+			if f.IsSlice {
+				methodName += _slice
+			} else if f.ArrayLen > 0 {
+				methodName += _list
+			}
+			field = f.Next
+		case types.TMap:
+			methodName += _map + typeToProto(f.Key, 1) + typeToProto(f.Value, 1)
+			field = nil
+		case types.TPointer:
+			if f.NumberOfPointers > 1 {
+				methodName += fmt.Sprintf("%sX%d", _pointer, f.NumberOfPointers)
+			} else {
+				methodName += _pointer
+			}
+			field = f.Next
+		case types.TInterface:
+			methodName += _interface
+			field = nil
+		default:
+			break Loop
+		}
 	}
 	if depth == 0 {
-		methodName += "ToProto"
+		methodName += _toProto
 	}
 	return methodName
 }
 
 // Returns ProtoToFieldType.
-func protoToType(field *types.Type, depth int) string {
+func protoToType(field types.Type, depth int) string {
 	methodName := ""
 	if depth == 0 {
-		methodName += "ProtoTo"
+		methodName += _protoTo
 	}
-	if field.Import != nil {
-		methodName += util.ToUpperFirst(field.Import.Name)
-	}
-	methodName += util.ToUpperFirst(field.Name)
-	if field.IsPointer {
-		methodName += "Ptr"
-	}
-	if field.IsArray {
-		methodName += "List"
-	}
-	if field.IsMap {
-		methodName += "Map"
-		m := field.Map
-		methodName += protoToType(&m.Key, 1) + protoToType(&m.Value, 1)
-	}
-	if field.IsInterface {
-		methodName += "Interface"
+Loop:
+	for field != nil {
+		switch f := field.(type) {
+		case types.TImport:
+			if f.Import != nil {
+				methodName += util.ToUpperFirst(f.Import.Name)
+			}
+			field = f.Next
+		case types.TName:
+			methodName += util.ToUpperFirst(f.TypeName)
+			field = nil
+		case types.TArray:
+			if f.IsSlice {
+				methodName += _slice
+			} else if f.ArrayLen > 0 {
+				methodName += _list
+			}
+			field = f.Next
+		case types.TMap:
+			methodName += _map + typeToProto(f.Key, 1) + typeToProto(f.Value, 1)
+			field = nil
+		case types.TPointer:
+			if f.NumberOfPointers > 1 {
+				methodName += fmt.Sprintf("%sX%d", _pointer, f.NumberOfPointers)
+			} else {
+				methodName += _pointer
+			}
+			field = f.Next
+		case types.TInterface:
+			methodName += _interface
+			field = nil
+		default:
+			break Loop
+		}
 	}
 	return methodName
 }
@@ -219,6 +264,11 @@ func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
+func isPointer(p types.Type) bool {
+	pp, ok := p.(types.TPointer)
+	return ok && pp.NumberOfPointers == 1
+}
+
 // Renders type conversion (if need) to default protobuf types.
 //		req.Symbol
 // or
@@ -228,18 +278,27 @@ func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 // based on field type
 // Second result means can field converts to default protobuf type.
 func golangTypeToProto(structName string, field *types.Variable) (*Statement, bool) {
-	if field.Type.IsArray || field.Type.IsPointer {
+	if types.IsArray(field.Type) || isPointer(field.Type) {
 		return Id(structName + util.ToUpperFirst(field.Name)), false
 	} else if isDefaultProtoField(field) {
 		return Id(structName).Dot(util.ToUpperFirst(field.Name)), true
-	} else if newType, ok := goToProtoTypesMap[field.Type.Name]; ok {
-		newField := &types.Type{
-			Name:      newType,
-			IsArray:   field.Type.IsArray,
-			Import:    field.Type.Import,
-			IsPointer: field.Type.IsPointer,
+	}
+	name := types.TypeName(field.Type)
+	if name == nil {
+		return Id(structName + util.ToUpperFirst(field.Name)), false
+	}
+	if newType, ok := goToProtoTypesMap[*name]; ok {
+		var newField types.Type
+		newField = types.TName{
+			TypeName: newType,
 		}
-		return fieldType(newField).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
+		if imp := types.TypeImport(field.Type); imp != nil {
+			newField = types.TImport{
+				Next:   newField,
+				Import: imp,
+			}
+		}
+		return fieldType(newField, false).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
 	}
 	return Id(structName + util.ToUpperFirst(field.Name)), false
 }
@@ -251,20 +310,22 @@ func golangTypeToProto(structName string, field *types.Variable) (*Statement, bo
 // based on field type
 // Second result means can field converts to golang type.
 func protoTypeToGolang(structName string, field *types.Variable) (*Statement, bool) {
-	if field.Type.IsArray || field.Type.IsPointer {
+	if types.IsArray(field.Type) || isPointer(field.Type) {
 		return Id(structName + util.ToUpperFirst(field.Name)), false
 	} else if isDefaultGolangField(field) {
-		return fieldType(&field.Type).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
+		return fieldType(field.Type, false).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
 	}
 	return Id(structName + util.ToUpperFirst(field.Name)), false
 }
 
 func isDefaultProtoField(field *types.Variable) bool {
-	return util.IsInStringSlice(field.Type.Name, defaultProtoTypes)
+	name := types.TypeName(field.Type)
+	return name != nil && util.IsInStringSlice(*name, defaultProtoTypes)
 }
 
 func isDefaultGolangField(field *types.Variable) bool {
-	return util.IsInStringSlice(field.Type.Name, defaultGolangTypes)
+	name := types.TypeName(field.Type)
+	return name != nil && util.IsInStringSlice(*name, defaultGolangTypes)
 }
 
 // Render custom type converting and error checking
@@ -305,7 +366,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ServiceImportPath, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := golangTypeToProto("", &field); !ok {
-						group.Add(t.convertCustomType("req", typeToProto(&field.Type, 0), &field))
+						group.Add(t.convertCustomType("req", typeToProto(field.Type, 0), &field))
 					}
 				}
 			}
@@ -349,7 +410,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.Info.ServiceImportPath, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := golangTypeToProto("", &field); !ok {
-						group.Add(t.convertCustomType("resp", typeToProto(&field.Type, 0), &field))
+						group.Add(t.convertCustomType("resp", typeToProto(field.Type, 0), &field))
 					}
 				}
 			}
@@ -381,7 +442,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := protoTypeToGolang("", &field); !ok {
-						group.Add(t.convertCustomType("req", protoToType(&field.Type, 0), &field))
+						group.Add(t.convertCustomType("req", protoToType(field.Type, 0), &field))
 					}
 				}
 			}
@@ -417,7 +478,7 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := protoTypeToGolang("", &field); !ok {
-						group.Add(t.convertCustomType("resp", protoToType(&field.Type, 0), &field))
+						group.Add(t.convertCustomType("resp", protoToType(field.Type, 0), &field))
 					}
 				}
 			}

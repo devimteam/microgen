@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
@@ -29,17 +30,19 @@ func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
 	}
 }
 
-func specialTypeConverter(p *types.Type) *Statement {
+func specialTypeConverter(p types.Type) *Statement {
+	name := types.TypeName(p)
+	imp := types.TypeImport(p)
 	// error -> string
-	if p.Name == "error" && p.Import == nil {
+	if name != nil && *name == "error" && imp == nil {
 		return (&Statement{}).Id("string")
 	}
 	// time.Time -> timestamp.Timestamp
-	if p.Name == "Time" && p.Import != nil && p.Import.Package == "time" {
+	if name != nil && *name == "Time" && imp != nil && imp.Package == "time" {
 		return (&Statement{}).Op("*").Qual(GolangProtobufPtypesTimestamp, "Timestamp")
 	}
 	// jsonb.JSONB -> string
-	if p.Name == "JSONB" && p.Import != nil && p.Import.Package == JsonbPackage {
+	if name != nil && *name == "JSONB" && imp != nil && imp.Package == JsonbPackage {
 		return (&Statement{}).Id("string")
 	}
 	return nil
@@ -47,7 +50,7 @@ func specialTypeConverter(p *types.Type) *Statement {
 
 func converterToProtoBody(field *types.Variable) Code {
 	s := &Statement{}
-	switch typeToProto(&field.Type, 0) {
+	switch typeToProto(field.Type, 0) {
 	case "ErrorToProto":
 		s.If().Id(util.ToLowerFirst(field.Name)).Op("==").Nil().Block(
 			Return().List(Lit(""), Nil()),
@@ -65,7 +68,7 @@ func converterToProtoBody(field *types.Variable) Code {
 
 func converterProtoToBody(field *types.Variable) Code {
 	s := &Statement{}
-	switch protoToType(&field.Type, 0) {
+	switch protoToType(field.Type, 0) {
 	case "ProtoToError":
 		s.If().Id("proto" + util.ToUpperFirst(field.Name)).Op("==").Lit("").Block(
 			Return().List(Nil(), Nil()),
@@ -100,13 +103,13 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 	for _, signature := range t.Info.Iface.Methods {
 		args := append(removeContextIfFirst(signature.Args), removeErrorIfLast(signature.Results)...)
 		for _, field := range args {
-			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(&field.Type, 0), t.alreadyRenderedConverters) {
+			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(field.Type, 0), t.alreadyRenderedConverters) {
 				f.Line().Add(t.stubConverterToProto(&field)).Line()
-				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, typeToProto(&field.Type, 0))
+				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, typeToProto(field.Type, 0))
 			}
-			if _, ok := protoTypeToGolang("", &field); !ok && !util.IsInStringSlice(protoToType(&field.Type, 0), t.alreadyRenderedConverters) {
+			if _, ok := protoTypeToGolang("", &field); !ok && !util.IsInStringSlice(protoToType(field.Type, 0), t.alreadyRenderedConverters) {
 				f.Line().Add(t.stubConverterProtoTo(&field)).Line()
-				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, protoToType(&field.Type, 0))
+				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, protoToType(field.Type, 0))
 			}
 		}
 	}
@@ -160,9 +163,9 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 //		}
 //
 func (t *stubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variable) *Statement {
-	return Func().Id(typeToProto(&field.Type, 0)).
-		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(&field.Type))).
-		Params(Add(t.protoFieldType(&field.Type)), Error()).
+	return Func().Id(typeToProto(field.Type, 0)).
+		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(field.Type, false))).
+		Params(Add(t.protoFieldType(field.Type)), Error()).
 		Block(converterToProtoBody(field))
 }
 
@@ -173,9 +176,9 @@ func (t *stubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variab
 //		}
 //
 func (t *stubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variable) *Statement {
-	return Func().Id(protoToType(&field.Type, 0)).
-		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(&field.Type))).
-		Params(Add(fieldType(&field.Type)), Error()).
+	return Func().Id(protoToType(field.Type, 0)).
+		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(field.Type))).
+		Params(Add(fieldType(field.Type, false)), Error()).
 		Block(converterProtoToBody(field))
 }
 
@@ -183,35 +186,46 @@ func (t *stubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variab
 //
 //  	*repository.Visit
 //
-func (t *stubGRPCTypeConverterTemplate) protoFieldType(field *types.Type) *Statement {
+func (t *stubGRPCTypeConverterTemplate) protoFieldType(field types.Type) *Statement {
 	c := &Statement{}
-
-	if field.IsArray {
-		c.Index()
-	}
-
-	if field.IsPointer {
-		c.Op("*")
-	}
-
-	if field.IsMap {
-		m := field.Map
-		return c.Map(t.protoFieldType(&m.Key)).Add(t.protoFieldType(&m.Value))
-	}
-	protoType := field.Name
-	if tmp, ok := goToProtoTypesMap[field.Name]; ok {
-		protoType = tmp
-	}
-	if code := specialTypeConverter(field); code != nil {
-		return c.Add(code)
-	}
-	if field.Import != nil {
-		c.Qual(t.Info.ProtobufPackage, protoType)
-	} else {
-		c.Id(protoType)
-	}
-	if field.IsInterface {
-		c.Interface()
+	for field != nil {
+		switch f := field.(type) {
+		case types.TImport:
+			if f.Import != nil {
+				c.Qual(t.Info.ProtobufPackage, "")
+			}
+			field = f.Next
+		case types.TName:
+			protoType := f.TypeName
+			if tmp, ok := goToProtoTypesMap[f.TypeName]; ok {
+				protoType = tmp
+			}
+			if code := specialTypeConverter(field); code != nil {
+				return c.Add(code)
+			}
+			c.Id(protoType)
+			field = nil
+		case types.TArray:
+			if f.IsSlice {
+				c.Index()
+			} else if f.ArrayLen > 0 {
+				c.Index(Lit(f.ArrayLen))
+			}
+			field = f.Next
+		case types.TMap:
+			return c.Map(t.protoFieldType(f.Key)).Add(t.protoFieldType(f.Value))
+		case types.TPointer:
+			c.Op(strings.Repeat("*", f.NumberOfPointers))
+			field = f.Next
+		case types.TInterface:
+			mhds := interfaceType(f.Interface)
+			return c.Interface(mhds...)
+		case types.TEllipsis:
+			c.Index()
+			field = f.Next
+		default:
+			return c
+		}
 	}
 
 	return c
