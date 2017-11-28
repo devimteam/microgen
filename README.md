@@ -8,6 +8,8 @@ The goal is to generate code for service which not fun to write but it should be
 go get -u github.com/devimteam/microgen/cmd/microgen
 ```
 
+Note: If you have problems with building microgen, please, install [dep](https://github.com/golang/dep) and use `dep ensure` command to install correct versions of dependencies ([#29](https://github.com/devimteam/microgen/issues/29)).
+
 ## Usage
 ``` sh
 microgen [OPTIONS]
