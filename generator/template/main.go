@@ -59,9 +59,9 @@ func (t *mainTemplate) Prepare() error {
 }
 
 func (t *mainTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	/*if util.StatFile(t.Info.AbsOutPath, t.DefaultPath()) == nil {
+	if util.StatFile(t.Info.AbsOutPath, t.DefaultPath()) == nil {
 		return write_strategy.NewNopStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
-	}*/
+	}
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
