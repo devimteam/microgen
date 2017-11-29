@@ -146,7 +146,7 @@ func (t *mainTemplate) mainFunc() *Statement {
 //			logger.Log("msg", "hello")
 //		}
 func (t *mainTemplate) initLogger() *Statement {
-	return Comment(`InitLogger initialize go-kit JSON logger with adds timestamp and caller.`).Line().
+	return Comment(`InitLogger initialize go-kit JSON logger with timestamp and caller.`).Line().
 		Func().Id("InitLogger").Params().Params(Qual(PackagePathGoKitLog, "Logger")).BlockFunc(func(body *Group) {
 		body.Id("logger").Op(":=").Qual(PackagePathGoKitLog, "NewJSONLogger").Call(Qual(PackagePathOs, "Stdout"))
 		body.Id("logger").Op("=").Qual(PackagePathGoKitLog, "With").Call(Id("logger"), Lit("@when"), Qual(PackagePathGoKitLog, "DefaultTimestampUTC"))
