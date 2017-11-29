@@ -30,6 +30,7 @@ const (
 	PackagePathOsSignal           = "os/signal"
 	PackagePathSyscall            = "syscall"
 	PackagePathErrors             = "errors"
+	PackagePathNet                = "net"
 
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"
