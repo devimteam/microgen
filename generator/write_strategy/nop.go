@@ -1,10 +1,5 @@
 package write_strategy
 
-import (
-	"fmt"
-	"path/filepath"
-)
-
 type nopStrategy struct {
 	absPath string
 	relPath string
@@ -19,7 +14,6 @@ func NewNopStrategy(absPath, relPath string) Strategy {
 }
 
 func (s nopStrategy) Write(Renderer) error {
-	fmt.Println(IgnoreFileMark, filepath.Join(s.absPath, s.relPath))
 	return nil
 }
 

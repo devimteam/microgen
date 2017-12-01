@@ -190,10 +190,10 @@ func (t *mainTemplate) serveGrpc() *Statement {
 		)
 		body.Comment(`Here you can add middlewares for grpc server.`)
 		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.ServiceImportPath, "transport/grpc"), "NewGRPCServer").Call(Id("endpoints"))
-		body.Id("grpcs").Op(":=").Qual(PackagePathGoogleGRPC, "NewServer").Call()
-		body.Qual(t.Info.ProtobufPackage, "Register"+util.ToUpperFirst(t.Info.Iface.Name)+"Server").Call(Id("grpcs"), Id("server"))
+		body.Id("grpcServer").Op(":=").Qual(PackagePathGoogleGRPC, "NewServer").Call()
+		body.Qual(t.Info.ProtobufPackage, "Register"+util.ToUpperFirst(t.Info.Iface.Name)+"Server").Call(Id("grpcServer"), Id("server"))
 		body.Id("logger").Dot("Log").Call(Lit("listen on"), Id("addr"))
-		body.Id("ch").Op("<-").Id("grpcs").Dot("Serve").Call(Id("listener"))
+		body.Id("ch").Op("<-").Id("grpcServer").Dot("Serve").Call(Id("listener"))
 	})
 }
 
@@ -209,11 +209,11 @@ func (t *mainTemplate) serveHTTP() *Statement {
 		Id("logger").Qual(PackagePathGoKitLog, "Logger"),
 	).BlockFunc(func(body *Group) {
 		body.Id("handler").Op(":=").Qual(t.Info.ServiceImportPath+"/transport/http", "NewHTTPHandler").Call(Id("endpoints"))
-		body.Id("https").Op(":=").Op("&").Qual(PackagePathHttp, "Server").Values(DictFunc(func(d Dict) {
+		body.Id("httpServer").Op(":=").Op("&").Qual(PackagePathHttp, "Server").Values(DictFunc(func(d Dict) {
 			d[Id("Addr")] = Id("addr")
 			d[Id("Handler")] = Id("handler")
 		}))
 		body.Id("logger").Dot("Log").Call(Lit("listen on"), Id("addr"))
-		body.Id("ch").Op("<-").Id("https").Dot("ListenAndServe").Call()
+		body.Id("ch").Op("<-").Id("httpServer").Dot("ListenAndServe").Call()
 	})
 }

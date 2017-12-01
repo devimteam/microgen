@@ -20,7 +20,6 @@ const (
 
 	NewFileMark    = "New"
 	AppendFileMark = "Add"
-	IgnoreFileMark = "Ign"
 )
 
 type createFileStrategy struct {
@@ -50,7 +49,6 @@ func (s createFileStrategy) Write(renderer Renderer) error {
 	if err != nil {
 		return fmt.Errorf("error when save file: %v", err)
 	}
-	fmt.Println(NewFileMark, filepath.Join(s.absPath, s.relPath))
 	return nil
 }
 
@@ -60,6 +58,10 @@ func (s createFileStrategy) Save(f Renderer, filename string) error {
 	if err := f.Render(buf); err != nil {
 		return err
 	}
+	// Stop saving because nothing
+	if len(buf.Bytes()) == 0 {
+		return nil
+	}
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {
 		return fmt.Errorf("error when format source: %v", err)
@@ -67,6 +69,7 @@ func (s createFileStrategy) Save(f Renderer, filename string) error {
 	if err := ioutil.WriteFile(filename, formatted, 0644); err != nil {
 		return err
 	}
+	fmt.Println(NewFileMark, filepath.Join(s.absPath, s.relPath))
 	return nil
 }
 
@@ -119,7 +122,6 @@ func (s appendFileStrategy) Write(renderer Renderer) error {
 	if err != nil {
 		return fmt.Errorf("error when save file: %v", err)
 	}
-	fmt.Println(AppendFileMark, filepath.Join(s.absPath, s.relPath))
 	return nil
 }
 
@@ -127,6 +129,11 @@ func (s appendFileStrategy) Save(renderer Renderer, filename string) error {
 	buf := &bytes.Buffer{}
 	if err := renderer.Render(buf); err != nil {
 		return err
+	}
+
+	// Stop saving because nothing
+	if len(buf.Bytes()) == 0 {
+		return nil
 	}
 	// Use trick for top-level formatting.
 	formatted, err := format.Source(append([]byte(formatTrick), buf.Bytes()...))
@@ -141,5 +148,6 @@ func (s appendFileStrategy) Save(renderer Renderer, filename string) error {
 	if _, err = f.Write(formatted[len(formatTrick):]); err != nil {
 		return err
 	}
+	fmt.Println(AppendFileMark, filepath.Join(s.absPath, s.relPath))
 	return nil
 }
