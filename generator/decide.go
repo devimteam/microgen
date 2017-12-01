@@ -13,10 +13,21 @@ import (
 )
 
 const (
-	TagMark            = template.TagMark
-	MicrogenGeneralTag = "microgen"
-	ProtobufTag        = "protobuf"
-	GRPCRegAddr        = "grpc-addr"
+	TagMark         = template.TagMark
+	MicrogenMainTag = template.MicrogenMainTag
+	ProtobufTag     = "protobuf"
+	GRPCRegAddr     = "grpc-addr"
+
+	MiddlewareTag        = template.MiddlewareTag
+	LoggingMiddlewareTag = template.LoggingMiddlewareTag
+	RecoverMiddlewareTag = template.RecoverMiddlewareTag
+	HttpTag              = template.HttpTag
+	HttpServerTag        = template.HttpServerTag
+	HttpClientTag        = template.HttpClientTag
+	GrpcTag              = template.GrpcTag
+	GrpcServerTag        = template.GrpcServerTag
+	GrpcClientTag        = template.GrpcClientTag
+	MainTag              = template.MainTag
 )
 
 func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, absOutPath, sourcePath string) (units []*generationUnit, err error) {
@@ -52,7 +63,7 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 	}
 	units = append(units, stubSvc, exch, endp)
 
-	genTags := util.FetchTags(iface.Docs, TagMark+MicrogenGeneralTag)
+	genTags := util.FetchTags(iface.Docs, TagMark+MicrogenMainTag)
 	fmt.Println("Tags:", strings.Join(genTags, ", "))
 	for _, tag := range genTags {
 		templates := tagToTemplate(tag, info)
@@ -83,47 +94,49 @@ func fetchMetaInfo(tag string, comments []string) string {
 
 func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.Template) {
 	switch tag {
-	case "middleware":
+	case MiddlewareTag:
 		return append(tmpls, template.NewMiddlewareTemplate(info))
-	case "logging":
+	case LoggingMiddlewareTag:
 		return append(tmpls, template.NewLoggingTemplate(info))
-	case "grpc":
+	case GrpcTag:
 		return append(tmpls,
 			template.NewGRPCClientTemplate(info),
 			template.NewGRPCServerTemplate(info),
 			template.NewGRPCEndpointConverterTemplate(info),
 			template.NewStubGRPCTypeConverterTemplate(info),
 		)
-	case "grpc-client":
+	case GrpcClientTag:
 		return append(tmpls,
 			template.NewGRPCClientTemplate(info),
 			template.NewGRPCEndpointConverterTemplate(info),
 			template.NewStubGRPCTypeConverterTemplate(info),
 		)
-	case "grpc-server":
+	case GrpcServerTag:
 		return append(tmpls,
 			template.NewGRPCServerTemplate(info),
 			template.NewGRPCEndpointConverterTemplate(info),
 			template.NewStubGRPCTypeConverterTemplate(info),
 		)
-	case "http":
+	case HttpTag:
 		return append(tmpls,
 			template.NewHttpServerTemplate(info),
 			template.NewHttpClientTemplate(info),
 			template.NewHttpConverterTemplate(info),
 		)
-	case "http-server":
+	case HttpServerTag:
 		return append(tmpls,
 			template.NewHttpServerTemplate(info),
 			template.NewHttpConverterTemplate(info),
 		)
-	case "http-client":
+	case HttpClientTag:
 		return append(tmpls,
 			template.NewHttpClientTemplate(info),
 			template.NewHttpConverterTemplate(info),
 		)
-	case "recover":
+	case RecoverMiddlewareTag:
 		return append(tmpls, template.NewRecoverTemplate(info))
+	case MainTag:
+		return append(tmpls, template.NewMainTemplate(info))
 	}
 	return nil
 }
