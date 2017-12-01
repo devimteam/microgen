@@ -112,6 +112,17 @@ All allowed tags for customize generation provided here.
 | http        | Generates client and server for http transport with request/response encoders/decoders. Do not generates again if file exist. |
 | main        | Generates basic `package main` for starting service. Uses other tags for minimal user changes.                                |
 
+### Files
+
+| Name  | Default path |  Generation logic |
+|---|----|------------------|
+| Service interface |./service.go | Add service entity, constructor and methods if it missed. Checks function names to understand it. |
+| Exchanges     | ./exchanges.go     |  Overwrites old file every time.|
+| Endpoints     |  ./endpoints.go    |  Overwrites old file every time.|
+| Middleware     | ./middleware/middleware.go     |  Overwrites old file every time.|
+| Logging middleware     |  ./middleware/logging.go    |  Overwrites old file every time.|
+| Recovering middleware  | ./middleware/recovering.go  |  Overwrites old file every time.|
+
 ## Example
 Follow this short guide to try microgen tool.
 
