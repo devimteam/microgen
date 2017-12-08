@@ -110,6 +110,18 @@ All allowed tags for customize generation provided here.
 | http-client | Generates client for http transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | http-server | Generates server for http transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | http        | Generates client and server for http transport with request/response encoders/decoders. Do not generates again if file exist. |
+| main        | Generates basic `package main` for starting service. Uses other tags for minimal user changes.                                |
+
+### Files
+
+| Name  | Default path |  Generation logic |
+|---|----|------------------|
+| Service interface |./service.go | Add service entity, constructor and methods if it missed. Checks function names to understand it. |
+| Exchanges     | ./exchanges.go     |  Overwrites old file every time.|
+| Endpoints     |  ./endpoints.go    |  Overwrites old file every time.|
+| Middleware     | ./middleware/middleware.go     |  Overwrites old file every time.|
+| Logging middleware     |  ./middleware/logging.go    |  Overwrites old file every time.|
+| Recovering middleware  | ./middleware/recovering.go  |  Overwrites old file every time.|
 
 ## Example
 Follow this short guide to try microgen tool.
@@ -120,11 +132,9 @@ package stringsvc
 
 import (
     "context"
-
-    drive "google.golang.org/api/drive/v3"
 )
 
-// @microgen grpc, middleware, logging
+// @microgen http, grpc, middleware, logging, recover, main
 // @protobuf github.com/devimteam/proto-utils
 // @grpc-addr test.address
 type StringService interface {
@@ -136,19 +146,24 @@ type StringService interface {
 3. Enter `microgen`. __*__
 4. You should see something like that:
 ```
-exchanges.go
-endpoints.go
-client.go
-middleware/middleware.go
-middleware/logging.go
-transport/grpc/server.go
-transport/grpc/client.go
-transport/converter/protobuf/endpoint_converters.go
-transport/converter/protobuf/type_converters.go
+@microgen 0.5.0
+Tags: middleware, logging, grpc, http, recover, main
+New cmd/string_service/main.go
+Add .../svc.go
+New exchanges.go
+New endpoints.go
+New middleware/middleware.go
+Add transport/converter/http/exchange_converters.go
+New middleware/logging.go
+New middleware/recovering.go
+New transport/grpc/server.go
+New transport/grpc/client.go
+New transport/converter/protobuf/type_converters.go
+New transport/converter/protobuf/endpoint_converters.go
 All files successfully generated
 ```
-5. Now, add and generate protobuf file, write converters from protobuf to golang and _vise versa_.
-6. Use endpoints and converters in your `package main` or wherever you want.
+5. Now, add and generate protobuf file (if you use grpc transport) and write transport converters (from protobuf/json to golang and _vise versa_).
+6. Use endpoints in your `package main` or wherever you want. (tag `main` generates some code for `package main`)
 
 __*__ `GOPATH/bin` should be in your PATH.
 
@@ -157,7 +172,7 @@ For correct generation, please, follow rules below.
 
 * All interface method's arguments and results should be named and should be different (name duplicating unacceptable).
 * First argument of each method should be of type `context.Context` (from [standard library](https://golang.org/pkg/context/)).
-* Last result should should be `error` type.
+* Last result should be builtin `error` type.
 ---
 * Name of _protobuf_ service should be the same, as interface name.
 * Function names in _protobuf_ should be the same, as in interface.
@@ -172,10 +187,16 @@ After generation your service may depend on this packages:
     "encoding/json" // for http purposes
     "io/ioutil"
     "strings"
+    "net"           // for http and grpc listners
     "net/url"       // for http purposes
     "fmt"
     "context"
     "time"          // for logging
+    "os"            // for signal handling and os.Stdout
+    "os/signal"     // for signal handling 
+    "syscall"       // for signal handling
+    "errors"        // for error handling
+    
 
     "google.golang.org/grpc"                    // for grpc purposes
     "golang.org/x/net/context"

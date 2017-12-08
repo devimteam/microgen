@@ -370,7 +370,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams, requestStructName, "req", golangTypeToProto), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams, requestStructName, "req", golangTypeToProto, t.Info.ProtobufPackage), Nil())
 		},
 	).Line()
 }
@@ -381,11 +381,12 @@ func (t *gRPCEndpointConverterTemplate) grpcEndpointConvReturn(fn *types.Functio
 	strNameFn func(*types.Function) string,
 	rec string,
 	typeToProtoFn func(string, *types.Variable) (*Statement, bool),
+	pkg string,
 ) *Statement {
 	if len(methodParams) == 0 {
 		return Op("&").Qual(PackagePathEmptyProtobuf, "Empty").Values()
 	}
-	return Op("&").Qual(t.Info.ProtobufPackage, strNameFn(fn)).Values(DictFunc(func(dict Dict) {
+	return Op("&").Qual(pkg, strNameFn(fn)).Values(DictFunc(func(dict Dict) {
 		for _, field := range methodParams {
 			req, _ := typeToProtoFn(rec, &field)
 			dict[structFieldName(&field)] = Line().Add(req)
@@ -419,13 +420,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 					}
 				}
 			}
-			/*group.Return().List(Op("&").Qual(t.Info.ProtobufPackage, responseStructName(signature)).Values(DictFunc(func(dict Dict) {
-				for _, field := range methodResults {
-					resp, _ := golangTypeToProto("resp", &field)
-					dict[structFieldName(&field)] = Line().Add(resp)
-				}
-			})), Nil())*/
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodResults, responseStructName, "resp", golangTypeToProto), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(signature, methodResults, responseStructName, "resp", golangTypeToProto, t.Info.ProtobufPackage), Nil())
 		},
 	).Line()
 }
@@ -452,13 +447,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 					}
 				}
 			}
-			/*group.Return().List(Op("&").Qual(t.Info.ServiceImportPath, requestStructName(signature)).Values(DictFunc(func(dict Dict) {
-				for _, field := range methodParams {
-					req, _ := protoTypeToGolang("req", &field)
-					dict[structFieldName(&field)] = Line().Add(req)
-				}
-			})), Nil())*/
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams, requestStructName, "req", protoTypeToGolang), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams, requestStructName, "req", protoTypeToGolang, t.Info.ServiceImportPath), Nil())
 		},
 	).Line()
 }
@@ -489,13 +478,7 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 					}
 				}
 			}
-			/*group.Return().List(Op("&").Qual(t.Info.ServiceImportPath, responseStructName(signature)).Values(DictFunc(func(dict Dict) {
-				for _, field := range methodResults {
-					resp, _ := protoTypeToGolang("resp", &field)
-					dict[structFieldName(&field)] = Line().Add(resp)
-				}
-			})), Nil())*/
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodResults, responseStructName, "resp", protoTypeToGolang), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(signature, methodResults, responseStructName, "resp", protoTypeToGolang, t.Info.ServiceImportPath), Nil())
 		},
 	).Line()
 }
