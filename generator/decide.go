@@ -68,7 +68,8 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 	for _, tag := range genTags {
 		templates := tagToTemplate(tag, info)
 		if templates == nil {
-			return nil, fmt.Errorf("unexpected tag %s", tag)
+			fmt.Printf("Warning! unexpected tag %s\n", tag)
+			continue
 		}
 		for _, t := range templates {
 			unit, err := NewGenUnit(t, absOutPath)
