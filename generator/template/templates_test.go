@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/devimteam/microgen/generator"
 	"github.com/vetcher/godecl"
 	"github.com/vetcher/godecl/types"
 )
@@ -127,7 +128,14 @@ func TestTemplates(t *testing.T) {
 			}
 
 			buf := bytes.NewBuffer([]byte{})
-			gen := NewGenerator([]Template{test.Template}, fs, WriterStrategy(buf))
+			// TODO(nicolai): NewGenerator was commented out in [1]
+			// Need to use NewGenUnit now.
+			// Also consider testify instead of doing diff heavy-lifting
+			// [1] https://github.com/devimteam/microgen/commit/0e094fadf97df0da8c14f5b778a3beea4f646545#diff-338bea067d2a01b69c90f1c032c6a24b
+
+			// TODO(nicolai): Figure out if absOutPath needs to be anything
+			absOutPath := ""
+			gen := generator.NewGenUnit(test.Template, absOutPath)
 			err = gen.Generate()
 			if err != nil {
 				t.Fatalf("unable to generate: %v", err)
