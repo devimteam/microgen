@@ -1,4 +1,4 @@
-package template
+package generator
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/devimteam/microgen/generator"
+	"github.com/devimteam/microgen/generator/template"
 	"github.com/vetcher/godecl"
 	"github.com/vetcher/godecl/types"
 )
@@ -51,54 +51,54 @@ func TestTemplates(t *testing.T) {
 	}
 	allTemplateTests := []struct {
 		TestName    string
-		Template    Template
+		Template    template.Template
 		OutFilePath string
 	}{
 		{
 			TestName: "Endpoints",
-			Template: NewEndpointsTemplate(&GenerationInfo{
+			Template: template.NewEndpointsTemplate(&template.GenerationInfo{
 				ServiceImportPackageName: "stringsvc",
 			}),
 			OutFilePath: "endpoints.go.txt",
 		},
 		{
 			TestName: "Exchange",
-			Template: NewExchangeTemplate(&GenerationInfo{
+			Template: template.NewExchangeTemplate(&template.GenerationInfo{
 				ServiceImportPackageName: "stringsvc",
 			}),
 			OutFilePath: "exchange.go.txt",
 		},
 		{
 			TestName: "Middleware",
-			Template: NewMiddlewareTemplate(&GenerationInfo{
+			Template: template.NewMiddlewareTemplate(&template.GenerationInfo{
 				ServiceImportPath: "github.com/devimteam/microgen/example/svc",
 			}),
 			OutFilePath: "middleware.go.txt",
 		},
 		{
 			TestName: "Logging",
-			Template: NewLoggingTemplate(&GenerationInfo{
+			Template: template.NewLoggingTemplate(&template.GenerationInfo{
 				ServiceImportPath: "github.com/devimteam/microgen/example/svc",
 			}),
 			OutFilePath: "logging.go.txt",
 		},
 		{
 			TestName: "GRPC Server",
-			Template: NewGRPCServerTemplate(&GenerationInfo{
+			Template: template.NewGRPCServerTemplate(&template.GenerationInfo{
 				ServiceImportPackageName: "stringsvc",
 			}),
 			OutFilePath: "grpc_server.go.txt",
 		},
 		{
 			TestName: "GRPC Client",
-			Template: NewGRPCClientTemplate(&GenerationInfo{
+			Template: template.NewGRPCClientTemplate(&template.GenerationInfo{
 				ServiceImportPath: "github.com/devimteam/microgen/example/svc",
 			}),
 			OutFilePath: "grpc_client.go.txt",
 		},
 		{
 			TestName: "GRPC Converter",
-			Template: NewGRPCEndpointConverterTemplate(&GenerationInfo{
+			Template: template.NewGRPCEndpointConverterTemplate(&template.GenerationInfo{
 				ServiceImportPath:        "github.com/devimteam/microgen/example/svc",
 				ServiceImportPackageName: "stringsvc",
 			}),
@@ -106,7 +106,7 @@ func TestTemplates(t *testing.T) {
 		},
 		{
 			TestName: "GRPC Type Converter",
-			Template: NewStubGRPCTypeConverterTemplate(&GenerationInfo{
+			Template: template.NewStubGRPCTypeConverterTemplate(&template.GenerationInfo{
 				ServiceImportPath: "github.com/devimteam/microgen/example/svc",
 			}),
 			OutFilePath: "grpc_type.go.txt",
@@ -127,7 +127,7 @@ func TestTemplates(t *testing.T) {
 
 			// TODO(nicolai): Figure out if absOutPath needs to be anything
 			absOutPath := ""
-			gen := generator.NewGenUnit(test.Template, absOutPath)
+			gen := NewGenUnit(test.Template, absOutPath)
 			err = gen.Generate()
 			if err != nil {
 				t.Fatalf("unable to generate: %v", err)
