@@ -127,7 +127,10 @@ func TestTemplates(t *testing.T) {
 
 			// TODO(nicolai): Figure out if absOutPath needs to be anything
 			absOutPath := ""
-			gen := NewGenUnit(test.Template, absOutPath)
+			gen, err := NewGenUnit(test.Template, absOutPath)
+			if err != nil {
+				t.Fatalf("NewGenUnit: %v", err)
+			}
 			err = gen.Generate()
 			if err != nil {
 				t.Fatalf("unable to generate: %v", err)
