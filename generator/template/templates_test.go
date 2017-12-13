@@ -30,7 +30,9 @@ func loadInterface(sourceFile, ifaceName string) (*types.Interface, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse file: %v", err)
 	}
-	info, err := godecl.ParseFile(tree)
+	// TODO(nicolai): Figure out if packagePath needs to be anything
+	packagePath := ""
+	info, err := godecl.ParseAstFile(tree, packagePath)
 	if err != nil {
 		fmt.Printf("error when parsing info from file: %v\n", err)
 	}
