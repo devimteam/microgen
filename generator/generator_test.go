@@ -137,8 +137,11 @@ func TestTemplates(t *testing.T) {
 			if buf.String() != string(out[:]) {
 				t.Errorf("Got:\n/////////\n%s\n/////////\nExpected:\n/////////\n%s\n/////////", buf.String(), string(out[:]))
 				t.Errorf("1: Got(bytes), 2: Expected(bytes):\n/////////\n1: %v\n2: %v\n/////////", buf.Bytes(), out[:])
-				x, y, z, line := findDifference(buf.String(), string(out[:]))
-				t.Errorf("line:pos:raw %d:%d:%d %d!=%d %v\n`%s`", x+1, y+1, z, buf.Bytes()[z], out[z], len(buf.String()) == len(string(out[:])), line)
+				/// XXX(nicolai): Commented out to prevent runtime error
+				/// Something in here is triggering IOB, probably because
+				/// buf is nil.
+				// x, y, z, line := findDifference(buf.String(), string(out[:]))
+				// t.Errorf("line:pos:raw %d:%d:%d %d!=%d %v\n`%s`", x+1, y+1, z, buf.Bytes()[z], out[z], len(buf.String()) == len(string(out[:])), line)
 			}
 		})
 	}
