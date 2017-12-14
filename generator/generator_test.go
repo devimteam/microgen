@@ -114,7 +114,7 @@ func TestTemplates(t *testing.T) {
 	}
 	for _, test := range allTemplateTests {
 		t.Run(test.TestName, func(t *testing.T) {
-			out, err := ioutil.ReadFile(test.OutFilePath)
+			out, err := ioutil.ReadFile("test_assets/" + test.OutFilePath)
 			if err != nil {
 				t.Fatalf("read out file error: %v", err)
 			}
