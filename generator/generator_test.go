@@ -6,6 +6,7 @@ import (
 	goparser "go/parser"
 	"go/token"
 	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/devimteam/microgen/generator/template"
@@ -45,70 +46,69 @@ func loadInterface(sourceFile, ifaceName string) (*types.Interface, error) {
 }
 
 func TestTemplates(t *testing.T) {
-	fs, err := loadInterface("service.go.txt", "StringService")
+	outPath := "./test_out/"
+	sourcePath := "./test_assets/service.go.txt"
+	absSourcePath, err := filepath.Abs(sourcePath)
+	importPackagePath, err := resolvePackagePath(outPath)
+	iface, err := loadInterface(sourcePath, "StringService")
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	genInfo := &template.GenerationInfo{
+		ServiceImportPackageName: "stringsvc",
+		ServiceImportPath:        importPackagePath,
+		Force:                    true,
+		Iface:                    iface,
+		AbsOutPath:               outPath,
+		SourceFilePath:           absSourcePath,
+		ProtobufPackage:          fetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
+		GRPCRegAddr:              fetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
+	}
+
 	allTemplateTests := []struct {
 		TestName    string
 		Template    template.Template
 		OutFilePath string
 	}{
 		{
-			TestName: "Endpoints",
-			Template: template.NewEndpointsTemplate(&template.GenerationInfo{
-				ServiceImportPackageName: "stringsvc",
-			}),
+			TestName:    "Endpoints",
+			Template:    template.NewEndpointsTemplate(genInfo),
 			OutFilePath: "endpoints.go.txt",
 		},
 		{
-			TestName: "Exchange",
-			Template: template.NewExchangeTemplate(&template.GenerationInfo{
-				ServiceImportPackageName: "stringsvc",
-			}),
+			TestName:    "Exchange",
+			Template:    template.NewExchangeTemplate(genInfo),
 			OutFilePath: "exchange.go.txt",
 		},
 		{
-			TestName: "Middleware",
-			Template: template.NewMiddlewareTemplate(&template.GenerationInfo{
-				ServiceImportPath: "github.com/devimteam/microgen/example/svc",
-			}),
+			TestName:    "Middleware",
+			Template:    template.NewMiddlewareTemplate(genInfo),
 			OutFilePath: "middleware.go.txt",
 		},
 		{
-			TestName: "Logging",
-			Template: template.NewLoggingTemplate(&template.GenerationInfo{
-				ServiceImportPath: "github.com/devimteam/microgen/example/svc",
-			}),
+			TestName:    "Logging",
+			Template:    template.NewLoggingTemplate(genInfo),
 			OutFilePath: "logging.go.txt",
 		},
 		{
-			TestName: "GRPC Server",
-			Template: template.NewGRPCServerTemplate(&template.GenerationInfo{
-				ServiceImportPackageName: "stringsvc",
-			}),
+			TestName:    "GRPC Server",
+			Template:    template.NewGRPCServerTemplate(genInfo),
 			OutFilePath: "grpc_server.go.txt",
 		},
 		{
-			TestName: "GRPC Client",
-			Template: template.NewGRPCClientTemplate(&template.GenerationInfo{
-				ServiceImportPath: "github.com/devimteam/microgen/example/svc",
-			}),
+			TestName:    "GRPC Client",
+			Template:    template.NewGRPCClientTemplate(genInfo),
 			OutFilePath: "grpc_client.go.txt",
 		},
 		{
-			TestName: "GRPC Converter",
-			Template: template.NewGRPCEndpointConverterTemplate(&template.GenerationInfo{
-				ServiceImportPath:        "github.com/devimteam/microgen/example/svc",
-				ServiceImportPackageName: "stringsvc",
-			}),
+			TestName:    "GRPC Converter",
+			Template:    template.NewGRPCEndpointConverterTemplate(genInfo),
 			OutFilePath: "grpc_converters.go.txt",
 		},
 		{
-			TestName: "GRPC Type Converter",
-			Template: template.NewStubGRPCTypeConverterTemplate(&template.GenerationInfo{
-				ServiceImportPath: "github.com/devimteam/microgen/example/svc",
-			}),
+			TestName:    "GRPC Type Converter",
+			Template:    template.NewStubGRPCTypeConverterTemplate(genInfo),
 			OutFilePath: "grpc_type.go.txt",
 		},
 	}
@@ -125,8 +125,7 @@ func TestTemplates(t *testing.T) {
 			// Also consider testify instead of doing diff heavy-lifting
 			// [1] https://github.com/devimteam/microgen/commit/0e094fadf97df0da8c14f5b778a3beea4f646545#diff-338bea067d2a01b69c90f1c032c6a24b
 
-			// TODO(nicolai): Figure out if absOutPath needs to be anything
-			absOutPath := ""
+			absOutPath := "./test_out/"
 			gen, err := NewGenUnit(test.Template, absOutPath)
 			if err != nil {
 				t.Fatalf("NewGenUnit: %v", err)
