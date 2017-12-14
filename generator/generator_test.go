@@ -1,15 +1,16 @@
 package generator
 
 import (
-	"bytes"
 	"fmt"
 	goparser "go/parser"
 	"go/token"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/devimteam/microgen/generator/template"
+	"github.com/stretchr/testify/assert"
 	"github.com/vetcher/godecl"
 	"github.com/vetcher/godecl/types"
 )
@@ -114,16 +115,10 @@ func TestTemplates(t *testing.T) {
 	}
 	for _, test := range allTemplateTests {
 		t.Run(test.TestName, func(t *testing.T) {
-			out, err := ioutil.ReadFile("test_assets/" + test.OutFilePath)
+			expected, err := ioutil.ReadFile("test_assets/" + test.OutFilePath)
 			if err != nil {
-				t.Fatalf("read out file error: %v", err)
+				t.Fatalf("read expected file error: %v", err)
 			}
-
-			buf := bytes.NewBuffer([]byte{})
-			// TODO(nicolai): NewGenerator was commented out in [1]
-			// Need to use NewGenUnit now.
-			// Also consider testify instead of doing diff heavy-lifting
-			// [1] https://github.com/devimteam/microgen/commit/0e094fadf97df0da8c14f5b778a3beea4f646545#diff-338bea067d2a01b69c90f1c032c6a24b
 
 			absOutPath := "./test_out/"
 			gen, err := NewGenUnit(test.Template, absOutPath)
@@ -134,32 +129,14 @@ func TestTemplates(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unable to generate: %v", err)
 			}
-			if buf.String() != string(out[:]) {
-				t.Errorf("Got:\n/////////\n%s\n/////////\nExpected:\n/////////\n%s\n/////////", buf.String(), string(out[:]))
-				t.Errorf("1: Got(bytes), 2: Expected(bytes):\n/////////\n1: %v\n2: %v\n/////////", buf.Bytes(), out[:])
-				/// XXX(nicolai): Commented out to prevent runtime error
-				/// Something in here is triggering IOB, probably because
-				/// buf is nil.
-				// x, y, z, line := findDifference(buf.String(), string(out[:]))
-				// t.Errorf("line:pos:raw %d:%d:%d %d!=%d %v\n`%s`", x+1, y+1, z, buf.Bytes()[z], out[z], len(buf.String()) == len(string(out[:])), line)
+			actual, err := ioutil.ReadFile("./test_out/" + test.Template.DefaultPath())
+			if err != nil {
+				t.Fatalf("read actual file error: %v", err)
 			}
+			assert.Equal(t,
+				strings.Split(string(expected[:]), "\n"),
+				strings.Split(string(actual[:]), "\n"),
+			)
 		})
 	}
-}
-
-func findDifference(first, second string) (line int, pos int, raw int, strLine string) {
-	for i, sym := range first {
-		if first[i] != second[i] {
-			return
-		}
-		if sym == '\n' {
-			line += 1
-			pos = 0
-			strLine = ""
-		}
-		pos += 1
-		raw += 1
-		strLine += string(sym)
-	}
-	return 0, 0, 0, ""
 }
