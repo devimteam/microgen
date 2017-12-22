@@ -2,8 +2,6 @@ package generator
 
 import (
 	"fmt"
-	goparser "go/parser"
-	"go/token"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -25,19 +23,9 @@ func findInterface(file *types.File, ifaceName string) *types.Interface {
 }
 
 func loadInterface(sourceFile, ifaceName string) (*types.Interface, error) {
-	src, err := ioutil.ReadFile(sourceFile)
+	info, err := godecl.ParseFile(sourceFile)
 	if err != nil {
-		return nil, fmt.Errorf("read source file error: %v", err)
-	}
-	tree, err := goparser.ParseFile(token.NewFileSet(), "", src, 0)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse file: %v", err)
-	}
-	// TODO(nicolai): Figure out if packagePath needs to be anything
-	packagePath := ""
-	info, err := godecl.ParseAstFile(tree, packagePath)
-	if err != nil {
-		fmt.Printf("error when parsing info from file: %v\n", err)
+		return nil, err
 	}
 	i := findInterface(info, ifaceName)
 	if i == nil {
@@ -66,6 +54,7 @@ func TestTemplates(t *testing.T) {
 		ProtobufPackage:          fetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
 		GRPCRegAddr:              fetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
 	}
+	t.Log("protobuf pkg", genInfo.ProtobufPackage)
 
 	allTemplateTests := []struct {
 		TestName    string
@@ -80,7 +69,7 @@ func TestTemplates(t *testing.T) {
 		{
 			TestName:    "Exchange",
 			Template:    template.NewExchangeTemplate(genInfo),
-			OutFilePath: "exchange.go.txt",
+			OutFilePath: "exchanges.go.txt",
 		},
 		{
 			TestName:    "Middleware",
