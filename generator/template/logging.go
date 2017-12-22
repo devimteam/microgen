@@ -169,7 +169,7 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
 			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
-				Line().Lit("method"), Lit(signature.Name),
+				Line().Lit("@method"), Lit(signature.Name),
 				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Args), signature.Name)),
 				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Results), signature.Name)),
 				Line().Lit("took"), Qual(PackagePathTime, "Since").Call(Id("begin")),
