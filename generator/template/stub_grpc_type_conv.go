@@ -16,6 +16,7 @@ const (
 	GolangProtobufPtypesTimestamp = "github.com/golang/protobuf/ptypes/timestamp"
 	JsonbPackage                  = "github.com/sas1024/gorm-jsonb/jsonb"
 	GolangProtobufPtypes          = "github.com/golang/protobuf/ptypes"
+	GolangProtobufWrappers        = "github.com/golang/protobuf/ptypes/wrappers"
 )
 
 type stubGRPCTypeConverterTemplate struct {
@@ -45,6 +46,10 @@ func specialTypeConverter(p types.Type) *Statement {
 	if name != nil && *name == "JSONB" && imp != nil && imp.Package == JsonbPackage {
 		return (&Statement{}).Id("string")
 	}
+	// *string -> *wrappers.StringValue
+	if name != nil && *name == "string" && imp == nil && p.TypeOf() == types.T_Pointer {
+		return (&Statement{}).Op("*").Qual(GolangProtobufWrappers, "StringValue")
+	}
 	return nil
 }
 
@@ -52,7 +57,7 @@ func converterToProtoBody(field *types.Variable) Code {
 	s := &Statement{}
 	switch typeToProto(field.Type, 0) {
 	case "ErrorToProto":
-		s.If().Id(util.ToLowerFirst(field.Name)).Op("==").Nil().Block(
+		s.If(Id(util.ToLowerFirst(field.Name))).Op("==").Nil().Block(
 			Return().List(Lit(""), Nil()),
 		).Line()
 		s.Return().List(Id(util.ToLowerFirst(field.Name)).Dot("Error").Call(), Nil())
@@ -62,6 +67,15 @@ func converterToProtoBody(field *types.Variable) Code {
 		s.Return().Qual(GolangProtobufPtypes, "TimestampProto").Call(Id(field.Name))
 	case "ListStringToProto", "SliceStringToProto":
 		s.Return().List(Id(util.ToLowerFirst(field.Name)), Nil())
+	//	if str == "" {
+	//		return nil
+	//	}
+	//	return &wrappers.StringValue{Value: str}
+	case "PtrStringToProto":
+		s.If(Id(util.ToLowerFirst(field.Name)).Op("==").Nil()).Block(
+			Return().List(Nil(), Nil()),
+		)
+		s.Line().Return().List(Op("&").Qual(GolangProtobufWrappers, "StringValue").Block(Dict{Id("Value"): Op("*").Id(util.ToLowerFirst(field.Name)).Op(",")}), Nil())
 	default:
 		s.Panic(Lit("function not provided"))
 	}
@@ -82,6 +96,11 @@ func converterProtoToBody(field *types.Variable) Code {
 		s.Return().Qual(GolangProtobufPtypes, "Timestamp").Call(Id("proto" + util.ToUpperFirst(field.Name)))
 	case "ProtoToListString", "ProtoToSliceString":
 		s.Return().List(Id("proto"+util.ToUpperFirst(field.Name)), Nil())
+	case "ProtoToPtrString":
+		s.If(Id("proto" + util.ToUpperFirst(field.Name)).Op("==").Nil()).Block(
+			Return().List(Nil(), Nil()),
+		)
+		s.Line().Return().List(Op("&").Id("proto"+util.ToUpperFirst(field.Name)).Dot("Value"), Nil())
 	default:
 		s.Panic(Lit("function not provided"))
 	}
@@ -192,6 +211,9 @@ func (t *stubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variab
 //
 func (t *stubGRPCTypeConverterTemplate) protoFieldType(field types.Type) *Statement {
 	c := &Statement{}
+	if code := specialTypeConverter(field); code != nil {
+		return c.Add(code)
+	}
 	for field != nil {
 		switch f := field.(type) {
 		case types.TImport:
@@ -203,9 +225,6 @@ func (t *stubGRPCTypeConverterTemplate) protoFieldType(field types.Type) *Statem
 			protoType := f.TypeName
 			if tmp, ok := goToProtoTypesMap[f.TypeName]; ok {
 				protoType = tmp
-			}
-			if code := specialTypeConverter(field); code != nil {
-				return c.Add(code)
 			}
 			c.Id(protoType)
 			field = nil

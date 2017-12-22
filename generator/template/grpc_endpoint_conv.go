@@ -138,6 +138,7 @@ const (
 	_interface = "Interface"
 	_toProto   = "ToProto"
 	_protoTo   = "ProtoTo"
+	_ellipsis  = "El"
 )
 
 // Returns FieldTypeToProto.
@@ -174,6 +175,9 @@ Loop:
 		case types.TInterface:
 			methodName += _interface
 			field = nil
+		case types.TEllipsis:
+			methodName += _ellipsis
+			field = f.Next
 		default:
 			break Loop
 		}
