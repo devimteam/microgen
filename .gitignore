@@ -26,3 +26,5 @@ _testmain.go
 *.prof
 
 vendor/
+
+generator/test_out/*

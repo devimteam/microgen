@@ -124,6 +124,8 @@ All allowed tags for customize generation provided here.
 | Recovering middleware  | ./middleware/recovering.go  |  Overwrites old file every time.|
 
 ## Example
+You may find examples in `example` directory, where `svc` contains all, what you need for successful generation, and `generated` contains what you will get after `microgen`.  
+
 Follow this short guide to try microgen tool.
 
 1. Create file `service.go` inside GOPATH and add code below.
