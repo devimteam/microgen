@@ -13,40 +13,16 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/devimteam/microgen"
+  packages = ["example/svc/entity","generator","generator/template","generator/write_strategy","util"]
+  revision = "7b8a94f3f85b96c4e9095ab337b0ec62521a8c25"
+  version = "0.6.0"
+
+[[projects]]
   name = "github.com/fatih/structtag"
   packages = ["."]
   revision = "da3d9ab5b78fdc25d3a7614853b085200bd10da9"
   version = "v0.1.0"
-
-[[projects]]
-  name = "github.com/go-kit/kit"
-  packages = ["endpoint","log"]
-  revision = "4dc7be5d2d12881735283bcab7352178e190fc71"
-  version = "v0.6.0"
-
-[[projects]]
-  name = "github.com/go-logfmt/logfmt"
-  packages = ["."]
-  revision = "390ab7935ee28ec6b286364bba9b4dd6410cb3d5"
-  version = "v0.3.0"
-
-[[projects]]
-  name = "github.com/go-stack/stack"
-  packages = ["."]
-  revision = "259ab82a6cad3992b4e21ff5cac294ccb06474bc"
-  version = "v1.7.0"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/golang/protobuf"
-  packages = ["proto","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
-  revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/kr/logfmt"
-  packages = ["."]
-  revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -65,33 +41,9 @@
   revision = "53591e911755ce91b17b2b6d1599c4dc4a548130"
   version = "v1.0.0"
 
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/net"
-  packages = ["context","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace"]
-  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/text"
-  packages = ["collate","collate/build","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","language","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
-  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
-
-[[projects]]
-  branch = "master"
-  name = "google.golang.org/genproto"
-  packages = ["googleapis/rpc/status"]
-  revision = "a8101f21cf983e773d0c1133ebc5424792003214"
-
-[[projects]]
-  name = "google.golang.org/grpc"
-  packages = [".","balancer","balancer/roundrobin","codes","connectivity","credentials","encoding","grpclb/grpc_lb_v1/messages","grpclog","internal","keepalive","metadata","naming","peer","resolver","resolver/dns","resolver/passthrough","stats","status","tap","transport"]
-  revision = "e687fa4e6424368ece6e4fe727cea2c806a0fcb4"
-  version = "v1.8.2"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "547e90e114140710679df8e0e9795da9a0f5121160d41032a9531e80e30c043f"
+  inputs-digest = "67bbb7381ad5ee5225c91bdf0fe5ba69ae3615fbc4d739f233464422a87e433d"
   solver-name = "gps-cdcl"
   solver-version = 1
