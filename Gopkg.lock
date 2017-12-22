@@ -7,10 +7,33 @@
   revision = "97587ff16f680f25594335a26c03ef6a1b7311b7"
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/devimteam/microgen"
+  packages = ["example/svc/entity","generator","generator/template","generator/write_strategy","util"]
+  revision = "7b8a94f3f85b96c4e9095ab337b0ec62521a8c25"
+  version = "0.6.0"
+
+[[projects]]
   name = "github.com/fatih/structtag"
   packages = ["."]
   revision = "da3d9ab5b78fdc25d3a7614853b085200bd10da9"
   version = "v0.1.0"
+
+[[projects]]
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  revision = "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f"
 
 [[projects]]
   name = "github.com/vetcher/godecl"
@@ -21,6 +44,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b60fbe869d836593f0a4a4caf4284298f050a3acc241b396539119f144346528"
+  inputs-digest = "67bbb7381ad5ee5225c91bdf0fe5ba69ae3615fbc4d739f233464422a87e433d"
   solver-name = "gps-cdcl"
   solver-version = 1
