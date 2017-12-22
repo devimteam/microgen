@@ -13,12 +13,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  name = "github.com/devimteam/microgen"
-  packages = ["example/svc/entity","generator","generator/template","generator/write_strategy","util"]
-  revision = "7b8a94f3f85b96c4e9095ab337b0ec62521a8c25"
-  version = "0.6.0"
-
-[[projects]]
   name = "github.com/fatih/structtag"
   packages = ["."]
   revision = "da3d9ab5b78fdc25d3a7614853b085200bd10da9"
@@ -44,6 +38,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "67bbb7381ad5ee5225c91bdf0fe5ba69ae3615fbc4d739f233464422a87e433d"
+  inputs-digest = "6bf3fdf9732def77dd3bdddc13983f001c50c4e799595d7a31500de3dd34d7ac"
   solver-name = "gps-cdcl"
   solver-version = 1
