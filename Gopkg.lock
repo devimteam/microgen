@@ -32,8 +32,8 @@
 [[projects]]
   name = "github.com/vetcher/godecl"
   packages = [".","types"]
-  revision = "53591e911755ce91b17b2b6d1599c4dc4a548130"
-  version = "v1.0.0"
+  revision = "e7cd2d121489c49a27b9551244c5f7a9e9bad729"
+  version = "v1.0.1"
 
 [solve-meta]
   analyzer-name = "dep"
