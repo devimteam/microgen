@@ -28,7 +28,7 @@ type serviceRecovering struct {
 func (R *serviceRecovering) Uppercase(ctx context.Context, str ...map[string]interface{}) (ans string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			R.logger.Log("@method", "Uppercase", "recover panic", r)
+			R.logger.Log("@method", "Uppercase", "message", r)
 			err = fmt.Errorf("%v", r)
 		}
 	}()
@@ -38,7 +38,7 @@ func (R *serviceRecovering) Uppercase(ctx context.Context, str ...map[string]int
 func (R *serviceRecovering) Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			R.logger.Log("@method", "Count", "recover panic", r)
+			R.logger.Log("@method", "Count", "message", r)
 			err = fmt.Errorf("%v", r)
 		}
 	}()
@@ -48,7 +48,7 @@ func (R *serviceRecovering) Count(ctx context.Context, text string, symbol strin
 func (R *serviceRecovering) TestCase(ctx context.Context, comments []*entity.Comment) (tree map[string]int, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			R.logger.Log("@method", "TestCase", "recover panic", r)
+			R.logger.Log("@method", "TestCase", "message", r)
 			err = fmt.Errorf("%v", r)
 		}
 	}()

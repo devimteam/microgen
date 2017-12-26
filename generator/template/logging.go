@@ -170,8 +170,10 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
 			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
 				Line().Lit("@method"), Lit(signature.Name),
-				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Args), signature.Name)),
-				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Results), signature.Name)),
+				Line().List(Lit("request"), Qual(t.Info.ServiceImportPath, requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))),
+				Line().List(Lit("response"), Qual(t.Info.ServiceImportPath, responseStructName(signature)).Values(dictByVariables(removeErrorIfLast(signature.Results)))),
+				//Add(t.paramsNameAndValue(removeContextIfFirst(signature.Args), signature.Name)),
+				//Add(t.paramsNameAndValue(removeContextIfFirst(signature.Results), signature.Name)),
 				Line().Lit("took"), Qual(PackagePathTime, "Since").Call(Id("begin")),
 			),
 		).Call(Qual(PackagePathTime, "Now").Call())

@@ -85,7 +85,7 @@ func (t *recoverTemplate) recoverFuncBody(signature *types.Function) func(g *Gro
 			If(Id("r").Op(":=").Recover(), Id("r").Op("!=").Nil()).Block(
 				Id(util.LastUpperOrFirst(serviceRecoverStructName)).Dot(loggerVarName).Dot("Log").Call(
 					Lit("@method"), Lit(signature.Name),
-					Lit("recover panic"), Id("r"),
+					Lit("message"), Id("r"),
 				),
 				Id(nameOfLastResultError(signature)).Op("=").Qual(PackagePathFmt, "Errorf").Call(Lit("%v"), Id("r")),
 			),

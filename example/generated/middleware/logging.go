@@ -29,7 +29,8 @@ func (L *serviceLogging) Uppercase(ctx context.Context, str ...map[string]interf
 	defer func(begin time.Time) {
 		L.logger.Log(
 			"@method", "Uppercase",
-			"str", str,
+			"request", generated.UppercaseRequest{Str: str},
+			"response", generated.UppercaseResponse{Ans: ans},
 			"took", time.Since(begin))
 	}(time.Now())
 	return L.next.Uppercase(ctx, str...)
@@ -39,11 +40,14 @@ func (L *serviceLogging) Count(ctx context.Context, text string, symbol string) 
 	defer func(begin time.Time) {
 		L.logger.Log(
 			"@method", "Count",
-			"text", text,
-			"symbol", symbol,
-			"count", count,
-			"positions", positions,
-			"err", err,
+			"request", generated.CountRequest{
+				Symbol: symbol,
+				Text:   text,
+			},
+			"response", generated.CountResponse{
+				Count:     count,
+				Positions: positions,
+			},
 			"took", time.Since(begin))
 	}(time.Now())
 	return L.next.Count(ctx, text, symbol)
@@ -53,10 +57,8 @@ func (L *serviceLogging) TestCase(ctx context.Context, comments []*entity.Commen
 	defer func(begin time.Time) {
 		L.logger.Log(
 			"@method", "TestCase",
-			"comments", comments,
-			"len(comments)", len(comments),
-			"tree", tree,
-			"err", err,
+			"request", generated.TestCaseRequest{Comments: comments},
+			"response", generated.TestCaseResponse{Tree: tree},
 			"took", time.Since(begin))
 	}(time.Now())
 	return L.next.TestCase(ctx, comments)
