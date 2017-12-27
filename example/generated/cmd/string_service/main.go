@@ -11,6 +11,7 @@ import (
 	stringsvc "github.com/devimteam/protobuf/stringsvc"
 	log "github.com/go-kit/kit/log"
 	grpc1 "google.golang.org/grpc"
+	io "io"
 	net "net"
 	http1 "net/http"
 	os "os"
@@ -19,15 +20,17 @@ import (
 )
 
 func main() {
-	logger := InitLogger()
-	defer logger.Log("goodbye", "good luck")
+	logger := log.With(InitLogger(os.Stdout), "level", "info")
+	errorLogger := log.With(InitLogger(os.Stderr), "level", "error")
+	logger.Log("message", "Hello, I am alive")
+	defer logger.Log("message", "goodbye, good luck")
 
 	errorChan := make(chan error)
 	go InterruptHandler(errorChan)
 
-	service := generated.NewStringService()                 // Create new service.
-	service = middleware.ServiceLogging(logger)(service)    // Setup service logging.
-	service = middleware.ServiceRecovering(logger)(service) // Setup service recovering.
+	service := generated.NewStringService()                      // Create new service.
+	service = middleware.ServiceLogging(logger)(service)         // Setup service logging.
+	service = middleware.ServiceRecovering(errorLogger)(service) // Setup service recovering.
 
 	endpoints := &generated.Endpoints{
 		CountEndpoint:     generated.CountEndpoint(service),
@@ -47,11 +50,10 @@ func main() {
 }
 
 // InitLogger initialize go-kit JSON logger with timestamp and caller.
-func InitLogger() log.Logger {
-	logger := log.NewJSONLogger(os.Stdout)
-	logger = log.With(logger, "@when", log.DefaultTimestampUTC)
-	logger = log.With(logger, "@where", log.DefaultCaller)
-	logger.Log("hello", "I am alive")
+func InitLogger(writer io.Writer) log.Logger {
+	logger := log.NewJSONLogger(writer)
+	logger = log.With(logger, "@timestamp", log.DefaultTimestampUTC)
+	logger = log.With(logger, "caller", log.DefaultCaller)
 	return logger
 }
 

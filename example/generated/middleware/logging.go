@@ -28,9 +28,9 @@ type serviceLogging struct {
 func (L *serviceLogging) Uppercase(ctx context.Context, str ...map[string]interface{}) (ans string, err error) {
 	defer func(begin time.Time) {
 		L.logger.Log(
-			"@method", "Uppercase",
-			"request", generated.UppercaseRequest{Str: str},
-			"response", generated.UppercaseResponse{Ans: ans},
+			"method", "Uppercase",
+			"request", "",
+			"response", "",
 			"took", time.Since(begin))
 	}(time.Now())
 	return L.next.Uppercase(ctx, str...)
@@ -39,12 +39,12 @@ func (L *serviceLogging) Uppercase(ctx context.Context, str ...map[string]interf
 func (L *serviceLogging) Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error) {
 	defer func(begin time.Time) {
 		L.logger.Log(
-			"@method", "Count",
-			"request", generated.CountRequest{
+			"method", "Count",
+			"request", logCountRequest{
 				Symbol: symbol,
 				Text:   text,
 			},
-			"response", generated.CountResponse{
+			"response", logCountResponse{
 				Count:     count,
 				Positions: positions,
 			},
@@ -56,10 +56,32 @@ func (L *serviceLogging) Count(ctx context.Context, text string, symbol string) 
 func (L *serviceLogging) TestCase(ctx context.Context, comments []*entity.Comment) (tree map[string]int, err error) {
 	defer func(begin time.Time) {
 		L.logger.Log(
-			"@method", "TestCase",
-			"request", generated.TestCaseRequest{Comments: comments},
-			"response", generated.TestCaseResponse{Tree: tree},
+			"method", "TestCase",
+			"request", logTestCaseRequest{
+				Comments:    comments,
+				LenComments: len(comments),
+			},
+			"response", logTestCaseResponse{Tree: tree},
 			"took", time.Since(begin))
 	}(time.Now())
 	return L.next.TestCase(ctx, comments)
+}
+
+type logCountRequest struct {
+	Text   string
+	Symbol string
+}
+
+type logCountResponse struct {
+	Count     int
+	Positions []int
+}
+
+type logTestCaseRequest struct {
+	Comments    []*entity.Comment
+	LenComments int `json:"len(Comments)"`
+}
+
+type logTestCaseResponse struct {
+	Tree map[string]int
 }

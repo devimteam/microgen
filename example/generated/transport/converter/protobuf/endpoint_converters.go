@@ -10,7 +10,7 @@ import (
 
 func EncodeUppercaseRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(*generated.UppercaseRequest)
-	reqStr, err := ToProto(req.Str)
+	reqStr, err := ElMapStringInterfaceToProto(req.Str)
 	if err != nil {
 		return nil, err
 	}

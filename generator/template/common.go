@@ -22,6 +22,7 @@ const (
 	PackagePathBytes              = "bytes"
 	PackagePathJson               = "encoding/json"
 	PackagePathIOUtil             = "io/ioutil"
+	PackagePathIO                 = "io"
 	PackagePathStrings            = "strings"
 	PackagePathUrl                = "net/url"
 	PackagePathEmptyProtobuf      = "github.com/golang/protobuf/ptypes/empty"

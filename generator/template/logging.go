@@ -91,6 +91,15 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 		f.Add(t.loggingFunc(signature)).Line()
 	}
 
+	for _, signature := range t.Info.Iface.Methods {
+		if params := removeContextIfFirst(signature.Args); t.calcParamAmount(signature.Name, params) > 0 {
+			f.Add(t.loggingEntity("log"+requestStructName(signature), signature, params)).Line()
+		}
+		if params := removeErrorIfLast(signature.Results); t.calcParamAmount(signature.Name, params) > 0 {
+			f.Add(t.loggingEntity("log"+responseStructName(signature), signature, params)).Line()
+		}
+	}
+
 	return f
 }
 
@@ -136,6 +145,24 @@ func (t *loggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 	}))
 }
 
+func (t *loggingTemplate) loggingEntity(name string, fn *types.Function, params []types.Variable) Code {
+	if len(params) == 0 {
+		return nil
+	}
+	return Type().Id(name).StructFunc(func(g *Group) {
+		ignore := t.ignoreParams[fn.Name]
+		lenParams := t.lenParams[fn.Name]
+		for _, field := range params {
+			if !util.IsInStringSlice(field.Name, ignore) {
+				g.Id(util.ToUpperFirst(field.Name)).Add(fieldType(field.Type, false))
+			}
+			if util.IsInStringSlice(field.Name, lenParams) {
+				g.Id("Len" + util.ToUpperFirst(field.Name)).Int().Tag(map[string]string{"json": "len(" + util.ToUpperFirst(field.Name) + ")"})
+			}
+		}
+	}).Line()
+}
+
 // Render logging middleware for interface method.
 //
 //		func (s *serviceLogging) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
@@ -169,9 +196,9 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
 			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
-				Line().Lit("@method"), Lit(signature.Name),
-				Line().List(Lit("request"), Qual(t.Info.ServiceImportPath, requestStructName(signature)).Values(dictByVariables(removeContextIfFirst(signature.Args)))),
-				Line().List(Lit("response"), Qual(t.Info.ServiceImportPath, responseStructName(signature)).Values(dictByVariables(removeErrorIfLast(signature.Results)))),
+				Line().Lit("method"), Lit(signature.Name),
+				Line().List(Lit("request"), t.logRequest(signature)),
+				Line().List(Lit("response"), t.logResponse(signature)),
 				//Add(t.paramsNameAndValue(removeContextIfFirst(signature.Args), signature.Name)),
 				//Add(t.paramsNameAndValue(removeContextIfFirst(signature.Results), signature.Name)),
 				Line().Lit("took"), Qual(PackagePathTime, "Since").Call(Id("begin")),
@@ -201,4 +228,50 @@ func (t *loggingTemplate) paramsNameAndValue(fields []types.Variable, functionNa
 			}
 		}
 	})
+}
+
+func (t *loggingTemplate) fillMap(fn *types.Function, params []types.Variable) *Statement {
+	return Values(DictFunc(func(d Dict) {
+		ignore := t.ignoreParams[fn.Name]
+		lenParams := t.lenParams[fn.Name]
+		for _, field := range params {
+			if !util.IsInStringSlice(field.Name, ignore) {
+				d[Id(util.ToUpperFirst(field.Name))] = Id(field.Name)
+			}
+			if util.IsInStringSlice(field.Name, lenParams) {
+				d[Id("Len"+util.ToUpperFirst(field.Name))] = Len(Id(field.Name))
+			}
+		}
+	}))
+}
+
+func (t *loggingTemplate) logRequest(fn *types.Function) *Statement {
+	paramAmount := t.calcParamAmount(fn.Name, removeContextIfFirst(fn.Args))
+	if paramAmount <= 0 {
+		return Lit("")
+	}
+	return Id("log" + requestStructName(fn)).Add(t.fillMap(fn, removeContextIfFirst(fn.Args)))
+}
+
+func (t *loggingTemplate) logResponse(fn *types.Function) *Statement {
+	paramAmount := t.calcParamAmount(fn.Name, removeErrorIfLast(fn.Results))
+	if paramAmount <= 0 {
+		return Lit("")
+	}
+	return Id("log" + responseStructName(fn)).Add(t.fillMap(fn, removeErrorIfLast(fn.Results)))
+}
+
+func (t *loggingTemplate) calcParamAmount(name string, params []types.Variable) int {
+	ignore := t.ignoreParams[name]
+	lenParams := t.lenParams[name]
+	paramAmount := len(params)
+	for _, field := range params {
+		if util.IsInStringSlice(field.Name, ignore) {
+			paramAmount -= 1
+		}
+		if util.IsInStringSlice(field.Name, lenParams) {
+			paramAmount += 1
+		}
+	}
+	return paramAmount
 }
