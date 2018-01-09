@@ -17,8 +17,8 @@ type Endpoints struct {
 	TestCaseEndpoint  endpoint.Endpoint
 }
 
-func (E *Endpoints) Uppercase(ctx context.Context, str ...map[string]interface{}) (ans string, err error) {
-	endpointUppercaseRequest := UppercaseRequest{Str: str}
+func (E *Endpoints) Uppercase(ctx context.Context, stringsMap map[string]string) (ans string, err error) {
+	endpointUppercaseRequest := UppercaseRequest{StringsMap: stringsMap}
 	endpointUppercaseResponse, err := E.UppercaseEndpoint(ctx, &endpointUppercaseRequest)
 	if err != nil {
 		if grpc.Code(err) == codes.Internal || grpc.Code(err) == codes.Unknown {
@@ -59,7 +59,7 @@ func (E *Endpoints) TestCase(ctx context.Context, comments []*entity.Comment) (t
 func UppercaseEndpoint(svc StringService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		_req := request.(*UppercaseRequest)
-		ans, err := svc.Uppercase(ctx, _req.Str...)
+		ans, err := svc.Uppercase(ctx, _req.StringsMap)
 		return &UppercaseResponse{Ans: ans}, err
 	}
 }

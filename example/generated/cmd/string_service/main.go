@@ -8,7 +8,7 @@ import (
 	middleware "github.com/devimteam/microgen/example/generated/middleware"
 	grpc "github.com/devimteam/microgen/example/generated/transport/grpc"
 	http "github.com/devimteam/microgen/example/generated/transport/http"
-	stringsvc "github.com/devimteam/protobuf/stringsvc"
+	protobuf "github.com/devimteam/microgen/example/protobuf"
 	log "github.com/go-kit/kit/log"
 	grpc1 "google.golang.org/grpc"
 	net "net"
@@ -72,7 +72,7 @@ func ServeGRPC(endpoints *generated.Endpoints, ch chan<- error, addr string, log
 	// Here you can add middlewares for grpc server.
 	server := grpc.NewGRPCServer(endpoints)
 	grpcServer := grpc1.NewServer()
-	stringsvc.RegisterStringServiceServer(grpcServer, server)
+	protobuf.RegisterStringServiceServer(grpcServer, server)
 	logger.Log("listen on", addr)
 	ch <- grpcServer.Serve(listener)
 }
