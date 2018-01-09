@@ -8,7 +8,7 @@ import (
 	stringsvc "github.com/devimteam/protobuf/stringsvc"
 )
 
-func ToProto(str []map[string]interface{}) ([]map[string]interface{}, error) {
+func ElMapStringInterfaceToProto(str []map[string]interface{}) ([]map[string]interface{}, error) {
 	panic("function not provided")
 }
 
