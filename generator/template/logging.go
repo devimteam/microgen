@@ -195,14 +195,20 @@ func (t *loggingTemplate) loggingFunc(signature *types.Function) *Statement {
 func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
-			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
-				Line().Lit("method"), Lit(signature.Name),
-				Line().List(Lit("request"), t.logRequest(signature)),
-				Line().List(Lit("response"), t.logResponse(signature)),
-				//Add(t.paramsNameAndValue(removeContextIfFirst(signature.Args), signature.Name)),
-				//Add(t.paramsNameAndValue(removeContextIfFirst(signature.Results), signature.Name)),
-				Line().Lit("took"), Qual(PackagePathTime, "Since").Call(Id("begin")),
-			),
+			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").CallFunc(func(g *Group) {
+				g.Line().Lit("method")
+				g.Lit(signature.Name)
+
+				if t.calcParamAmount(signature.Name, removeContextIfFirst(signature.Args)) > 0 {
+					g.Line().List(Lit("request"), t.logRequest(signature))
+				}
+				if t.calcParamAmount(signature.Name, removeErrorIfLast(signature.Results)) > 0 {
+					g.Line().List(Lit("response"), t.logResponse(signature))
+				}
+
+				g.Line().Lit("took")
+				g.Qual(PackagePathTime, "Since").Call(Id("begin"))
+			}),
 		).Call(Qual(PackagePathTime, "Now").Call())
 
 		g.Return().Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))

@@ -82,6 +82,7 @@ func (info GenerationInfo) Copy() *GenerationInfo {
 
 		GRPCRegAddr:     info.GRPCRegAddr,
 		ProtobufPackage: info.ProtobufPackage,
+		FileHeader:      info.FileHeader,
 	}
 }
 
