@@ -71,7 +71,7 @@ func (t *httpServerTemplate) Prepare() error {
 //
 func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transporthttp")
-	f.PackageComment(FileHeader)
+	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
 	f.Func().Id("NewHTTPHandler").Params(

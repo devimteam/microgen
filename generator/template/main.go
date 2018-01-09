@@ -25,7 +25,7 @@ func NewMainTemplate(info *GenerationInfo) Template {
 
 func (t *mainTemplate) Render() write_strategy.Renderer {
 	f := NewFile("main")
-	f.PackageComment(FileHeader)
+	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`This file will never be overwritten.`)
 
 	f.Line().Add(t.mainFunc())

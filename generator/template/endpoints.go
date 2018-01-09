@@ -61,7 +61,7 @@ func endpointStructName(str string) string {
 //
 func (t *endpointsTemplate) Render() write_strategy.Renderer {
 	f := NewFile(t.Info.ServiceImportPackageName)
-	f.PackageComment(FileHeader)
+	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {

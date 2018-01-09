@@ -70,7 +70,7 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 //
 func (t *loggingTemplate) Render() write_strategy.Renderer {
 	f := NewFile("middleware")
-	f.PackageComment(FileHeader)
+	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
 	f.Comment("ServiceLogging writes params, results and working time of method call to provided logger after its execution.").
