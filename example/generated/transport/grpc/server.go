@@ -4,8 +4,8 @@ package transportgrpc
 
 import (
 	generated "github.com/devimteam/microgen/example/generated"
-	protobuf "github.com/devimteam/microgen/example/generated/transport/converter/protobuf"
-	stringsvc "github.com/devimteam/protobuf/stringsvc"
+	protobuf1 "github.com/devimteam/microgen/example/generated/transport/converter/protobuf"
+	protobuf "github.com/devimteam/microgen/example/protobuf"
 	grpc "github.com/go-kit/kit/transport/grpc"
 	context "golang.org/x/net/context"
 )
@@ -16,49 +16,49 @@ type stringServiceServer struct {
 	testCase  grpc.Handler
 }
 
-func NewGRPCServer(endpoints *generated.Endpoints, opts ...grpc.ServerOption) stringsvc.StringServiceServer {
+func NewGRPCServer(endpoints *generated.Endpoints, opts ...grpc.ServerOption) protobuf.StringServiceServer {
 	return &stringServiceServer{
 		count: grpc.NewServer(
 			endpoints.CountEndpoint,
-			protobuf.DecodeCountRequest,
-			protobuf.EncodeCountResponse,
+			protobuf1.DecodeCountRequest,
+			protobuf1.EncodeCountResponse,
 			opts...,
 		),
 		testCase: grpc.NewServer(
 			endpoints.TestCaseEndpoint,
-			protobuf.DecodeTestCaseRequest,
-			protobuf.EncodeTestCaseResponse,
+			protobuf1.DecodeTestCaseRequest,
+			protobuf1.EncodeTestCaseResponse,
 			opts...,
 		),
 		uppercase: grpc.NewServer(
 			endpoints.UppercaseEndpoint,
-			protobuf.DecodeUppercaseRequest,
-			protobuf.EncodeUppercaseResponse,
+			protobuf1.DecodeUppercaseRequest,
+			protobuf1.EncodeUppercaseResponse,
 			opts...,
 		),
 	}
 }
 
-func (S *stringServiceServer) Uppercase(ctx context.Context, req *stringsvc.UppercaseRequest) (*stringsvc.UppercaseResponse, error) {
+func (S *stringServiceServer) Uppercase(ctx context.Context, req *protobuf.UppercaseRequest) (*protobuf.UppercaseResponse, error) {
 	_, resp, err := S.uppercase.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*stringsvc.UppercaseResponse), nil
+	return resp.(*protobuf.UppercaseResponse), nil
 }
 
-func (S *stringServiceServer) Count(ctx context.Context, req *stringsvc.CountRequest) (*stringsvc.CountResponse, error) {
+func (S *stringServiceServer) Count(ctx context.Context, req *protobuf.CountRequest) (*protobuf.CountResponse, error) {
 	_, resp, err := S.count.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*stringsvc.CountResponse), nil
+	return resp.(*protobuf.CountResponse), nil
 }
 
-func (S *stringServiceServer) TestCase(ctx context.Context, req *stringsvc.TestCaseRequest) (*stringsvc.TestCaseResponse, error) {
+func (S *stringServiceServer) TestCase(ctx context.Context, req *protobuf.TestCaseRequest) (*protobuf.TestCaseResponse, error) {
 	_, resp, err := S.testCase.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*stringsvc.TestCaseResponse), nil
+	return resp.(*protobuf.TestCaseResponse), nil
 }

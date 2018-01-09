@@ -28,37 +28,37 @@ func CommonHTTPResponseEncoder(_ context.Context, w http.ResponseWriter, respons
 func DecodeHTTPUppercaseRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req generated.UppercaseRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
-	return req, err
+	return &req, err
 }
 
 func DecodeHTTPCountRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req generated.CountRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
-	return req, err
+	return &req, err
 }
 
 func DecodeHTTPTestCaseRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req generated.TestCaseRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
-	return req, err
+	return &req, err
 }
 
 func DecodeHTTPUppercaseResponse(_ context.Context, r *http.Response) (interface{}, error) {
 	var resp generated.UppercaseResponse
 	err := json.NewDecoder(r.Body).Decode(&resp)
-	return resp, err
+	return &resp, err
 }
 
 func DecodeHTTPCountResponse(_ context.Context, r *http.Response) (interface{}, error) {
 	var resp generated.CountResponse
 	err := json.NewDecoder(r.Body).Decode(&resp)
-	return resp, err
+	return &resp, err
 }
 
 func DecodeHTTPTestCaseResponse(_ context.Context, r *http.Response) (interface{}, error) {
 	var resp generated.TestCaseResponse
 	err := json.NewDecoder(r.Body).Decode(&resp)
-	return resp, err
+	return &resp, err
 }
 
 func EncodeHTTPUppercaseRequest(ctx context.Context, r *http.Request, request interface{}) error {

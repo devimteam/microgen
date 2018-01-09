@@ -4,15 +4,15 @@
 package protobuf
 
 import (
+	protobuf "github.com/devimteam/microgen/example/protobuf"
 	entity "github.com/devimteam/microgen/example/svc/entity"
-	stringsvc "github.com/devimteam/protobuf/stringsvc"
 )
 
-func ElMapStringInterfaceToProto(str []map[string]interface{}) ([]map[string]interface{}, error) {
+func MapStringStringToProto(stringsMap map[string]string) (map[string]string, error) {
 	panic("function not provided")
 }
 
-func ProtoTo(protoStr []map[string]interface{}) ([]map[string]interface{}, error) {
+func ProtoToMapStringString(protoStringsMap map[string]string) (map[string]string, error) {
 	panic("function not provided")
 }
 
@@ -24,11 +24,11 @@ func ProtoToListInt(protoPositions []int64) ([]int, error) {
 	panic("function not provided")
 }
 
-func ListPtrEntityCommentToProto(comments []*entity.Comment) ([]*stringsvc.Comment, error) {
+func ListPtrEntityCommentToProto(comments []*entity.Comment) ([]*protobuf.Comment, error) {
 	panic("function not provided")
 }
 
-func ProtoToListPtrEntityComment(protoComments []*stringsvc.Comment) ([]*entity.Comment, error) {
+func ProtoToListPtrEntityComment(protoComments []*protobuf.Comment) ([]*entity.Comment, error) {
 	panic("function not provided")
 }
 

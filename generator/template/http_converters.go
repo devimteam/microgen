@@ -216,7 +216,7 @@ func (t *httpConverterTemplate) decodeHttpRequest(fn *types.Function) *Statement
 	).BlockFunc(func(g *Group) {
 		g.Var().Id("req").Qual(t.Info.ServiceImportPath, requestStructName(fn))
 		g.Err().Op(":=").Qual(PackagePathJson, "NewDecoder").Call(Id("r").Dot("Body")).Dot("Decode").Call(Op("&").Id("req"))
-		g.Return(Id("req"), Err())
+		g.Return(Op("&").Id("req"), Err())
 	})
 }
 
@@ -237,7 +237,7 @@ func (t *httpConverterTemplate) decodeHttpResponse(fn *types.Function) *Statemen
 		BlockFunc(func(g *Group) {
 			g.Var().Id("resp").Qual(t.Info.ServiceImportPath, responseStructName(fn))
 			g.Err().Op(":=").Qual(PackagePathJson, "NewDecoder").Call(Id("r").Dot("Body")).Dot("Decode").Call(Op("&").Id("resp"))
-			g.Return(Id("resp"), Err())
+			g.Return(Op("&").Id("resp"), Err())
 		})
 }
 

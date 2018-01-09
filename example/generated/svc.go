@@ -7,11 +7,11 @@ import (
 )
 
 // @microgen middleware, logging, grpc, http, recover, main
-// @grpc-addr devim.string.team
-// @protobuf github.com/devimteam/protobuf/stringsvc
+// @grpc-addr service.string
+// @protobuf github.com/devimteam/microgen/example/protobuf
 type StringService interface {
-	// @logs-ignore ans, err, str
-	Uppercase(ctx context.Context, str ...map[string]interface{}) (ans string, err error)
+	// @logs-ignore ans, err
+	Uppercase(ctx context.Context, stringsMap map[string]string) (ans string, err error)
 	Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error)
 	// @logs-len comments
 	TestCase(ctx context.Context, comments []*entity.Comment) (tree map[string]int, err error)
@@ -26,7 +26,7 @@ func NewStringService() StringService {
 	panic("constructor not provided")
 }
 
-func (S *stringService) Uppercase(ctx context.Context, str ...map[string]interface{}) (ans string, err error) {
+func (S *stringService) Uppercase(ctx context.Context, stringsMap map[string]string) (ans string, err error) {
 	panic("method not provided")
 }
 

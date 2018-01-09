@@ -5,7 +5,7 @@ package stringsvc
 import entity "github.com/devimteam/microgen/example/svc/entity"
 
 type UppercaseRequest struct {
-	Str []map[string]interface{} `json:"str"` // This field was defined with ellipsis (...).
+	StringsMap map[string]string `json:"strings_map"`
 }
 
 type UppercaseResponse struct {
