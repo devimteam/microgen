@@ -25,14 +25,14 @@ type serviceRecovering struct {
 	next   generated.StringService
 }
 
-func (R *serviceRecovering) Uppercase(ctx context.Context, str ...map[string]interface{}) (ans string, err error) {
+func (R *serviceRecovering) Uppercase(ctx context.Context, stringsMap map[string]string) (ans string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			R.logger.Log("@method", "Uppercase", "recover panic", r)
 			err = fmt.Errorf("%v", r)
 		}
 	}()
-	return R.next.Uppercase(ctx, str...)
+	return R.next.Uppercase(ctx, stringsMap)
 }
 
 func (R *serviceRecovering) Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error) {

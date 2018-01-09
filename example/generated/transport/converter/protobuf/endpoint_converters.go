@@ -5,21 +5,21 @@ package protobuf
 import (
 	context "context"
 	generated "github.com/devimteam/microgen/example/generated"
-	stringsvc "github.com/devimteam/protobuf/stringsvc"
+	protobuf "github.com/devimteam/microgen/example/protobuf"
 )
 
 func EncodeUppercaseRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(*generated.UppercaseRequest)
-	reqStr, err := ElMapStringInterfaceToProto(req.Str)
+	reqStringsMap, err := MapStringStringToProto(req.StringsMap)
 	if err != nil {
 		return nil, err
 	}
-	return &stringsvc.UppercaseRequest{Str: reqStr}, nil
+	return &protobuf.UppercaseRequest{StringsMap: reqStringsMap}, nil
 }
 
 func EncodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(*generated.CountRequest)
-	return &stringsvc.CountRequest{
+	return &protobuf.CountRequest{
 		Symbol: req.Symbol,
 		Text:   req.Text,
 	}, nil
@@ -31,12 +31,12 @@ func EncodeTestCaseRequest(_ context.Context, request interface{}) (interface{},
 	if err != nil {
 		return nil, err
 	}
-	return &stringsvc.TestCaseRequest{Comments: reqComments}, nil
+	return &protobuf.TestCaseRequest{Comments: reqComments}, nil
 }
 
 func EncodeUppercaseResponse(_ context.Context, response interface{}) (interface{}, error) {
 	resp := response.(*generated.UppercaseResponse)
-	return &stringsvc.UppercaseResponse{Ans: resp.Ans}, nil
+	return &protobuf.UppercaseResponse{Ans: resp.Ans}, nil
 }
 
 func EncodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
@@ -45,7 +45,7 @@ func EncodeCountResponse(_ context.Context, response interface{}) (interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	return &stringsvc.CountResponse{
+	return &protobuf.CountResponse{
 		Count:     int64(resp.Count),
 		Positions: respPositions,
 	}, nil
@@ -57,20 +57,20 @@ func EncodeTestCaseResponse(_ context.Context, response interface{}) (interface{
 	if err != nil {
 		return nil, err
 	}
-	return &stringsvc.TestCaseResponse{Tree: respTree}, nil
+	return &protobuf.TestCaseResponse{Tree: respTree}, nil
 }
 
 func DecodeUppercaseRequest(_ context.Context, request interface{}) (interface{}, error) {
-	req := request.(*stringsvc.UppercaseRequest)
-	reqStr, err := ProtoTo(req.Str)
+	req := request.(*protobuf.UppercaseRequest)
+	reqStringsMap, err := ProtoToMapStringString(req.StringsMap)
 	if err != nil {
 		return nil, err
 	}
-	return &generated.UppercaseRequest{Str: reqStr}, nil
+	return &generated.UppercaseRequest{StringsMap: reqStringsMap}, nil
 }
 
 func DecodeCountRequest(_ context.Context, request interface{}) (interface{}, error) {
-	req := request.(*stringsvc.CountRequest)
+	req := request.(*protobuf.CountRequest)
 	return &generated.CountRequest{
 		Symbol: string(req.Symbol),
 		Text:   string(req.Text),
@@ -78,7 +78,7 @@ func DecodeCountRequest(_ context.Context, request interface{}) (interface{}, er
 }
 
 func DecodeTestCaseRequest(_ context.Context, request interface{}) (interface{}, error) {
-	req := request.(*stringsvc.TestCaseRequest)
+	req := request.(*protobuf.TestCaseRequest)
 	reqComments, err := ProtoToListPtrEntityComment(req.Comments)
 	if err != nil {
 		return nil, err
@@ -87,12 +87,12 @@ func DecodeTestCaseRequest(_ context.Context, request interface{}) (interface{},
 }
 
 func DecodeUppercaseResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(*stringsvc.UppercaseResponse)
+	resp := response.(*protobuf.UppercaseResponse)
 	return &generated.UppercaseResponse{Ans: string(resp.Ans)}, nil
 }
 
 func DecodeCountResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(*stringsvc.CountResponse)
+	resp := response.(*protobuf.CountResponse)
 	respPositions, err := ProtoToListInt(resp.Positions)
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func DecodeCountResponse(_ context.Context, response interface{}) (interface{}, 
 }
 
 func DecodeTestCaseResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(*stringsvc.TestCaseResponse)
+	resp := response.(*protobuf.TestCaseResponse)
 	respTree, err := ProtoToMapStringInt(resp.Tree)
 	if err != nil {
 		return nil, err

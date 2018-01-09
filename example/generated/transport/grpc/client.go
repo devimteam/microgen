@@ -5,7 +5,7 @@ package transportgrpc
 import (
 	generated "github.com/devimteam/microgen/example/generated"
 	protobuf "github.com/devimteam/microgen/example/generated/transport/converter/protobuf"
-	stringsvc "github.com/devimteam/protobuf/stringsvc"
+	protobuf1 "github.com/devimteam/microgen/example/protobuf"
 	grpc1 "github.com/go-kit/kit/transport/grpc"
 	grpc "google.golang.org/grpc"
 )
@@ -14,29 +14,29 @@ func NewGRPCClient(conn *grpc.ClientConn, opts ...grpc1.ClientOption) generated.
 	return &generated.Endpoints{
 		CountEndpoint: grpc1.NewClient(
 			conn,
-			"devim.string.team",
+			"service.string",
 			"Count",
 			protobuf.EncodeCountRequest,
 			protobuf.DecodeCountResponse,
-			stringsvc.CountResponse{},
+			protobuf1.CountResponse{},
 			opts...,
 		).Endpoint(),
 		TestCaseEndpoint: grpc1.NewClient(
 			conn,
-			"devim.string.team",
+			"service.string",
 			"TestCase",
 			protobuf.EncodeTestCaseRequest,
 			protobuf.DecodeTestCaseResponse,
-			stringsvc.TestCaseResponse{},
+			protobuf1.TestCaseResponse{},
 			opts...,
 		).Endpoint(),
 		UppercaseEndpoint: grpc1.NewClient(
 			conn,
-			"devim.string.team",
+			"service.string",
 			"Uppercase",
 			protobuf.EncodeUppercaseRequest,
 			protobuf.DecodeUppercaseResponse,
-			stringsvc.UppercaseResponse{},
+			protobuf1.UppercaseResponse{},
 			opts...,
 		).Endpoint(),
 	}

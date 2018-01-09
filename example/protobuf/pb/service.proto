@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+option go_package = "github.com/devimteam/microgen/example/protobuf;protobuf";
+
+package service.string;
+
+import "google/protobuf/timestamp.proto";
+
+service StringService {
+    rpc Uppercase(UppercaseRequest) returns (UppercaseResponse);
+    rpc Count(CountRequest) returns (CountResponse);
+    rpc TestCase(TestCaseRequest) returns (TestCaseResponse);
+}
+
+message UppercaseRequest {
+    map<string, string> strings_map = 1;
+}
+
+message UppercaseResponse {
+    string ans = 1;
+}
+
+message CountRequest {
+    string text = 1;
+    string symbol = 2;
+}
+
+message CountResponse {
+    int64 count = 1;
+    repeated int64 positions = 2;
+}
+
+message Comment {
+    string text = 1;
+    Comment relates = 2;
+    google.protobuf.Timestamp PostedAt = 3;
+}
+
+message TestCaseRequest {
+    repeated Comment comments = 1;
+}
+
+message TestCaseResponse {
+    map<string, int64> tree = 1;
+}
