@@ -133,15 +133,20 @@ Follow this short guide to try microgen tool.
 package stringsvc
 
 import (
-    "context"
+	"context"
+
+	"github.com/devimteam/microgen/example/svc/entity"
 )
 
-// @microgen http, grpc, middleware, logging, recover, main
-// @protobuf github.com/devimteam/proto-utils
-// @grpc-addr test.address
+// @microgen middleware, logging, grpc, http, recover, main
+// @grpc-addr service.string
+// @protobuf github.com/devimteam/microgen/example/protobuf
 type StringService interface {
-    Uppercase(ctx context.Context, str string) (ans string, err error)
-    Count(ctx context.Context, text string, symbol string) (count int, positions []int)
+	// @logs-ignore ans, err
+	Uppercase(ctx context.Context, stringsMap map[string]string) (ans string, err error)
+	Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error)
+	// @logs-len comments
+	TestCase(ctx context.Context, comments []*entity.Comment) (tree map[string]int, err error)
 }
 ```
 2. Open command line next to your `service.go`.
