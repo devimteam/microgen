@@ -11,10 +11,11 @@ import (
 type mainTemplate struct {
 	Info *GenerationInfo
 
-	logging    bool
-	recovering bool
-	grpcServer bool
-	httpServer bool
+	logging      bool
+	recovering   bool
+	errorLogging bool
+	grpcServer   bool
+	httpServer   bool
 }
 
 func NewMainTemplate(info *GenerationInfo) Template {
@@ -53,6 +54,8 @@ func (t *mainTemplate) Prepare() error {
 			t.httpServer = true
 		case GrpcTag, GrpcServerTag:
 			t.grpcServer = true
+		case ErrorLoggingMiddlewareTag:
+			t.errorLogging = true
 		}
 	}
 	return nil
@@ -98,6 +101,11 @@ func (t *mainTemplate) mainFunc() *Statement {
 			main.Id("service").Op("=").
 				Qual(filepath.Join(t.Info.ServiceImportPath, "middleware"), "ServiceLogging").Call(Id("logger")).Call(Id("service")).
 				Comment(`Setup service logging.`)
+		}
+		if t.errorLogging {
+			main.Id("service").Op("=").
+				Qual(filepath.Join(t.Info.ServiceImportPath, "middleware"), "ServiceErrorLogging").Call(Id("logger")).Call(Id("service")).
+				Comment(`Setup error logging.`)
 		}
 		if t.recovering {
 			main.Id("service").Op("=").

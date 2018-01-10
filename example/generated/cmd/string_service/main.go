@@ -30,6 +30,7 @@ func main() {
 
 	service := generated.NewStringService()                      // Create new service.
 	service = middleware.ServiceLogging(logger)(service)         // Setup service logging.
+	service = middleware.ServiceErrorLogging(logger)(service)    // Setup error logging.
 	service = middleware.ServiceRecovering(errorLogger)(service) // Setup service recovering.
 
 	endpoints := &generated.Endpoints{

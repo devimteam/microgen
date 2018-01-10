@@ -18,16 +18,17 @@ const (
 	ProtobufTag     = "protobuf"
 	GRPCRegAddr     = "grpc-addr"
 
-	MiddlewareTag        = template.MiddlewareTag
-	LoggingMiddlewareTag = template.LoggingMiddlewareTag
-	RecoverMiddlewareTag = template.RecoverMiddlewareTag
-	HttpTag              = template.HttpTag
-	HttpServerTag        = template.HttpServerTag
-	HttpClientTag        = template.HttpClientTag
-	GrpcTag              = template.GrpcTag
-	GrpcServerTag        = template.GrpcServerTag
-	GrpcClientTag        = template.GrpcClientTag
-	MainTag              = template.MainTag
+	MiddlewareTag             = template.MiddlewareTag
+	LoggingMiddlewareTag      = template.LoggingMiddlewareTag
+	RecoverMiddlewareTag      = template.RecoverMiddlewareTag
+	HttpTag                   = template.HttpTag
+	HttpServerTag             = template.HttpServerTag
+	HttpClientTag             = template.HttpClientTag
+	GrpcTag                   = template.GrpcTag
+	GrpcServerTag             = template.GrpcServerTag
+	GrpcClientTag             = template.GrpcClientTag
+	MainTag                   = template.MainTag
+	ErrorLoggingMiddlewareTag = template.ErrorLoggingMiddlewareTag
 )
 
 func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, absOutPath, sourcePath string) (units []*generationUnit, err error) {
@@ -139,6 +140,8 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 		return append(tmpls, template.NewRecoverTemplate(info))
 	case MainTag:
 		return append(tmpls, template.NewMainTemplate(info))
+	case ErrorLoggingMiddlewareTag:
+		return append(tmpls, template.NewErrorLoggingTemplate(info))
 	}
 	return nil
 }

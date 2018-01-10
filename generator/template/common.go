@@ -39,16 +39,17 @@ const (
 )
 
 const (
-	MiddlewareTag        = "middleware"
-	LoggingMiddlewareTag = "logging"
-	RecoverMiddlewareTag = "recover"
-	HttpTag              = "http"
-	HttpServerTag        = "http-server"
-	HttpClientTag        = "http-client"
-	GrpcTag              = "grpc"
-	GrpcServerTag        = "grpc-server"
-	GrpcClientTag        = "grpc-client"
-	MainTag              = "main"
+	MiddlewareTag             = "middleware"
+	LoggingMiddlewareTag      = "logging"
+	RecoverMiddlewareTag      = "recover"
+	HttpTag                   = "http"
+	HttpServerTag             = "http-server"
+	HttpClientTag             = "http-client"
+	GrpcTag                   = "grpc"
+	GrpcServerTag             = "grpc-server"
+	GrpcClientTag             = "grpc-client"
+	MainTag                   = "main"
+	ErrorLoggingMiddlewareTag = "error-logging"
 )
 
 type WriteStrategyState int
