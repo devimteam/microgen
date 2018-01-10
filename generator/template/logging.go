@@ -70,7 +70,7 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 //
 func (t *loggingTemplate) Render() write_strategy.Renderer {
 	f := NewFile("middleware")
-	f.PackageComment(FileHeader)
+	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
 	f.Comment("ServiceLogging writes params, results and working time of method call to provided logger after its execution.").
@@ -89,6 +89,15 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 	for _, signature := range t.Info.Iface.Methods {
 		f.Line()
 		f.Add(t.loggingFunc(signature)).Line()
+	}
+
+	for _, signature := range t.Info.Iface.Methods {
+		if params := removeContextIfFirst(signature.Args); t.calcParamAmount(signature.Name, params) > 0 {
+			f.Add(t.loggingEntity("log"+requestStructName(signature), signature, params)).Line()
+		}
+		if params := removeErrorIfLast(signature.Results); t.calcParamAmount(signature.Name, params) > 0 {
+			f.Add(t.loggingEntity("log"+responseStructName(signature), signature, params)).Line()
+		}
 	}
 
 	return f
@@ -136,6 +145,24 @@ func (t *loggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 	}))
 }
 
+func (t *loggingTemplate) loggingEntity(name string, fn *types.Function, params []types.Variable) Code {
+	if len(params) == 0 {
+		return nil
+	}
+	return Type().Id(name).StructFunc(func(g *Group) {
+		ignore := t.ignoreParams[fn.Name]
+		lenParams := t.lenParams[fn.Name]
+		for _, field := range params {
+			if !util.IsInStringSlice(field.Name, ignore) {
+				g.Id(util.ToUpperFirst(field.Name)).Add(fieldType(field.Type, false))
+			}
+			if util.IsInStringSlice(field.Name, lenParams) {
+				g.Id("Len" + util.ToUpperFirst(field.Name)).Int().Tag(map[string]string{"json": "len(" + util.ToUpperFirst(field.Name) + ")"})
+			}
+		}
+	}).Line()
+}
+
 // Render logging middleware for interface method.
 //
 //		func (s *serviceLogging) Count(ctx context.Context, text string, symbol string) (count int, positions []int) {
@@ -168,12 +195,20 @@ func (t *loggingTemplate) loggingFunc(signature *types.Function) *Statement {
 func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
-			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
-				Line().Lit("@method"), Lit(signature.Name),
-				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Args), signature.Name)),
-				Add(t.paramsNameAndValue(removeContextIfFirst(signature.Results), signature.Name)),
-				Line().Lit("took"), Qual(PackagePathTime, "Since").Call(Id("begin")),
-			),
+			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").CallFunc(func(g *Group) {
+				g.Line().Lit("method")
+				g.Lit(signature.Name)
+
+				if t.calcParamAmount(signature.Name, removeContextIfFirst(signature.Args)) > 0 {
+					g.Line().List(Lit("request"), t.logRequest(signature))
+				}
+				if t.calcParamAmount(signature.Name, removeErrorIfLast(signature.Results)) > 0 {
+					g.Line().List(Lit("response"), t.logResponse(signature))
+				}
+
+				g.Line().Lit("took")
+				g.Qual(PackagePathTime, "Since").Call(Id("begin"))
+			}),
 		).Call(Qual(PackagePathTime, "Now").Call())
 
 		g.Return().Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
@@ -199,4 +234,50 @@ func (t *loggingTemplate) paramsNameAndValue(fields []types.Variable, functionNa
 			}
 		}
 	})
+}
+
+func (t *loggingTemplate) fillMap(fn *types.Function, params []types.Variable) *Statement {
+	return Values(DictFunc(func(d Dict) {
+		ignore := t.ignoreParams[fn.Name]
+		lenParams := t.lenParams[fn.Name]
+		for _, field := range params {
+			if !util.IsInStringSlice(field.Name, ignore) {
+				d[Id(util.ToUpperFirst(field.Name))] = Id(field.Name)
+			}
+			if util.IsInStringSlice(field.Name, lenParams) {
+				d[Id("Len"+util.ToUpperFirst(field.Name))] = Len(Id(field.Name))
+			}
+		}
+	}))
+}
+
+func (t *loggingTemplate) logRequest(fn *types.Function) *Statement {
+	paramAmount := t.calcParamAmount(fn.Name, removeContextIfFirst(fn.Args))
+	if paramAmount <= 0 {
+		return Lit("")
+	}
+	return Id("log" + requestStructName(fn)).Add(t.fillMap(fn, removeContextIfFirst(fn.Args)))
+}
+
+func (t *loggingTemplate) logResponse(fn *types.Function) *Statement {
+	paramAmount := t.calcParamAmount(fn.Name, removeErrorIfLast(fn.Results))
+	if paramAmount <= 0 {
+		return Lit("")
+	}
+	return Id("log" + responseStructName(fn)).Add(t.fillMap(fn, removeErrorIfLast(fn.Results)))
+}
+
+func (t *loggingTemplate) calcParamAmount(name string, params []types.Variable) int {
+	ignore := t.ignoreParams[name]
+	lenParams := t.lenParams[name]
+	paramAmount := len(params)
+	for _, field := range params {
+		if util.IsInStringSlice(field.Name, ignore) {
+			paramAmount -= 1
+		}
+		if util.IsInStringSlice(field.Name, lenParams) {
+			paramAmount += 1
+		}
+	}
+	return paramAmount
 }

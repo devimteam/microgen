@@ -48,6 +48,7 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 		SourceFilePath:           absSourcePath,
 		ProtobufPackage:          fetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
 		GRPCRegAddr:              fetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
+		FileHeader:               defaultFileHeader,
 	}
 	stubSvc, err := NewGenUnit(template.NewStubInterfaceTemplate(info), absOutPath)
 	if err != nil {

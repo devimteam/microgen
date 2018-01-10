@@ -43,7 +43,7 @@ func responseStructName(signature *types.Function) string {
 //
 func (t *exchangeTemplate) Render() write_strategy.Renderer {
 	f := NewFile(t.Info.ServiceImportPackageName)
-	f.PackageComment(FileHeader)
+	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
 	for _, signature := range t.Info.Iface.Methods {

@@ -25,7 +25,7 @@ func NewMainTemplate(info *GenerationInfo) Template {
 
 func (t *mainTemplate) Render() write_strategy.Renderer {
 	f := NewFile("main")
-	f.PackageComment(FileHeader)
+	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`This file will never be overwritten.`)
 
 	f.Line().Add(t.mainFunc())
@@ -82,8 +82,12 @@ func (t *mainTemplate) interruptHandler() *Statement {
 
 func (t *mainTemplate) mainFunc() *Statement {
 	return Func().Id("main").Call().BlockFunc(func(main *Group) {
-		main.Id("logger").Op(":=").Id("InitLogger").Call()
-		main.Defer().Id("logger").Dot("Log").Call(Lit("goodbye"), Lit("good luck"))
+		main.Id("logger").Op(":=").
+			Qual(PackagePathGoKitLog, "With").Call(Id("InitLogger").Call(Qual(PackagePathOs, "Stdout")), Lit("level"), Lit("info"))
+		main.Id("errorLogger").Op(":=").
+			Qual(PackagePathGoKitLog, "With").Call(Id("InitLogger").Call(Qual(PackagePathOs, "Stderr")), Lit("level"), Lit("error"))
+		main.Id("logger").Dot("Log").Call(Lit("message"), Lit("Hello, I am alive"))
+		main.Defer().Id("logger").Dot("Log").Call(Lit("message"), Lit("goodbye, good luck"))
 		main.Line()
 		main.Id("errorChan").Op(":=").Make(Id("chan error"))
 		main.Go().Id("InterruptHandler").Call(Id("errorChan"))
@@ -97,7 +101,7 @@ func (t *mainTemplate) mainFunc() *Statement {
 		}
 		if t.recovering {
 			main.Id("service").Op("=").
-				Qual(filepath.Join(t.Info.ServiceImportPath, "middleware"), "ServiceRecovering").Call(Id("logger")).Call(Id("service")).
+				Qual(filepath.Join(t.Info.ServiceImportPath, "middleware"), "ServiceRecovering").Call(Id("errorLogger")).Call(Id("service")).
 				Comment(`Setup service recovering.`)
 		}
 		main.Line()
@@ -147,11 +151,10 @@ func (t *mainTemplate) mainFunc() *Statement {
 //		}
 func (t *mainTemplate) initLogger() *Statement {
 	return Comment(`InitLogger initialize go-kit JSON logger with timestamp and caller.`).Line().
-		Func().Id("InitLogger").Params().Params(Qual(PackagePathGoKitLog, "Logger")).BlockFunc(func(body *Group) {
-		body.Id("logger").Op(":=").Qual(PackagePathGoKitLog, "NewJSONLogger").Call(Qual(PackagePathOs, "Stdout"))
-		body.Id("logger").Op("=").Qual(PackagePathGoKitLog, "With").Call(Id("logger"), Lit("@when"), Qual(PackagePathGoKitLog, "DefaultTimestampUTC"))
-		body.Id("logger").Op("=").Qual(PackagePathGoKitLog, "With").Call(Id("logger"), Lit("@where"), Qual(PackagePathGoKitLog, "DefaultCaller"))
-		body.Id("logger").Dot("Log").Call(Lit("hello"), Lit("I am alive"))
+		Func().Id("InitLogger").Params(Id("writer").Qual(PackagePathIO, "Writer")).Params(Qual(PackagePathGoKitLog, "Logger")).BlockFunc(func(body *Group) {
+		body.Id("logger").Op(":=").Qual(PackagePathGoKitLog, "NewJSONLogger").Call(Id("writer"))
+		body.Id("logger").Op("=").Qual(PackagePathGoKitLog, "With").Call(Id("logger"), Lit("@timestamp"), Qual(PackagePathGoKitLog, "DefaultTimestampUTC"))
+		body.Id("logger").Op("=").Qual(PackagePathGoKitLog, "With").Call(Id("logger"), Lit("caller"), Qual(PackagePathGoKitLog, "DefaultCaller"))
 		body.Return(Id("logger"))
 	})
 }

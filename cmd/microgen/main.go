@@ -12,7 +12,9 @@ import (
 	"github.com/vetcher/godecl/types"
 )
 
-const Version = generator.Version
+const (
+	Version = generator.Version
+)
 
 var (
 	flagFileName  = flag.String("file", "service.go", "Name of file where described interface definition")
@@ -63,6 +65,7 @@ func main() {
 			err := unit.Generate()
 			if err != nil && err != generator.EmptyStrategyError {
 				fmt.Println("fatal:", err)
+				os.Exit(1)
 			}
 		}()
 	}
