@@ -45,6 +45,7 @@ func (L *serviceLogging) Count(ctx context.Context, text string, symbol string) 
 			},
 			"response", logCountResponse{
 				Count:     count,
+				Err:       err,
 				Positions: positions,
 			},
 			"took", time.Since(begin))
@@ -60,7 +61,10 @@ func (L *serviceLogging) TestCase(ctx context.Context, comments []*entity.Commen
 				Comments:    comments,
 				LenComments: len(comments),
 			},
-			"response", logTestCaseResponse{Tree: tree},
+			"response", logTestCaseResponse{
+				Err:  err,
+				Tree: tree,
+			},
 			"took", time.Since(begin))
 	}(time.Now())
 	return L.next.TestCase(ctx, comments)
@@ -78,6 +82,7 @@ type logCountRequest struct {
 type logCountResponse struct {
 	Count     int
 	Positions []int
+	Err       error
 }
 
 type logTestCaseRequest struct {
@@ -87,4 +92,5 @@ type logTestCaseRequest struct {
 
 type logTestCaseResponse struct {
 	Tree map[string]int
+	Err  error
 }

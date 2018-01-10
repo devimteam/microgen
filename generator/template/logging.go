@@ -95,7 +95,7 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 		if params := removeContextIfFirst(signature.Args); t.calcParamAmount(signature.Name, params) > 0 {
 			f.Add(t.loggingEntity("log"+requestStructName(signature), signature, params)).Line()
 		}
-		if params := removeErrorIfLast(signature.Results); t.calcParamAmount(signature.Name, params) > 0 {
+		if params := signature.Results; t.calcParamAmount(signature.Name, params) > 0 {
 			f.Add(t.loggingEntity("log"+responseStructName(signature), signature, params)).Line()
 		}
 	}
@@ -260,11 +260,11 @@ func (t *loggingTemplate) logRequest(fn *types.Function) *Statement {
 }
 
 func (t *loggingTemplate) logResponse(fn *types.Function) *Statement {
-	paramAmount := t.calcParamAmount(fn.Name, removeErrorIfLast(fn.Results))
+	paramAmount := t.calcParamAmount(fn.Name, fn.Results)
 	if paramAmount <= 0 {
 		return Lit("")
 	}
-	return Id("log" + responseStructName(fn)).Add(t.fillMap(fn, removeErrorIfLast(fn.Results)))
+	return Id("log" + responseStructName(fn)).Add(t.fillMap(fn, fn.Results))
 }
 
 func (t *loggingTemplate) calcParamAmount(name string, params []types.Variable) int {
