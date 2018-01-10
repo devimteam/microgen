@@ -95,7 +95,7 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 		if params := removeContextIfFirst(signature.Args); t.calcParamAmount(signature.Name, params) > 0 {
 			f.Add(t.loggingEntity("log"+requestStructName(signature), signature, params)).Line()
 		}
-		if params := signature.Results; t.calcParamAmount(signature.Name, params) > 0 {
+		if params := removeErrorIfLast(signature.Results); t.calcParamAmount(signature.Name, params) > 0 {
 			f.Add(t.loggingEntity("log"+responseStructName(signature), signature, params)).Line()
 		}
 	}
@@ -205,6 +205,9 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 				if t.calcParamAmount(signature.Name, removeErrorIfLast(signature.Results)) > 0 {
 					g.Line().List(Lit("response"), t.logResponse(signature))
 				}
+				if !util.IsInStringSlice(nameOfLastResultError(signature), t.ignoreParams[signature.Name]) {
+					g.Line().List(Lit("error"), Id(nameOfLastResultError(signature)))
+				}
 
 				g.Line().Lit("took")
 				g.Qual(PackagePathTime, "Since").Call(Id("begin"))
@@ -260,11 +263,11 @@ func (t *loggingTemplate) logRequest(fn *types.Function) *Statement {
 }
 
 func (t *loggingTemplate) logResponse(fn *types.Function) *Statement {
-	paramAmount := t.calcParamAmount(fn.Name, fn.Results)
+	paramAmount := t.calcParamAmount(fn.Name, removeErrorIfLast(fn.Results))
 	if paramAmount <= 0 {
 		return Lit("")
 	}
-	return Id("log" + responseStructName(fn)).Add(t.fillMap(fn, fn.Results))
+	return Id("log" + responseStructName(fn)).Add(t.fillMap(fn, removeErrorIfLast(fn.Results)))
 }
 
 func (t *loggingTemplate) calcParamAmount(name string, params []types.Variable) int {
