@@ -206,7 +206,7 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 					g.Line().List(Lit("response"), t.logResponse(signature))
 				}
 				if !util.IsInStringSlice(nameOfLastResultError(signature), t.ignoreParams[signature.Name]) {
-					g.Line().List(Lit("error"), Id(nameOfLastResultError(signature)))
+					g.Line().List(Lit(nameOfLastResultError(signature)), Id(nameOfLastResultError(signature)))
 				}
 
 				g.Line().Lit("took")

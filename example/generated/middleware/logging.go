@@ -47,7 +47,7 @@ func (L *serviceLogging) Count(ctx context.Context, text string, symbol string) 
 				Count:     count,
 				Positions: positions,
 			},
-			"error", err,
+			"err", err,
 			"took", time.Since(begin))
 	}(time.Now())
 	return L.next.Count(ctx, text, symbol)
@@ -62,7 +62,7 @@ func (L *serviceLogging) TestCase(ctx context.Context, comments []*entity.Commen
 				LenComments: len(comments),
 			},
 			"response", logTestCaseResponse{Tree: tree},
-			"error", err,
+			"err", err,
 			"took", time.Since(begin))
 	}(time.Now())
 	return L.next.TestCase(ctx, comments)
