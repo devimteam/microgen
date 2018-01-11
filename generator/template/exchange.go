@@ -74,7 +74,7 @@ func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 //
 func exchange(name string, params []types.Variable) Code {
 	if len(params) == 0 {
-		return Comment("Formal exchange type, please do not delete").Line().
+		return Comment("Formal exchange type, please do not delete.").Line().
 			Type().Id(name).Struct().
 			Line()
 	}
