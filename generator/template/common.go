@@ -99,8 +99,11 @@ func removeContextIfFirst(fields []types.Variable) []types.Variable {
 }
 
 func IsContextFirst(fields []types.Variable) bool {
+	if len(fields) == 0{
+		return false
+	}
 	name := types.TypeName(fields[0].Type)
-	return name != nil && len(fields) > 0 &&
+	return name != nil &&
 		types.TypeImport(fields[0].Type) != nil &&
 		types.TypeImport(fields[0].Type).Package == PackagePathContext &&
 		*name == "Context"
@@ -115,8 +118,11 @@ func removeErrorIfLast(fields []types.Variable) []types.Variable {
 }
 
 func IsErrorLast(fields []types.Variable) bool {
+	if len(fields) == 0 {
+		return false
+	}
 	name := types.TypeName(fields[len(fields)-1].Type)
-	return name != nil && len(fields) > 0 &&
+	return name != nil &&
 		types.TypeImport(fields[len(fields)-1].Type) == nil &&
 		*name == "error"
 }
