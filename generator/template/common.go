@@ -31,6 +31,7 @@ const (
 	PackagePathSyscall            = "syscall"
 	PackagePathErrors             = "errors"
 	PackagePathNet                = "net"
+	PackageGorillaMux             = "github.com/gorilla/mux"
 
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"
@@ -99,7 +100,7 @@ func removeContextIfFirst(fields []types.Variable) []types.Variable {
 }
 
 func IsContextFirst(fields []types.Variable) bool {
-	if len(fields) == 0{
+	if len(fields) == 0 {
 		return false
 	}
 	name := types.TypeName(fields[0].Type)

@@ -1,11 +1,16 @@
 package template
 
 import (
+	"fmt"
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
+)
+
+const (
+	httpPostTag = "http-post"
 )
 
 type httpServerTemplate struct {
@@ -69,10 +74,30 @@ func (t *httpServerTemplate) Prepare() error {
 //			return handler
 //		}
 //
+
+/*
+
+func MakeHTTPHandler(s EchoService, logger log.Logger) http.Handler {
+	r := mux.NewRouter()
+
+	r.Methods("POST").Path("/echo").Handler(httptransport.NewServer(
+		makeEchoEndpoint(s),
+		decodeEchoRequest,
+		encodeResponse,
+		httptransport.ServerErrorLogger(logger),
+	))
+	return r
+}
+*/
+
 func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transporthttp")
 	f.PackageComment(FileHeader)
 	f.PackageComment(`Please, do not edit.`)
+
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+httpPostTag)
+
+	fmt.Println(tags)
 
 	f.Func().Id("NewHTTPHandler").Params(
 		Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints"),
@@ -80,16 +105,15 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	).Params(
 		Qual(PackagePathHttp, "Handler"),
 	).BlockFunc(func(g *Group) {
-		g.Id("handler").Op(":=").Qual(PackagePathHttp, "NewServeMux").Call()
+		g.Id("mux").Op(":=").Qual(PackageGorillaMux, "NewRouter").Call()
 		for _, fn := range t.Info.Iface.Methods {
-			g.Id("handler").Dot("Handle").Call(
-				Lit("/"+util.ToURLSnakeCase(fn.Name)),
+			g.Id("mux").Dot("Methods(\"GET\")").Dot("Path").
+				Call(Lit("/" + util.ToURLSnakeCase(fn.Name))).Dot("Handler").Call(
 				Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeRequestName(fn)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpEncodeResponseName(fn)),
-					Line().Id("opts").Op("..."),
-				),
+					Line().Id("opts").Op("...")),
 			)
 		}
 		g.Return(Id("handler"))
