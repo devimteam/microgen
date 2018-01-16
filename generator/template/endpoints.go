@@ -9,6 +9,7 @@ import (
 
 type endpointsTemplate struct {
 	Info *GenerationInfo
+	grpc bool
 }
 
 func NewEndpointsTemplate(info *GenerationInfo) Template {
@@ -71,7 +72,7 @@ func (t *endpointsTemplate) Render() write_strategy.Renderer {
 	}).Line()
 
 	for _, signature := range t.Info.Iface.Methods {
-		f.Add(serviceEndpointMethod(signature)).Line().Line()
+		f.Add(t.serviceEndpointMethod(signature)).Line().Line()
 	}
 	f.Line()
 	for _, signature := range t.Info.Iface.Methods {
@@ -85,7 +86,14 @@ func (endpointsTemplate) DefaultPath() string {
 	return "./endpoints.go"
 }
 
-func (endpointsTemplate) Prepare() error {
+func (t *endpointsTemplate) Prepare() error {
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
+	for _, tag := range tags {
+		switch tag {
+		case GrpcTag, GrpcServerTag, GrpcClientTag:
+			t.grpc = true
+		}
+	}
 	return nil
 }
 
@@ -107,35 +115,35 @@ func (t *endpointsTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 //			return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //		}
 //
-func serviceEndpointMethod(signature *types.Function) *Statement {
+func (t *endpointsTemplate) serviceEndpointMethod(signature *types.Function) *Statement {
 	return methodDefinition("Endpoints", signature).
-		BlockFunc(serviceEndpointMethodBody(signature))
+		BlockFunc(t.serviceEndpointMethodBody(signature))
 }
 
 // Render interface method body.
 //
-//		req := CountRequest{
+//		endpointCountRequest := CountRequest{
 //			Symbol: symbol,
 //			Text:   text,
 //		}
-//		resp, err := e.CountEndpoint(ctx, &req)
+//		endpointCountResponse, err := E.CountEndpoint(ctx, &endpointCountRequest)
 //		if err != nil {
 //			return
 //		}
-//		return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
+//		return endpointCountResponse.(*CountResponse).Count, endpointCountResponse.(*CountResponse).Positions, err
 //
-func serviceEndpointMethodBody(fn *types.Function) func(g *Group) {
+func (t *endpointsTemplate) serviceEndpointMethodBody(fn *types.Function) func(g *Group) {
 	reqName := endpointExchange("request", fn)
 	respName := endpointExchange("response", fn)
 	return func(g *Group) {
 		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByVariables(removeContextIfFirst(fn.Args)))
 		g.Add(endpointResponse(respName, fn)).Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(fn)), Op("&").Id(reqName))
-		g.If(Id(nameOfLastResultError(fn)).Op("!=").Nil().Block(
-			If(Qual(PackagePathGoogleGRPC, "Code").Call(Id(nameOfLastResultError(fn))).Op("==").Qual(PackagePathGoogleGRPCCodes, "Internal").Op("||").
-				Qual(PackagePathGoogleGRPC, "Code").Call(Id(nameOfLastResultError(fn))).Op("==").Qual(PackagePathGoogleGRPCCodes, "Unknown").Block(
-				Id(nameOfLastResultError(fn)).Op("=").Qual("errors", "New").Call(Qual(PackagePathGoogleGRPC, "ErrorDesc").Call(Id(nameOfLastResultError(fn)))),
-			)).Line().Return(),
-		))
+		g.If(Id(nameOfLastResultError(fn)).Op("!=").Nil().BlockFunc(func(ifg *Group) {
+			if t.grpc {
+				ifg.Add(checkGRPCError(fn))
+			}
+			ifg.Return()
+		}))
 		g.ReturnFunc(func(group *Group) {
 			for _, field := range removeErrorIfLast(fn.Results) {
 				group.Id(respName).Assert(Op("*").Id(responseStructName(fn))).Op(".").Add(structFieldName(&field))
@@ -143,6 +151,18 @@ func serviceEndpointMethodBody(fn *types.Function) func(g *Group) {
 			group.Id(nameOfLastResultError(fn))
 		})
 	}
+}
+
+func checkGRPCError(fn *types.Function) *Statement {
+	s := &Statement{}
+	s.If(List(Id("e"), Id("ok")).Op(":=").Qual(PackagePathGoogleGRPCStatus, "FromError").Call(Id(nameOfLastResultError(fn))),
+		Id("ok").Op("||").
+			Id("e").Dot("Code").Call().Op("==").Qual(PackagePathGoogleGRPCCodes, "Internal").Op("||").
+			Id("e").Dot("Code").Call().Op("==").Qual(PackagePathGoogleGRPCCodes, "Unknown"),
+	).Block(
+		Id(nameOfLastResultError(fn)).Op("=").Qual("errors", "New").Call(Id("e").Dot("Message").Call()),
+	)
+	return s
 }
 
 // Helper func for `serviceEndpointMethodBody`

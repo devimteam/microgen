@@ -7,8 +7,8 @@ import (
 	errors "errors"
 	entity "github.com/devimteam/microgen/example/svc/entity"
 	endpoint "github.com/go-kit/kit/endpoint"
-	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 type Endpoints struct {
@@ -21,8 +21,8 @@ func (E *Endpoints) Uppercase(ctx context.Context, stringsMap map[string]string)
 	endpointUppercaseRequest := UppercaseRequest{StringsMap: stringsMap}
 	endpointUppercaseResponse, err := E.UppercaseEndpoint(ctx, &endpointUppercaseRequest)
 	if err != nil {
-		if grpc.Code(err) == codes.Internal || grpc.Code(err) == codes.Unknown {
-			err = errors.New(grpc.ErrorDesc(err))
+		if e, ok := status.FromError(err); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
+			err = errors.New(e.Message())
 		}
 		return
 	}
@@ -36,8 +36,8 @@ func (E *Endpoints) Count(ctx context.Context, text string, symbol string) (coun
 	}
 	endpointCountResponse, err := E.CountEndpoint(ctx, &endpointCountRequest)
 	if err != nil {
-		if grpc.Code(err) == codes.Internal || grpc.Code(err) == codes.Unknown {
-			err = errors.New(grpc.ErrorDesc(err))
+		if e, ok := status.FromError(err); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
+			err = errors.New(e.Message())
 		}
 		return
 	}
@@ -48,8 +48,8 @@ func (E *Endpoints) TestCase(ctx context.Context, comments []*entity.Comment) (t
 	endpointTestCaseRequest := TestCaseRequest{Comments: comments}
 	endpointTestCaseResponse, err := E.TestCaseEndpoint(ctx, &endpointTestCaseRequest)
 	if err != nil {
-		if grpc.Code(err) == codes.Internal || grpc.Code(err) == codes.Unknown {
-			err = errors.New(grpc.ErrorDesc(err))
+		if e, ok := status.FromError(err); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
+			err = errors.New(e.Message())
 		}
 		return
 	}
