@@ -2,12 +2,12 @@ package generator
 
 import (
 	"fmt"
-	"strings"
-
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/devimteam/microgen/generator/template"
+	lg "github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 )
@@ -66,11 +66,11 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 	units = append(units, stubSvc, exch, endp)
 
 	genTags := util.FetchTags(iface.Docs, TagMark+MicrogenMainTag)
-	fmt.Println("Tags:", strings.Join(genTags, ", "))
+	lg.Logger.Logln(2, "Tags:", strings.Join(genTags, ", "))
 	for _, tag := range genTags {
 		templates := tagToTemplate(tag, info)
 		if templates == nil {
-			fmt.Printf("Warning! unexpected tag %s\n", tag)
+			lg.Logger.Logf(1, "Warning! unexpected tag %s\n", tag)
 			continue
 		}
 		for _, t := range templates {
@@ -147,6 +147,7 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 }
 
 func resolvePackagePath(outPath string) (string, error) {
+	lg.Logger.Logln(3, "try to resolve current package")
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		return "", fmt.Errorf("GOPATH is empty")

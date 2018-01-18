@@ -8,6 +8,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+
+	lg "github.com/devimteam/microgen/logger"
 )
 
 const (
@@ -69,7 +71,7 @@ func (s createFileStrategy) Save(f Renderer, filename string) error {
 	if err := ioutil.WriteFile(filename, formatted, 0644); err != nil {
 		return err
 	}
-	fmt.Println(NewFileMark, filepath.Join(s.absPath, s.relPath))
+	lg.Logger.Logln(2, NewFileMark, filepath.Join(s.absPath, s.relPath))
 	return nil
 }
 
@@ -148,6 +150,6 @@ func (s appendFileStrategy) Save(renderer Renderer, filename string) error {
 	if _, err = f.Write(formatted[len(formatTrick):]); err != nil {
 		return err
 	}
-	fmt.Println(AppendFileMark, filepath.Join(s.absPath, s.relPath))
+	lg.Logger.Logln(2, AppendFileMark, filepath.Join(s.absPath, s.relPath))
 	return nil
 }

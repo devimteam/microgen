@@ -25,6 +25,7 @@ generation parameters provides through ["tags"](#tags) in interface docs after g
 | -file  | service.go | Relative path to source file with service interface                           |
 | -out   | .          | Relative or absolute path to directory, where you want to see generated files |
 | -force | false      | With flag generate stub methods.                                              |
+| -v     | 1          | Log verbose level. 0 - print only errors, 3 - print everything.               |
 | -help  | false      | Print usage information                                                       |
 
 \* __Required option__
