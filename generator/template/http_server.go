@@ -2,10 +2,15 @@ package template
 
 import (
 	"path/filepath"
+	"strings"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
+)
+
+const (
+	httpMethodTag = "http-method"
 )
 
 type httpServerTemplate struct {
@@ -69,6 +74,22 @@ func (t *httpServerTemplate) Prepare() error {
 //			return handler
 //		}
 //
+
+/*
+
+func MakeHTTPHandler(s EchoService, logger log.Logger) http.Handler {
+	r := mux.NewRouter()
+
+	r.Methods("POST").Path("/echo").Handler(httptransport.NewServer(
+		makeEchoEndpoint(s),
+		decodeEchoRequest,
+		encodeResponse,
+		httptransport.ServerErrorLogger(logger),
+	))
+	return r
+}
+*/
+
 func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transporthttp")
 	f.PackageComment(FileHeader)
@@ -80,19 +101,25 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	).Params(
 		Qual(PackagePathHttp, "Handler"),
 	).BlockFunc(func(g *Group) {
-		g.Id("handler").Op(":=").Qual(PackagePathHttp, "NewServeMux").Call()
+		g.Id("mux").Op(":=").Qual(PackageGorillaMux, "NewRouter").Call()
 		for _, fn := range t.Info.Iface.Methods {
-			g.Id("handler").Dot("Handle").Call(
-				Lit("/"+util.ToURLSnakeCase(fn.Name)),
+			tags := util.FetchTags(fn.Docs, TagMark+httpMethodTag)
+			tag := ""
+			if len(tags) == 1 {
+				tag = strings.ToUpper(tags[0])
+			} else {
+				tag = "GET"
+			}
+			g.Id("mux").Dot("Methods").Call(Lit(tag)).Dot("Path").
+				Call(Lit("/" + util.ToURLSnakeCase(fn.Name))).Dot("Handler").Call(
 				Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeRequestName(fn)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpEncodeResponseName(fn)),
-					Line().Id("opts").Op("..."),
-				),
+					Line().Id("opts").Op("...")),
 			)
 		}
-		g.Return(Id("handler"))
+		g.Return(Id("mux"))
 	})
 
 	return f
