@@ -108,7 +108,7 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 			if len(tags) == 1 {
 				tag = strings.ToUpper(tags[0])
 			} else {
-				tag = "GET"
+				tag = "POST"
 			}
 			g.Id("mux").Dot("Methods").Call(Lit(tag)).Dot("Path").
 				Call(Lit("/" + util.ToURLSnakeCase(fn.Name))).Dot("Handler").Call(
