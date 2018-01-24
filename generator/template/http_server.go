@@ -1,20 +1,27 @@
 package template
 
 import (
+	"net/url"
 	"path/filepath"
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
 )
 
 const (
+	defaultHTTPMethod = "POST"
+
 	httpMethodTag = "http-method"
 )
 
 type httpServerTemplate struct {
-	Info *GenerationInfo
+	Info  *GenerationInfo
+	tags  map[string]string
+	paths map[string]string
 }
 
 func NewHttpServerTemplate(info *GenerationInfo) Template {
@@ -35,11 +42,34 @@ func (t *httpServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 }
 
 func (t *httpServerTemplate) Prepare() error {
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
-	if util.IsInStringSlice("http", tags) || util.IsInStringSlice("http-server", tags) {
-		t.Info.Force = true
+	t.tags = make(map[string]string)
+	t.paths = make(map[string]string)
+	for _, fn := range t.Info.Iface.Methods {
+		t.tags[fn.Name] = fetchMethodTag(fn.Docs)
+		t.paths[fn.Name] = fetchMethodPath(fn)
 	}
 	return nil
+}
+
+func fetchMethodTag(rawString []string) string {
+	tags := util.FetchTags(rawString, TagMark+httpMethodTag)
+	tag := defaultHTTPMethod
+	if len(tags) == 1 {
+		tag = strings.Title(tags[0])
+	}
+	return tag
+}
+
+func fetchMethodPath(fn *types.Function) string {
+	url := strings.Replace(mstrings.FetchMetaInfo(TagMark+httpMethodTag, fn.Docs), " ", "", -1)
+	if url == "" {
+		url = buildDefaultMethodPath(fn.Name)
+	}
+	return url
+}
+
+func buildDefaultMethodPath(s string) string {
+	return url.PathEscape("/" + util.ToURLSnakeCase(s))
 }
 
 // Render http server constructor.
@@ -103,15 +133,8 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	).BlockFunc(func(g *Group) {
 		g.Id("mux").Op(":=").Qual(PackageGorillaMux, "NewRouter").Call()
 		for _, fn := range t.Info.Iface.Methods {
-			tags := util.FetchTags(fn.Docs, TagMark+httpMethodTag)
-			tag := ""
-			if len(tags) == 1 {
-				tag = strings.ToUpper(tags[0])
-			} else {
-				tag = "POST"
-			}
-			g.Id("mux").Dot("Methods").Call(Lit(tag)).Dot("Path").
-				Call(Lit("/" + util.ToURLSnakeCase(fn.Name))).Dot("Handler").Call(
+			g.Id("mux").Dot("Methods").Call(Lit(t.tags[fn.Name])).Dot("Path").
+				Call(Lit(t.paths[fn.Name])).Dot("Handler").Call(
 				Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeRequestName(fn)),

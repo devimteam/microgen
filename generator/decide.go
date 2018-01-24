@@ -2,11 +2,11 @@ package generator
 
 import (
 	"fmt"
-	"strings"
-
 	"os"
 	"path/filepath"
+	"strings"
 
+	mstrings "github.com/devimteam/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
@@ -46,8 +46,8 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 		Iface:                    iface,
 		AbsOutPath:               absOutPath,
 		SourceFilePath:           absSourcePath,
-		ProtobufPackage:          fetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
-		GRPCRegAddr:              fetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
+		ProtobufPackage:          mstrings.FetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
+		GRPCRegAddr:              mstrings.FetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
 	}
 	stubSvc, err := NewGenUnit(template.NewStubInterfaceTemplate(info), absOutPath)
 	if err != nil {
@@ -80,17 +80,6 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 		}
 	}
 	return units, nil
-}
-
-// Fetch information from slice of comments (docs).
-// Returns appendix of first comment which has tag as prefix.
-func fetchMetaInfo(tag string, comments []string) string {
-	for _, comment := range comments {
-		if len(comment) > len(tag) && strings.HasPrefix(comment, tag) {
-			return comment[len(tag)+1:]
-		}
-	}
-	return ""
 }
 
 func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.Template) {
