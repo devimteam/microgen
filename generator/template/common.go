@@ -31,7 +31,8 @@ const (
 	PackagePathSyscall            = "syscall"
 	PackagePathErrors             = "errors"
 	PackagePathNet                = "net"
-	PackageGorillaMux             = "github.com/gorilla/mux"
+	PackagePathGorillaMux         = "github.com/gorilla/mux"
+	PackagePathPath               = "path"
 
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"

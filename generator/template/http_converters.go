@@ -2,6 +2,7 @@ package template
 
 import (
 	"path/filepath"
+	"strings"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
@@ -271,7 +272,7 @@ func encodeHttpRequest(fn *types.Function) *Statement {
 	).Params(
 		Error(),
 	).Block(
-		Return().Id(commonRequestEncoderName).Call(Id("ctx"), Id("r"), Id("request")),
+		Add(encodeHttpRequestBody(fn)),
 	)
 }
 
@@ -289,4 +290,14 @@ func httpEncodeResponseName(f *types.Function) string {
 
 func httpDecodeResponseName(f *types.Function) string {
 	return "DecodeHTTP" + util.ToUpperFirst(f.Name) + "Response"
+}
+
+func encodeHttpRequestBody(fn *types.Function) *Statement {
+	s := &Statement{}
+	method := fetchMethodTag(fn.Docs)
+	urlPath := fetchMethodPath(fn)
+	s.Id("r").Dot("Method").Op("=").Lit(strings.Title(method))
+	s.Id("r").Dot("URL").Dot("Path").Op("=").Qual(PackagePathPath, "Join").Call(Lit(urlPath))
+	s.Return().Id(commonRequestEncoderName).Call(Id("ctx"), Id("r"), Id("request"))
+	return s
 }

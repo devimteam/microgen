@@ -15,13 +15,14 @@ import (
 const (
 	defaultHTTPMethod = "POST"
 
-	httpMethodTag = "http-method"
+	httpMethodTag  = "http-method"
+	httpMethodPath = "http-path"
 )
 
 type httpServerTemplate struct {
-	Info  *GenerationInfo
-	tags  map[string]string
-	paths map[string]string
+	Info    *GenerationInfo
+	methods map[string]string
+	paths   map[string]string
 }
 
 func NewHttpServerTemplate(info *GenerationInfo) Template {
@@ -42,10 +43,10 @@ func (t *httpServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 }
 
 func (t *httpServerTemplate) Prepare() error {
-	t.tags = make(map[string]string)
+	t.methods = make(map[string]string)
 	t.paths = make(map[string]string)
 	for _, fn := range t.Info.Iface.Methods {
-		t.tags[fn.Name] = fetchMethodTag(fn.Docs)
+		t.methods[fn.Name] = fetchMethodTag(fn.Docs)
 		t.paths[fn.Name] = fetchMethodPath(fn)
 	}
 	return nil
@@ -61,7 +62,7 @@ func fetchMethodTag(rawString []string) string {
 }
 
 func fetchMethodPath(fn *types.Function) string {
-	url := strings.Replace(mstrings.FetchMetaInfo(TagMark+httpMethodTag, fn.Docs), " ", "", -1)
+	url := strings.Replace(mstrings.FetchMetaInfo(TagMark+httpMethodPath, fn.Docs), " ", "", -1)
 	if url == "" {
 		url = buildDefaultMethodPath(fn.Name)
 	}
@@ -131,9 +132,9 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	).Params(
 		Qual(PackagePathHttp, "Handler"),
 	).BlockFunc(func(g *Group) {
-		g.Id("mux").Op(":=").Qual(PackageGorillaMux, "NewRouter").Call()
+		g.Id("mux").Op(":=").Qual(PackagePathGorillaMux, "NewRouter").Call()
 		for _, fn := range t.Info.Iface.Methods {
-			g.Id("mux").Dot("Methods").Call(Lit(t.tags[fn.Name])).Dot("Path").
+			g.Id("mux").Dot("Methods").Call(Lit(t.methods[fn.Name])).Dot("Path").
 				Call(Lit(t.paths[fn.Name])).Dot("Handler").Call(
 				Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
