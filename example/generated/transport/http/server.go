@@ -12,19 +12,19 @@ import (
 
 func NewHTTPHandler(endpoints *generated.Endpoints, opts ...http.ServerOption) http1.Handler {
 	mux := mux.NewRouter()
-	mux.Methods("GET").Path("/customUrl").Handler(
+	mux.Methods("GET").Path("uppercase/{strings-map}").Handler(
 		http.NewServer(
 			endpoints.UppercaseEndpoint,
 			http2.DecodeHTTPUppercaseRequest,
 			http2.EncodeHTTPUppercaseResponse,
 			opts...))
-	mux.Methods("POST").Path("/count").Handler(
+	mux.Methods("GET").Path("count").Handler(
 		http.NewServer(
 			endpoints.CountEndpoint,
 			http2.DecodeHTTPCountRequest,
 			http2.EncodeHTTPCountResponse,
 			opts...))
-	mux.Methods("POST").Path("/test-case").Handler(
+	mux.Methods("POST").Path("test-case").Handler(
 		http.NewServer(
 			endpoints.TestCaseEndpoint,
 			http2.DecodeHTTPTestCaseRequest,

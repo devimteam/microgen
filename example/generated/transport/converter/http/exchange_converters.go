@@ -73,7 +73,7 @@ func EncodeHTTPCountRequest(ctx context.Context, r *http.Request, request interf
 }
 
 func EncodeHTTPTestCaseRequest(ctx context.Context, r *http.Request, request interface{}) error {
-	r.URL.Path = path.Join(r.URL.Path, "/test-case")
+	r.URL.Path = path.Join(r.URL.Path, "/test-case{ctx}")
 	return CommonHTTPRequestEncoder(ctx, r, request)
 }
 

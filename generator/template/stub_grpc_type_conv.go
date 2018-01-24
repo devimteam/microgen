@@ -124,7 +124,7 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 	f := &Statement{}
 
 	for _, signature := range t.Info.Iface.Methods {
-		args := append(removeContextIfFirst(signature.Args), removeErrorIfLast(signature.Results)...)
+		args := append(RemoveContextIfFirst(signature.Args), removeErrorIfLast(signature.Results)...)
 		for _, field := range args {
 			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(field.Type, 0), t.alreadyRenderedConverters) {
 				f.Line().Add(t.stubConverterToProto(&field)).Line()

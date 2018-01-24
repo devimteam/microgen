@@ -92,7 +92,7 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 	}
 
 	for _, signature := range t.Info.Iface.Methods {
-		if params := removeContextIfFirst(signature.Args); t.calcParamAmount(signature.Name, params) > 0 {
+		if params := RemoveContextIfFirst(signature.Args); t.calcParamAmount(signature.Name, params) > 0 {
 			f.Add(t.loggingEntity("log"+requestStructName(signature), signature, params)).Line()
 		}
 		if params := removeErrorIfLast(signature.Results); t.calcParamAmount(signature.Name, params) > 0 {
@@ -199,7 +199,7 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 				g.Line().Lit("method")
 				g.Lit(signature.Name)
 
-				if t.calcParamAmount(signature.Name, removeContextIfFirst(signature.Args)) > 0 {
+				if t.calcParamAmount(signature.Name, RemoveContextIfFirst(signature.Args)) > 0 {
 					g.Line().List(Lit("request"), t.logRequest(signature))
 				}
 				if t.calcParamAmount(signature.Name, removeErrorIfLast(signature.Results)) > 0 {
@@ -255,11 +255,11 @@ func (t *loggingTemplate) fillMap(fn *types.Function, params []types.Variable) *
 }
 
 func (t *loggingTemplate) logRequest(fn *types.Function) *Statement {
-	paramAmount := t.calcParamAmount(fn.Name, removeContextIfFirst(fn.Args))
+	paramAmount := t.calcParamAmount(fn.Name, RemoveContextIfFirst(fn.Args))
 	if paramAmount <= 0 {
 		return Lit("")
 	}
-	return Id("log" + requestStructName(fn)).Add(t.fillMap(fn, removeContextIfFirst(fn.Args)))
+	return Id("log" + requestStructName(fn)).Add(t.fillMap(fn, RemoveContextIfFirst(fn.Args)))
 }
 
 func (t *loggingTemplate) logResponse(fn *types.Function) *Statement {

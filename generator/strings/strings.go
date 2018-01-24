@@ -12,3 +12,12 @@ func FetchMetaInfo(tag string, comments []string) string {
 	}
 	return ""
 }
+
+func ContainTag(strs []string, prefix string) bool {
+	for _, comment := range strs {
+		if strings.HasPrefix(comment, prefix) {
+			return true
+		}
+	}
+	return false
+}

@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
@@ -37,5 +38,28 @@ func validateFunction(fn *types.Function) (errs []error) {
 			errs = append(errs, fmt.Errorf("%s: unnamed result of type %s", fn.Name, param.Type.String()))
 		}
 	}
+	if mstrings.ContainTag(fn.Docs, TagMark+HttpSmartPathTag) && template.FetchHttpMethodTag(fn.Docs) != "GET" {
+		errs = append(errs, fmt.Errorf("%s: %s should be used only with GET method", fn.Name, HttpSmartPathTag))
+	}
+	if mstrings.ContainTag(fn.Docs, TagMark+HttpSmartPathTag) && !isArgumentsAllowSmartPath(fn) {
+		errs = append(errs, fmt.Errorf("%s: can't use %s with provided arguments", fn.Name, HttpSmartPathTag))
+	}
 	return
+}
+
+func isArgumentsAllowSmartPath(fn *types.Function) bool {
+	for _, arg := range template.RemoveContextIfFirst(fn.Args) {
+		if !canInsertToPath(&arg) {
+			return false
+		}
+	}
+	return true
+}
+
+var insertableToUrlTypes = []string{"string", "int", "int32", "int64", "uint", "uint32", "uint64"}
+
+// We can make url variable from string, int, int32, int64, uint, uint32, uint64
+func canInsertToPath(p *types.Variable) bool {
+	name := types.TypeName(p.Type)
+	return name != nil && util.IsInStringSlice(*name, insertableToUrlTypes)
 }

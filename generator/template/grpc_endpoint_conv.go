@@ -363,7 +363,7 @@ func (t *gRPCEndpointConverterTemplate) convertCustomType(structName, converterN
 //		}
 //
 func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function) *Statement {
-	methodParams := removeContextIfFirst(signature.Args)
+	methodParams := RemoveContextIfFirst(signature.Args)
 	return Line().Func().Id(requestEncodeName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {
@@ -440,7 +440,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 //		}
 //
 func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function) *Statement {
-	methodParams := removeContextIfFirst(signature.Args)
+	methodParams := RemoveContextIfFirst(signature.Args)
 	return Line().Func().Id(requestDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) > 0 {

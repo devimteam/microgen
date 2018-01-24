@@ -145,7 +145,7 @@ func (t *httpClientTemplate) clientBody() *Statement {
 		Line().Return(Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(
 		func(d Dict) {
 			for _, fn := range t.Info.Iface.Methods {
-				method := fetchMethodTag(fn.Docs)
+				method := FetchHttpMethodTag(fn.Docs)
 				d[Id(endpointStructName(fn.Name))] = Qual(PackagePathGoKitTransportHTTP, "NewClient").Call(
 					Line().Lit(method),
 					Line().Id("u"),

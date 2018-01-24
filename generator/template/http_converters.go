@@ -277,7 +277,7 @@ func encodeHttpRequest(fn *types.Function) *Statement {
 
 func encodeHttpRequestBody(fn *types.Function) *Statement {
 	s := &Statement{}
-	urlPath := fetchMethodPath(fn)
+	urlPath := buildMethodPath(fn)
 	s.Id("r").Dot("URL").Dot("Path").Op("=").Qual(PackagePathPath, "Join").Call(Id("r").Dot("URL").Dot("Path"), Lit(urlPath))
 	s.Line().Return().Id(commonRequestEncoderName).Call(Id("ctx"), Id("r"), Id("request"))
 	return s

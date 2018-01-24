@@ -156,7 +156,7 @@ func (t *gRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.
 // or
 //		*stringsvc.CountRequest
 func (t *gRPCServerTemplate) grpcServerReqStruct(fn *types.Function) *Statement {
-	if len(removeContextIfFirst(fn.Args)) == 0 {
+	if len(RemoveContextIfFirst(fn.Args)) == 0 {
 		return Op("*").Qual(PackagePathEmptyProtobuf, "Empty")
 	}
 	return Op("*").Qual(t.Info.ProtobufPackage, requestStructName(fn))

@@ -1,6 +1,7 @@
 package template
 
 import (
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -14,8 +15,9 @@ import (
 const (
 	defaultHTTPMethod = "POST"
 
-	httpMethodTag  = "http-method"
-	httpMethodPath = "http-path"
+	HttpMethodTag    = "http-method"
+	HttpMethodPath   = "http-path"
+	HttpSmartPathTag = "http-autopath" // todo: Add flag, which switch auto(smart) functions.
 )
 
 type httpServerTemplate struct {
@@ -45,30 +47,65 @@ func (t *httpServerTemplate) Prepare() error {
 	t.methods = make(map[string]string)
 	t.paths = make(map[string]string)
 	for _, fn := range t.Info.Iface.Methods {
-		t.methods[fn.Name] = fetchMethodTag(fn.Docs)
-		t.paths[fn.Name] = fetchMethodPath(fn)
+		t.methods[fn.Name] = FetchHttpMethodTag(fn.Docs)
+		t.paths[fn.Name] = buildMethodPath(fn)
 	}
 	return nil
 }
 
-func fetchMethodTag(rawString []string) string {
-	tags := util.FetchTags(rawString, TagMark+httpMethodTag)
+func FetchHttpMethodTag(rawString []string) string {
+	tags := util.FetchTags(rawString, TagMark+HttpMethodTag)
 	if len(tags) == 1 {
 		return strings.ToTitle(tags[0])
 	}
 	return defaultHTTPMethod
 }
 
-func fetchMethodPath(fn *types.Function) string {
-	url := strings.Replace(mstrings.FetchMetaInfo(TagMark+httpMethodPath, fn.Docs), " ", "", -1)
+// todo: Add flag, which switch auto(smart) functions.
+func containHttpSmartPath(rawString []string) bool {
+	return mstrings.ContainTag(rawString, TagMark+HttpSmartPathTag)
+}
+
+func buildMethodPath(fn *types.Function) string {
+	url := strings.Replace(mstrings.FetchMetaInfo(TagMark+HttpMethodPath, fn.Docs), " ", "", -1)
 	if url == "" {
-		return buildDefaultMethodPath(fn.Name)
+		return buildDefaultMethodPath(fn)
 	}
 	return url
 }
 
-func buildDefaultMethodPath(s string) string {
-	return "/" + util.ToURLSnakeCase(s)
+func buildDefaultMethodPath(fn *types.Function) string {
+	edges := []string{util.ToURLSnakeCase(fn.Name)} // parts of full path
+	if FetchHttpMethodTag(fn.Docs) == "GET" && containHttpSmartPath(fn.Docs) {
+		edges = append(edges, gorillaMuxUrlTemplateVarList(RemoveContextIfFirst(fn.Args))...)
+	}
+	return path.Join(edges...)
+}
+
+func findCanInsertToPathIndex(vars []types.Variable) (index int) {
+	for i := range vars {
+		if !canInsertToPath(&vars[i]) {
+			return
+		}
+		index++
+	}
+	return
+}
+
+func gorillaMuxUrlTemplateVarList(vars []types.Variable) []string {
+	var list []string
+	for i := range vars {
+		list = append(list, "{"+util.ToURLSnakeCase(vars[i].Name)+"}")
+	}
+	return list
+}
+
+var insertableToUrlTypes = []string{"string", "int", "int32", "int64", "uint", "uint32", "uint64"}
+
+// We can make url variable from string, int, int32, int64, uint, uint32, uint64
+func canInsertToPath(p *types.Variable) bool {
+	name := types.TypeName(p.Type)
+	return name != nil && util.IsInStringSlice(*name, insertableToUrlTypes)
 }
 
 // Render http server constructor.

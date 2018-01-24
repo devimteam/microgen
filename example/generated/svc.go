@@ -12,8 +12,9 @@ import (
 type StringService interface {
 	// @logs-ignore ans, err
 	// @http-method get
-	// @http-path /customUrl
 	Uppercase(ctx context.Context, stringsMap map[string]string) (ans string, err error)
+	// @http-method geT
+	// @http-autopath
 	Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error)
 	// @logs-len comments
 	TestCase(ctx context.Context, comments []*entity.Comment) (tree map[string]int, err error)

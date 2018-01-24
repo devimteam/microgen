@@ -95,7 +95,7 @@ func structFieldName(field *types.Variable) *Statement {
 }
 
 // Remove from function fields context if it is first in slice
-func removeContextIfFirst(fields []types.Variable) []types.Variable {
+func RemoveContextIfFirst(fields []types.Variable) []types.Variable {
 	if IsContextFirst(fields) {
 		return fields[1:]
 	}

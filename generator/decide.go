@@ -30,6 +30,10 @@ const (
 	GrpcClientTag             = template.GrpcClientTag
 	MainTag                   = template.MainTag
 	ErrorLoggingMiddlewareTag = template.ErrorLoggingMiddlewareTag
+
+	HttpMethodTag    = template.HttpMethodTag
+	HttpMethodPath   = template.HttpMethodPath
+	HttpSmartPathTag = template.HttpSmartPathTag
 )
 
 func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, absOutPath, sourcePath string) (units []*generationUnit, err error) {
