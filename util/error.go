@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func ComposeErrors(errs []error) error {
+func ComposeErrors(errs ...error) error {
 	if len(errs) > 0 {
 		var strs []string
 		for _, err := range errs {

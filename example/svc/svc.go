@@ -6,9 +6,9 @@ import (
 	"github.com/devimteam/microgen/example/svc/entity"
 )
 
-// @microgen middleware, logging, grpc, http, recover, main
-// @grpc-addr devim.string.team
-// @protobuf github.com/devimteam/protobuf/stringsvc
+// @microgen middleware, logging, grpc, http, recover, main, error-logging
+// @grpc-addr service.string
+// @protobuf github.com/devimteam/microgen/example/protobuf
 type StringService interface {
 	// @logs-ignore ans, err
 	Uppercase(ctx context.Context, str ...map[string]interface{}) (ans string, err error)

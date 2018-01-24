@@ -23,7 +23,7 @@ func NewRecoverTemplate(info *GenerationInfo) Template {
 
 func (t *recoverTemplate) Render() write_strategy.Renderer {
 	f := NewFile("middleware")
-	f.PackageComment(FileHeader)
+	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
 	f.Comment("ServiceRecovering recovers panics from method calls, writes to provided logger and returns the error of panic as method error.").
@@ -84,8 +84,8 @@ func (t *recoverTemplate) recoverFuncBody(signature *types.Function) func(g *Gro
 		g.Defer().Func().Params().Block(
 			If(Id("r").Op(":=").Recover(), Id("r").Op("!=").Nil()).Block(
 				Id(util.LastUpperOrFirst(serviceRecoverStructName)).Dot(loggerVarName).Dot("Log").Call(
-					Lit("@method"), Lit(signature.Name),
-					Lit("recover panic"), Id("r"),
+					Lit("method"), Lit(signature.Name),
+					Lit("message"), Id("r"),
 				),
 				Id(nameOfLastResultError(signature)).Op("=").Qual(PackagePathFmt, "Errorf").Call(Lit("%v"), Id("r")),
 			),

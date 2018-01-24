@@ -155,7 +155,7 @@ func (t *httpConverterTemplate) Render() write_strategy.Renderer {
 	}
 
 	file := NewFile("httpconv")
-	file.PackageComment(FileHeader)
+	file.PackageComment(t.Info.FileHeader)
 	file.PackageComment(`Please, do not change functions names!`)
 	file.Add(f)
 

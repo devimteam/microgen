@@ -68,7 +68,7 @@ func pathToConverter(servicePath string) string {
 //
 func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transportgrpc")
-	f.PackageComment(FileHeader)
+	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
 	f.Type().Id(privateServerStructName(t.Info.Iface)).StructFunc(func(g *Group) {
