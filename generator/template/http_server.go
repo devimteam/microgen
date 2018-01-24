@@ -1,12 +1,11 @@
 package template
 
 import (
-	"net/url"
 	"path/filepath"
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
-	mstrings "github.com/devimteam/generator/strings"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
@@ -54,23 +53,22 @@ func (t *httpServerTemplate) Prepare() error {
 
 func fetchMethodTag(rawString []string) string {
 	tags := util.FetchTags(rawString, TagMark+httpMethodTag)
-	tag := defaultHTTPMethod
 	if len(tags) == 1 {
-		tag = strings.Title(tags[0])
+		return strings.ToTitle(tags[0])
 	}
-	return tag
+	return defaultHTTPMethod
 }
 
 func fetchMethodPath(fn *types.Function) string {
 	url := strings.Replace(mstrings.FetchMetaInfo(TagMark+httpMethodPath, fn.Docs), " ", "", -1)
 	if url == "" {
-		url = buildDefaultMethodPath(fn.Name)
+		return buildDefaultMethodPath(fn.Name)
 	}
 	return url
 }
 
 func buildDefaultMethodPath(s string) string {
-	return url.PathEscape("/" + util.ToURLSnakeCase(s))
+	return "/" + util.ToURLSnakeCase(s)
 }
 
 // Render http server constructor.
@@ -136,7 +134,7 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 		for _, fn := range t.Info.Iface.Methods {
 			g.Id("mux").Dot("Methods").Call(Lit(t.methods[fn.Name])).Dot("Path").
 				Call(Lit(t.paths[fn.Name])).Dot("Handler").Call(
-				Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
+				Line().Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeRequestName(fn)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpEncodeResponseName(fn)),

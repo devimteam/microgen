@@ -34,7 +34,7 @@ func NewHTTPClient(addr string, opts ...http.ClientOption) (generated.StringServ
 			opts...,
 		).Endpoint(),
 		UppercaseEndpoint: http.NewClient(
-			"POST",
+			"GET",
 			u,
 			http1.EncodeHTTPUppercaseRequest,
 			http1.DecodeHTTPUppercaseResponse,

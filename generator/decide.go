@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	mstrings "github.com/devimteam/generator/strings"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
 	lg "github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"

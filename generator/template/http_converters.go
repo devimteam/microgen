@@ -2,7 +2,6 @@ package template
 
 import (
 	"path/filepath"
-	"strings"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
@@ -276,6 +275,14 @@ func encodeHttpRequest(fn *types.Function) *Statement {
 	)
 }
 
+func encodeHttpRequestBody(fn *types.Function) *Statement {
+	s := &Statement{}
+	urlPath := fetchMethodPath(fn)
+	s.Id("r").Dot("URL").Dot("Path").Op("=").Qual(PackagePathPath, "Join").Call(Id("r").Dot("URL").Dot("Path"), Lit(urlPath))
+	s.Line().Return().Id(commonRequestEncoderName).Call(Id("ctx"), Id("r"), Id("request"))
+	return s
+}
+
 func httpDecodeRequestName(f *types.Function) string {
 	return "DecodeHTTP" + util.ToUpperFirst(f.Name) + "Request"
 }
@@ -290,14 +297,4 @@ func httpEncodeResponseName(f *types.Function) string {
 
 func httpDecodeResponseName(f *types.Function) string {
 	return "DecodeHTTP" + util.ToUpperFirst(f.Name) + "Response"
-}
-
-func encodeHttpRequestBody(fn *types.Function) *Statement {
-	s := &Statement{}
-	method := fetchMethodTag(fn.Docs)
-	urlPath := fetchMethodPath(fn)
-	s.Id("r").Dot("Method").Op("=").Lit(strings.Title(method))
-	s.Id("r").Dot("URL").Dot("Path").Op("=").Qual(PackagePathPath, "Join").Call(Lit(urlPath))
-	s.Return().Id(commonRequestEncoderName).Call(Id("ctx"), Id("r"), Id("request"))
-	return s
 }

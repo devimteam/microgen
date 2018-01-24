@@ -6,11 +6,10 @@ import (
 	bytes "bytes"
 	context "context"
 	json "encoding/json"
+	generated "github.com/devimteam/microgen/example/generated"
 	ioutil "io/ioutil"
 	http "net/http"
-	"path"
-
-	generated "github.com/devimteam/microgen/example/generated"
+	path "path"
 )
 
 func CommonHTTPRequestEncoder(_ context.Context, r *http.Request, request interface{}) error {
@@ -64,15 +63,17 @@ func DecodeHTTPTestCaseResponse(_ context.Context, r *http.Response) (interface{
 }
 
 func EncodeHTTPUppercaseRequest(ctx context.Context, r *http.Request, request interface{}) error {
-	r.URL.Path = path.Join(r.URL.Path, "omg/{id}/wtf/")
+	r.URL.Path = path.Join(r.URL.Path, "/customUrl")
 	return CommonHTTPRequestEncoder(ctx, r, request)
 }
 
 func EncodeHTTPCountRequest(ctx context.Context, r *http.Request, request interface{}) error {
+	r.URL.Path = path.Join(r.URL.Path, "/count")
 	return CommonHTTPRequestEncoder(ctx, r, request)
 }
 
 func EncodeHTTPTestCaseRequest(ctx context.Context, r *http.Request, request interface{}) error {
+	r.URL.Path = path.Join(r.URL.Path, "/test-case")
 	return CommonHTTPRequestEncoder(ctx, r, request)
 }
 

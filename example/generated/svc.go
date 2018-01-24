@@ -11,6 +11,8 @@ import (
 // @protobuf github.com/devimteam/microgen/example/protobuf
 type StringService interface {
 	// @logs-ignore ans, err
+	// @http-method get
+	// @http-path /customUrl
 	Uppercase(ctx context.Context, stringsMap map[string]string) (ans string, err error)
 	Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error)
 	// @logs-len comments
