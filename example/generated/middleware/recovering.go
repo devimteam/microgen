@@ -35,7 +35,7 @@ func (R *serviceRecovering) Uppercase(ctx context.Context, stringsMap map[string
 	return R.next.Uppercase(ctx, stringsMap)
 }
 
-func (R *serviceRecovering) Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error) {
+func (R *serviceRecovering) Count(ctx context.Context, text string, symbol int) (count int, positions []int, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			R.logger.Log("method", "Count", "message", r)

@@ -31,9 +31,8 @@ const (
 	MainTag                   = template.MainTag
 	ErrorLoggingMiddlewareTag = template.ErrorLoggingMiddlewareTag
 
-	HttpMethodTag    = template.HttpMethodTag
-	HttpMethodPath   = template.HttpMethodPath
-	HttpSmartPathTag = template.HttpSmartPathTag
+	HttpMethodTag  = template.HttpMethodTag
+	HttpMethodPath = template.HttpMethodPath
 )
 
 func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, absOutPath, sourcePath string) (units []*generationUnit, err error) {

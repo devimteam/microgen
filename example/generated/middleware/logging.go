@@ -35,7 +35,7 @@ func (L *serviceLogging) Uppercase(ctx context.Context, stringsMap map[string]st
 	return L.next.Uppercase(ctx, stringsMap)
 }
 
-func (L *serviceLogging) Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error) {
+func (L *serviceLogging) Count(ctx context.Context, text string, symbol int) (count int, positions []int, err error) {
 	defer func(begin time.Time) {
 		L.logger.Log(
 			"method", "Count",
@@ -74,7 +74,7 @@ type logUppercaseRequest struct {
 
 type logCountRequest struct {
 	Text   string
-	Symbol string
+	Symbol int
 }
 
 type logCountResponse struct {

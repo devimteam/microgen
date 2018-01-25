@@ -15,9 +15,8 @@ import (
 const (
 	defaultHTTPMethod = "POST"
 
-	HttpMethodTag    = "http-method"
-	HttpMethodPath   = "http-path"
-	HttpSmartPathTag = "http-autopath" // todo: Add flag, which switch auto(smart) functions.
+	HttpMethodTag  = "http-method"
+	HttpMethodPath = "http-path"
 )
 
 type httpServerTemplate struct {
@@ -61,11 +60,6 @@ func FetchHttpMethodTag(rawString []string) string {
 	return defaultHTTPMethod
 }
 
-// todo: Add flag, which switch auto(smart) functions.
-func containHttpSmartPath(rawString []string) bool {
-	return mstrings.ContainTag(rawString, TagMark+HttpSmartPathTag)
-}
-
 func buildMethodPath(fn *types.Function) string {
 	url := strings.Replace(mstrings.FetchMetaInfo(TagMark+HttpMethodPath, fn.Docs), " ", "", -1)
 	if url == "" {
@@ -76,20 +70,10 @@ func buildMethodPath(fn *types.Function) string {
 
 func buildDefaultMethodPath(fn *types.Function) string {
 	edges := []string{util.ToURLSnakeCase(fn.Name)} // parts of full path
-	if FetchHttpMethodTag(fn.Docs) == "GET" && containHttpSmartPath(fn.Docs) {
+	if FetchHttpMethodTag(fn.Docs) == "GET" {
 		edges = append(edges, gorillaMuxUrlTemplateVarList(RemoveContextIfFirst(fn.Args))...)
 	}
 	return path.Join(edges...)
-}
-
-func findCanInsertToPathIndex(vars []types.Variable) (index int) {
-	for i := range vars {
-		if !canInsertToPath(&vars[i]) {
-			return
-		}
-		index++
-	}
-	return
 }
 
 func gorillaMuxUrlTemplateVarList(vars []types.Variable) []string {
@@ -98,14 +82,6 @@ func gorillaMuxUrlTemplateVarList(vars []types.Variable) []string {
 		list = append(list, "{"+util.ToURLSnakeCase(vars[i].Name)+"}")
 	}
 	return list
-}
-
-var insertableToUrlTypes = []string{"string", "int", "int32", "int64", "uint", "uint32", "uint64"}
-
-// We can make url variable from string, int, int32, int64, uint, uint32, uint64
-func canInsertToPath(p *types.Variable) bool {
-	name := types.TypeName(p.Type)
-	return name != nil && util.IsInStringSlice(*name, insertableToUrlTypes)
 }
 
 // Render http server constructor.

@@ -10,6 +10,7 @@ import (
 	ioutil "io/ioutil"
 	http "net/http"
 	path "path"
+	strconv "strconv"
 )
 
 func CommonHTTPRequestEncoder(_ context.Context, r *http.Request, request interface{}) error {
@@ -63,17 +64,21 @@ func DecodeHTTPTestCaseResponse(_ context.Context, r *http.Response) (interface{
 }
 
 func EncodeHTTPUppercaseRequest(ctx context.Context, r *http.Request, request interface{}) error {
-	r.URL.Path = path.Join(r.URL.Path, "/customUrl")
+	r.URL.Path = path.Join(r.URL.Path, "uppercase")
 	return CommonHTTPRequestEncoder(ctx, r, request)
 }
 
 func EncodeHTTPCountRequest(ctx context.Context, r *http.Request, request interface{}) error {
-	r.URL.Path = path.Join(r.URL.Path, "/count")
-	return CommonHTTPRequestEncoder(ctx, r, request)
+	req := request.(*generated.CountRequest)
+	r.URL.Path = path.Join(r.URL.Path, "count",
+		req.Text,
+		strconv.FormatInt(int64(req.Symbol), 10),
+	)
+	return nil
 }
 
 func EncodeHTTPTestCaseRequest(ctx context.Context, r *http.Request, request interface{}) error {
-	r.URL.Path = path.Join(r.URL.Path, "/test-case{ctx}")
+	r.URL.Path = path.Join(r.URL.Path, "test-case")
 	return CommonHTTPRequestEncoder(ctx, r, request)
 }
 

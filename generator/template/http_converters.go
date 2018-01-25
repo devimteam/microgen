@@ -143,7 +143,7 @@ func (t *httpConverterTemplate) Render() write_strategy.Renderer {
 		f.Line().Add(t.decodeHttpResponse(fn)).Line()
 	}
 	for _, fn := range t.encodersRequest {
-		f.Line().Add(encodeHttpRequest(fn)).Line()
+		f.Line().Add(t.encodeHttpRequest(fn)).Line()
 	}
 	for _, fn := range t.encodersResponse {
 		f.Line().Add(encodeHttpResponse(fn)).Line()
@@ -263,7 +263,7 @@ func encodeHttpResponse(fn *types.Function) *Statement {
 //			return DefaultRequestEncoder(ctx, r, request)
 //		}
 //
-func encodeHttpRequest(fn *types.Function) *Statement {
+func (t *httpConverterTemplate) encodeHttpRequest(fn *types.Function) *Statement {
 	return Func().Id(httpEncodeRequestName(fn)).Params(
 		Id("ctx").Qual(PackagePathContext, "Context"),
 		Id("r").Op("*").Qual(PackagePathHttp, "Request"),
@@ -271,16 +271,53 @@ func encodeHttpRequest(fn *types.Function) *Statement {
 	).Params(
 		Error(),
 	).Block(
-		Add(encodeHttpRequestBody(fn)),
+		Add(t.encodeHttpRequestBody(fn)),
 	)
 }
 
-func encodeHttpRequestBody(fn *types.Function) *Statement {
+func (t *httpConverterTemplate) encodeHttpRequestBody(fn *types.Function) *Statement {
 	s := &Statement{}
-	urlPath := buildMethodPath(fn)
-	s.Id("r").Dot("URL").Dot("Path").Op("=").Qual(PackagePathPath, "Join").Call(Id("r").Dot("URL").Dot("Path"), Lit(urlPath))
-	s.Line().Return().Id(commonRequestEncoderName).Call(Id("ctx"), Id("r"), Id("request"))
+	pathVars := Lit(util.ToURLSnakeCase(fn.Name))
+	if FetchHttpMethodTag(fn.Docs) == "GET" {
+		s.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ServiceImportPath, requestStructName(fn))).Line()
+		pathVars.Add(t.pathConverters(fn))
+	}
+	s.Id("r").Dot("URL").Dot("Path").Op("=").
+		Qual(PackagePathPath, "Join").Call(Id("r").Dot("URL").Dot("Path"), pathVars)
+	if FetchHttpMethodTag(fn.Docs) == "GET" {
+		s.Line().Return(Nil())
+	} else {
+		s.Line().Return(Id(commonRequestEncoderName).Call(Id("ctx"), Id("r"), Id("request")))
+	}
 	return s
+}
+
+func (t *httpConverterTemplate) pathConverters(fn *types.Function) *Statement {
+	converters := &Statement{}
+	for _, arg := range RemoveContextIfFirst(fn.Args) {
+		typename := types.TypeName(arg.Type)
+		if typename == nil {
+			panic("need to check and update validation rules")
+		}
+		converters.Op(",").Add(typeToStringConverters(&arg))
+	}
+	return converters.Op(",").Line()
+}
+
+func typeToStringConverters(arg *types.Variable) *Statement {
+	typename := types.TypeName(arg.Type)
+	if typename == nil {
+		panic("need to check and update validation rules")
+	}
+	switch *typename {
+	case "string":
+		return Line().Id("req").Op(".").Add(structFieldName(arg))
+	case "int", "int32", "int64":
+		return Line().Qual(PackagePathStrconv, "FormatInt").Call(Int64().Call(Id("req").Op(".").Add(structFieldName(arg))), Lit(10))
+	case "uint", "uint32", "uint64":
+		return Line().Qual(PackagePathStrconv, "FormatInt").Call(Int64().Call(Id("req").Op(".").Add(structFieldName(arg))), Lit(10))
+	}
+	return Line().Lit(arg.Name)
 }
 
 func httpDecodeRequestName(f *types.Function) string {

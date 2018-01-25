@@ -33,7 +33,7 @@ func (L *serviceErrorLogging) Uppercase(ctx context.Context, stringsMap map[stri
 	return L.next.Uppercase(ctx, stringsMap)
 }
 
-func (L *serviceErrorLogging) Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error) {
+func (L *serviceErrorLogging) Count(ctx context.Context, text string, symbol int) (count int, positions []int, err error) {
 	defer func() {
 		if err != nil {
 			L.logger.Log("method", "Count", "message", err)

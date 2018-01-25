@@ -35,6 +35,7 @@ const (
 	PackagePathNet                = "net"
 	PackagePathGorillaMux         = "github.com/gorilla/mux"
 	PackagePathPath               = "path"
+	PackagePathStrconv            = "strconv"
 
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"
