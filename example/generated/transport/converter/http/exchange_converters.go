@@ -6,7 +6,9 @@ import (
 	bytes "bytes"
 	context "context"
 	json "encoding/json"
+	errors "errors"
 	generated "github.com/devimteam/microgen/example/generated"
+	mux "github.com/gorilla/mux"
 	ioutil "io/ioutil"
 	http "net/http"
 	path "path"
@@ -34,9 +36,26 @@ func DecodeHTTPUppercaseRequest(_ context.Context, r *http.Request) (interface{}
 }
 
 func DecodeHTTPCountRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req generated.CountRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	return &req, err
+	var _param string
+	var ok bool
+	_vars := mux.Vars(r)
+	_param, ok = _vars["text"]
+	if !ok {
+		return nil, errors.New("param text not found")
+	}
+	text := _param
+	_param, ok = _vars["symbol"]
+	if !ok {
+		return nil, errors.New("param symbol not found")
+	}
+	symbol, err := strconv.ParseInt(_param, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return &generated.CountRequest{
+		Symbol: int(symbol),
+		Text:   string(text),
+	}, nil
 }
 
 func DecodeHTTPTestCaseRequest(_ context.Context, r *http.Request) (interface{}, error) {
