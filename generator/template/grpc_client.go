@@ -85,10 +85,27 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 // Renders reply type argument
 // 		stringsvc.CountResponse{}
 func (t *gRPCClientTemplate) replyType(signature *types.Function) *Statement {
-	if len(removeErrorIfLast(signature.Results)) == 0 {
+	results := removeErrorIfLast(signature.Results)
+	if len(results) == 0 {
 		return Qual(PackagePathEmptyProtobuf, "Empty").Values()
 	}
+	if len(results) == 1 {
+		sp := specialReplyType(results[0].Type)
+		if sp != nil {
+			return sp
+		}
+	}
 	return Qual(t.Info.ProtobufPackage, responseStructName(signature)).Values()
+}
+
+func specialReplyType(p types.Type) *Statement {
+	name := types.TypeName(p)
+	imp := types.TypeImport(p)
+	// *string -> *wrappers.StringValue
+	if name != nil && *name == "string" && imp == nil && p.TypeOf() == types.T_Pointer {
+		return (&Statement{}).Qual(GolangProtobufWrappers, "StringValue").Values()
+	}
+	return nil
 }
 
 func (gRPCClientTemplate) DefaultPath() string {
