@@ -272,7 +272,7 @@ func encodeHttpRequest(fn *types.Function) *Statement {
 	).Params(
 		Error(),
 	).Block(
-		Add(encodeHttpRequestBody(fn)),
+		encodeHttpRequestBody(fn),
 	)
 }
 
@@ -293,11 +293,13 @@ func httpDecodeResponseName(f *types.Function) string {
 }
 
 func encodeHttpRequestBody(fn *types.Function) *Statement {
-	s := &Statement{}
-	method := fetchMethodTag(fn.Docs)
-	urlPath := fetchMethodPath(fn)
-	s.Id("r").Dot("Method").Op("=").Lit(strings.Title(method))
-	s.Id("r").Dot("URL").Dot("Path").Op("=").Qual(PackagePathPath, "Join").Call(Lit(urlPath))
-	s.Return().Id(commonRequestEncoderName).Call(Id("ctx"), Id("r"), Id("request"))
-	return s
+	return BlockFunc(func(g *Group) {
+		method := fetchMethodTag(fn.Docs)
+		urlPath := fetchMethodPath(fn)
+
+		g.Id("r").Dot("Method").Op("=").Lit(strings.Title(method))
+		g.Id("r").Dot("URL").Dot("Path").Op("=").Qual(PackagePathPath, "Join").Call(Lit(urlPath))
+		g.Return(Nil())
+	})
+
 }
