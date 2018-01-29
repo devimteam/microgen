@@ -225,6 +225,9 @@ Loop:
 		case types.TInterface:
 			methodName += _interface
 			field = nil
+		case types.TEllipsis:
+			methodName += _ellipsis
+			field = f.Next
 		default:
 			break Loop
 		}
@@ -364,17 +367,29 @@ func (t *gRPCEndpointConverterTemplate) convertCustomType(structName, converterN
 //
 func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function) *Statement {
 	methodParams := RemoveContextIfFirst(signature.Args)
-	return Line().Func().Id(requestEncodeName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
+	fullName := "request"
+	shortName := "req"
+	return Line().Func().Id(requestEncodeName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
+			if len(methodParams) == 1 {
+				sp := specialEndpointConverterToProto(methodParams[0], fullName, shortName)
+				if sp != nil {
+					group.Add(sp)
+					return
+				}
+			}
 			if len(methodParams) > 0 {
-				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ServiceImportPath, requestStructName(signature)))
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ServiceImportPath, requestStructName(signature)))
+				group.If(Id(shortName).Op("==").Nil()).Block(
+					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+requestStructName(signature)))),
+				)
 				for _, field := range methodParams {
 					if _, ok := golangTypeToProto("", &field); !ok {
-						group.Add(t.convertCustomType("req", typeToProto(field.Type, 0), &field))
+						group.Add(t.convertCustomType(shortName, typeToProto(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams, requestStructName, "req", golangTypeToProto, t.Info.ProtobufPackage), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams, requestStructName, shortName, golangTypeToProto, t.Info.ProtobufPackage), Nil())
 		},
 	).Line()
 }
@@ -414,17 +429,29 @@ func (t *gRPCEndpointConverterTemplate) grpcEndpointConvReturn(fn *types.Functio
 //
 func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function) *Statement {
 	methodResults := removeErrorIfLast(signature.Results)
-	return Line().Func().Id(responseEncodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
+	fullName := "response"
+	shortName := "resp"
+	return Line().Func().Id(responseEncodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
+			if len(methodResults) == 1 {
+				sp := specialEndpointConverterToProto(methodResults[0], fullName, shortName)
+				if sp != nil {
+					group.Add(sp)
+					return
+				}
+			}
 			if len(methodResults) > 0 {
-				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.Info.ServiceImportPath, responseStructName(signature)))
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ServiceImportPath, responseStructName(signature)))
+				group.If(Id(shortName).Op("==").Nil()).Block(
+					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+responseStructName(signature)))),
+				)
 				for _, field := range methodResults {
 					if _, ok := golangTypeToProto("", &field); !ok {
-						group.Add(t.convertCustomType("resp", typeToProto(field.Type, 0), &field))
+						group.Add(t.convertCustomType(shortName, typeToProto(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodResults, responseStructName, "resp", golangTypeToProto, t.Info.ProtobufPackage), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(signature, methodResults, responseStructName, shortName, golangTypeToProto, t.Info.ProtobufPackage), Nil())
 		},
 	).Line()
 }
@@ -441,17 +468,29 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 //
 func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function) *Statement {
 	methodParams := RemoveContextIfFirst(signature.Args)
-	return Line().Func().Id(requestDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("request").Interface()).Params(Interface(), Error()).BlockFunc(
+	fullName := "request"
+	shortName := "req"
+	return Line().Func().Id(requestDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
+			if len(methodParams) == 1 {
+				sp := specialEndpointConverterFromProto(methodParams[0], fullName, shortName)
+				if sp != nil {
+					group.Add(sp)
+					return
+				}
+			}
 			if len(methodParams) > 0 {
-				group.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature)))
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature)))
+				group.If(Id(shortName).Op("==").Nil()).Block(
+					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+requestStructName(signature)))),
+				)
 				for _, field := range methodParams {
 					if _, ok := protoTypeToGolang("", &field); !ok {
-						group.Add(t.convertCustomType("req", protoToType(field.Type, 0), &field))
+						group.Add(t.convertCustomType(shortName, protoToType(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams, requestStructName, "req", protoTypeToGolang, t.Info.ServiceImportPath), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams, requestStructName, shortName, protoTypeToGolang, t.Info.ServiceImportPath), Nil())
 		},
 	).Line()
 }
@@ -472,17 +511,75 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 //
 func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function) *Statement {
 	methodResults := removeErrorIfLast(signature.Results)
-	return Line().Func().Id(responseDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id("response").Interface()).Params(Interface(), Error()).BlockFunc(
+	fullName := "response"
+	shortName := "resp"
+	return Line().Func().Id(responseDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
+			if len(methodResults) == 1 {
+				sp := specialEndpointConverterFromProto(methodResults[0], fullName, shortName)
+				if sp != nil {
+					group.Add(sp)
+					return
+				}
+			}
 			if len(methodResults) > 0 {
-				group.Id("resp").Op(":=").Id("response").Assert(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)))
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)))
+				group.If(Id(shortName).Op("==").Nil()).Block(
+					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+responseStructName(signature)))),
+				)
 				for _, field := range methodResults {
 					if _, ok := protoTypeToGolang("", &field); !ok {
-						group.Add(t.convertCustomType("resp", protoToType(field.Type, 0), &field))
+						group.Add(t.convertCustomType(shortName, protoToType(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodResults, responseStructName, "resp", protoTypeToGolang, t.Info.ServiceImportPath), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(signature, methodResults, responseStructName, shortName, protoTypeToGolang, t.Info.ServiceImportPath), Nil())
 		},
 	).Line()
+}
+
+func specialEndpointConverterToProto(v types.Variable,
+	//fn *types.Function,
+	//strNameFn func(*types.Function) string,
+	//pkg string,
+	fullName string,
+	shortName string,
+	//typeToProtoFn func(string, *types.Variable) (*Statement, bool),
+) *Statement {
+	name := types.TypeName(v.Type)
+	imp := types.TypeImport(v.Type)
+	// *string -> *wrappers.StringValue
+	if name != nil && *name == "string" && imp == nil && v.Type.TypeOf() == types.T_Pointer {
+		sp := Op("*").Id("string")
+		s := Id(shortName).Op(":=").Id(fullName).Assert(sp)
+		s.Line().If(Id(shortName).Op("==").Nil()).Block(
+			Return(Nil(), Nil()),
+		)
+		s.Line().Return(Op("&").Qual(GolangProtobufWrappers, "StringValue").Values(Dict{Id("Value"): Op("*").Id(shortName)}), Nil())
+		return s
+	}
+	return nil
+}
+
+func specialEndpointConverterFromProto(v types.Variable,
+	//fn *types.Function,
+	//strNameFn func(*types.Function) string,
+	//pkg string,
+	fullName string,
+	shortName string,
+	//typeToProtoFn func(string, *types.Variable) (*Statement, bool),
+) *Statement {
+	name := types.TypeName(v.Type)
+	imp := types.TypeImport(v.Type)
+	// *string <- *wrappers.StringValue
+	if name != nil && *name == "string" && imp == nil && v.Type.TypeOf() == types.T_Pointer {
+		sp := Op("*").Qual(GolangProtobufWrappers, "StringValue")
+		s := Id(shortName).Op(":=").Id(fullName).Assert(sp)
+		s.Line().If(Id(shortName).Op("==").Nil()).Block(
+			Return(Nil(), Nil()),
+		)
+		s.Line().Return(Op("&").Id(shortName).Dot("Value"), Nil())
+		return s
+	}
+	return nil
 }
