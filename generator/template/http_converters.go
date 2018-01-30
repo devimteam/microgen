@@ -137,16 +137,16 @@ func (t *httpConverterTemplate) Render() write_strategy.Renderer {
 	}
 
 	for _, fn := range t.decodersRequest {
-		f.Line().Add(t.decodeHttpRequest(fn)).Line()
+		f.Line().Add(t.decodeHTTPRequest(fn)).Line()
 	}
 	for _, fn := range t.decodersResponse {
-		f.Line().Add(t.decodeHttpResponse(fn)).Line()
+		f.Line().Add(t.decodeHTTPResponse(fn)).Line()
 	}
 	for _, fn := range t.encodersRequest {
-		f.Line().Add(t.encodeHttpRequest(fn)).Line()
+		f.Line().Add(t.encodeHTTPRequest(fn)).Line()
 	}
 	for _, fn := range t.encodersResponse {
-		f.Line().Add(encodeHttpResponse(fn)).Line()
+		f.Line().Add(encodeHTTPResponse(fn)).Line()
 	}
 
 	if t.state == AppendStrat {
@@ -205,7 +205,7 @@ func commonEncoderResponse() *Statement {
 //			err := json.NewDecoder(r.Body).Decode(&req)
 //			return req, err
 //		}
-func (t *httpConverterTemplate) decodeHttpRequest(fn *types.Function) *Statement {
+func (t *httpConverterTemplate) decodeHTTPRequest(fn *types.Function) *Statement {
 	return Func().Id(httpDecodeRequestName(fn)).
 		Params(
 			Id("_").Qual(PackagePathContext, "Context"),
@@ -282,7 +282,7 @@ func stringToTypeConverter(arg *types.Variable) *Statement {
 //			err := json.NewDecoder(r.Body).Decode(&resp)
 //			return resp, err
 //		}
-func (t *httpConverterTemplate) decodeHttpResponse(fn *types.Function) *Statement {
+func (t *httpConverterTemplate) decodeHTTPResponse(fn *types.Function) *Statement {
 	return Func().Id(httpDecodeResponseName(fn)).
 		Params(
 			Id("_").Qual(PackagePathContext, "Context"),
@@ -303,7 +303,7 @@ func (t *httpConverterTemplate) decodeHttpResponse(fn *types.Function) *Statemen
 //			return DefaultResponseEncoder(ctx, w, response)
 //		}
 //
-func encodeHttpResponse(fn *types.Function) *Statement {
+func encodeHTTPResponse(fn *types.Function) *Statement {
 	return Func().Id(httpEncodeResponseName(fn)).Params(
 		Id("ctx").Qual(PackagePathContext, "Context"),
 		Id("w").Qual(PackagePathHttp, "ResponseWriter"),
@@ -320,7 +320,7 @@ func encodeHttpResponse(fn *types.Function) *Statement {
 //			return DefaultRequestEncoder(ctx, r, request)
 //		}
 //
-func (t *httpConverterTemplate) encodeHttpRequest(fn *types.Function) *Statement {
+func (t *httpConverterTemplate) encodeHTTPRequest(fn *types.Function) *Statement {
 	return Func().Id(httpEncodeRequestName(fn)).Params(
 		Id("ctx").Qual(PackagePathContext, "Context"),
 		Id("r").Op("*").Qual(PackagePathHttp, "Request"),
@@ -328,11 +328,11 @@ func (t *httpConverterTemplate) encodeHttpRequest(fn *types.Function) *Statement
 	).Params(
 		Error(),
 	).Block(
-		Add(t.encodeHttpRequestBody(fn)),
+		Add(t.encodeHTTPRequestBody(fn)),
 	)
 }
 
-func (t *httpConverterTemplate) encodeHttpRequestBody(fn *types.Function) *Statement {
+func (t *httpConverterTemplate) encodeHTTPRequestBody(fn *types.Function) *Statement {
 	s := &Statement{}
 	pathVars := Lit(util.ToURLSnakeCase(fn.Name))
 	if FetchHttpMethodTag(fn.Docs) == "GET" {
