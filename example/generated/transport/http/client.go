@@ -20,7 +20,7 @@ func NewHTTPClient(addr string, opts ...http.ClientOption) (generated.StringServ
 	}
 	return &generated.Endpoints{
 		CountEndpoint: http.NewClient(
-			"POST",
+			"GET",
 			u,
 			http1.EncodeHTTPCountRequest,
 			http1.DecodeHTTPCountResponse,
@@ -34,7 +34,7 @@ func NewHTTPClient(addr string, opts ...http.ClientOption) (generated.StringServ
 			opts...,
 		).Endpoint(),
 		UppercaseEndpoint: http.NewClient(
-			"GET",
+			"POST",
 			u,
 			http1.EncodeHTTPUppercaseRequest,
 			http1.DecodeHTTPUppercaseResponse,

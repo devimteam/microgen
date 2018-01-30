@@ -392,15 +392,3 @@ func httpEncodeResponseName(f *types.Function) string {
 func httpDecodeResponseName(f *types.Function) string {
 	return "DecodeHTTP" + util.ToUpperFirst(f.Name) + "Response"
 }
-
-func encodeHttpRequestBody(fn *types.Function) *Statement {
-	return BlockFunc(func(g *Group) {
-		method := fetchMethodTag(fn.Docs)
-		urlPath := fetchMethodPath(fn)
-
-		g.Id("r").Dot("Method").Op("=").Lit(strings.Title(method))
-		g.Id("r").Dot("URL").Dot("Path").Op("=").Qual(PackagePathPath, "Join").Call(Lit(urlPath))
-		g.Return(Nil())
-	})
-
-}

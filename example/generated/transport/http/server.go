@@ -12,7 +12,7 @@ import (
 
 func NewHTTPHandler(endpoints *generated.Endpoints, opts ...http.ServerOption) http1.Handler {
 	mux := mux.NewRouter()
-	mux.Methods("GET").Path("uppercase").Handler(
+	mux.Methods("POST").Path("uppercase").Handler(
 		http.NewServer(
 			endpoints.UppercaseEndpoint,
 			http2.DecodeHTTPUppercaseRequest,

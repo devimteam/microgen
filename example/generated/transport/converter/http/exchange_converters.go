@@ -36,7 +36,9 @@ func DecodeHTTPUppercaseRequest(_ context.Context, r *http.Request) (interface{}
 }
 
 func DecodeHTTPCountRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var _param string
+	var (
+		_param string
+	)
 	var ok bool
 	_vars := mux.Vars(r)
 	_param, ok = _vars["text"]
