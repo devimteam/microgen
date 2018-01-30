@@ -33,6 +33,9 @@ const (
 	PackagePathSyscall            = "syscall"
 	PackagePathErrors             = "errors"
 	PackagePathNet                = "net"
+	PackagePathGorillaMux         = "github.com/gorilla/mux"
+	PackagePathPath               = "path"
+	PackagePathStrconv            = "strconv"
 
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"
@@ -93,7 +96,7 @@ func structFieldName(field *types.Variable) *Statement {
 }
 
 // Remove from function fields context if it is first in slice
-func removeContextIfFirst(fields []types.Variable) []types.Variable {
+func RemoveContextIfFirst(fields []types.Variable) []types.Variable {
 	if IsContextFirst(fields) {
 		return fields[1:]
 	}
@@ -101,7 +104,7 @@ func removeContextIfFirst(fields []types.Variable) []types.Variable {
 }
 
 func IsContextFirst(fields []types.Variable) bool {
-	if len(fields) == 0{
+	if len(fields) == 0 {
 		return false
 	}
 	name := types.TypeName(fields[0].Type)

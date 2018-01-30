@@ -29,7 +29,7 @@ func (E *Endpoints) Uppercase(ctx context.Context, stringsMap map[string]string)
 	return endpointUppercaseResponse.(*UppercaseResponse).Ans, err
 }
 
-func (E *Endpoints) Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error) {
+func (E *Endpoints) Count(ctx context.Context, text string, symbol int) (count int, positions []int, err error) {
 	endpointCountRequest := CountRequest{
 		Symbol: symbol,
 		Text:   text,

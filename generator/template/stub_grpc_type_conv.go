@@ -36,19 +36,19 @@ func specialTypeConverter(p types.Type) *Statement {
 	imp := types.TypeImport(p)
 	// error -> string
 	if name != nil && *name == "error" && imp == nil {
-		return (&Statement{}).Id("string")
+		return Id("string")
 	}
 	// time.Time -> timestamp.Timestamp
 	if name != nil && *name == "Time" && imp != nil && imp.Package == "time" {
-		return (&Statement{}).Op("*").Qual(GolangProtobufPtypesTimestamp, "Timestamp")
+		return Op("*").Qual(GolangProtobufPtypesTimestamp, "Timestamp")
 	}
 	// jsonb.JSONB -> string
 	if name != nil && *name == "JSONB" && imp != nil && imp.Package == JsonbPackage {
-		return (&Statement{}).Id("string")
+		return Id("string")
 	}
 	// *string -> *wrappers.StringValue
 	if name != nil && *name == "string" && imp == nil && p.TypeOf() == types.T_Pointer {
-		return (&Statement{}).Op("*").Qual(GolangProtobufWrappers, "StringValue")
+		return Op("*").Qual(GolangProtobufWrappers, "StringValue")
 	}
 	return nil
 }
@@ -124,7 +124,7 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 	f := &Statement{}
 
 	for _, signature := range t.Info.Iface.Methods {
-		args := append(removeContextIfFirst(signature.Args), removeErrorIfLast(signature.Results)...)
+		args := append(RemoveContextIfFirst(signature.Args), removeErrorIfLast(signature.Results)...)
 		for _, field := range args {
 			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(field.Type, 0), t.alreadyRenderedConverters) {
 				f.Line().Add(t.stubConverterToProto(&field)).Line()

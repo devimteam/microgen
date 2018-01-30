@@ -1,15 +1,28 @@
 package template
 
 import (
+	"path"
 	"path/filepath"
+	"strings"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
+)
+
+const (
+	defaultHTTPMethod = "POST"
+
+	HttpMethodTag  = "http-method"
+	HttpMethodPath = "http-path"
 )
 
 type httpServerTemplate struct {
-	Info *GenerationInfo
+	Info    *GenerationInfo
+	methods map[string]string
+	paths   map[string]string
 }
 
 func NewHttpServerTemplate(info *GenerationInfo) Template {
@@ -30,11 +43,45 @@ func (t *httpServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 }
 
 func (t *httpServerTemplate) Prepare() error {
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
-	if util.IsInStringSlice("http", tags) || util.IsInStringSlice("http-server", tags) {
-		t.Info.Force = true
+	t.methods = make(map[string]string)
+	t.paths = make(map[string]string)
+	for _, fn := range t.Info.Iface.Methods {
+		t.methods[fn.Name] = FetchHttpMethodTag(fn.Docs)
+		t.paths[fn.Name] = buildMethodPath(fn)
 	}
 	return nil
+}
+
+func FetchHttpMethodTag(rawString []string) string {
+	tags := util.FetchTags(rawString, TagMark+HttpMethodTag)
+	if len(tags) == 1 {
+		return strings.ToTitle(tags[0])
+	}
+	return defaultHTTPMethod
+}
+
+func buildMethodPath(fn *types.Function) string {
+	url := strings.Replace(mstrings.FetchMetaInfo(TagMark+HttpMethodPath, fn.Docs), " ", "", -1)
+	if url == "" {
+		return buildDefaultMethodPath(fn)
+	}
+	return url
+}
+
+func buildDefaultMethodPath(fn *types.Function) string {
+	edges := []string{util.ToURLSnakeCase(fn.Name)} // parts of full path
+	if FetchHttpMethodTag(fn.Docs) == "GET" {
+		edges = append(edges, gorillaMuxUrlTemplateVarList(RemoveContextIfFirst(fn.Args))...)
+	}
+	return path.Join(edges...)
+}
+
+func gorillaMuxUrlTemplateVarList(vars []types.Variable) []string {
+	var list []string
+	for i := range vars {
+		list = append(list, "{"+util.ToURLSnakeCase(vars[i].Name)+"}")
+	}
+	return list
 }
 
 // Render http server constructor.
@@ -69,6 +116,22 @@ func (t *httpServerTemplate) Prepare() error {
 //			return handler
 //		}
 //
+
+/*
+
+func MakeHTTPHandler(s EchoService, logger log.Logger) http.Handler {
+	r := mux.NewRouter()
+
+	r.Methods("POST").Path("/echo").Handler(httptransport.NewServer(
+		makeEchoEndpoint(s),
+		decodeEchoRequest,
+		encodeResponse,
+		httptransport.ServerErrorLogger(logger),
+	))
+	return r
+}
+*/
+
 func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transporthttp")
 	f.PackageComment(t.Info.FileHeader)
@@ -80,19 +143,18 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	).Params(
 		Qual(PackagePathHttp, "Handler"),
 	).BlockFunc(func(g *Group) {
-		g.Id("handler").Op(":=").Qual(PackagePathHttp, "NewServeMux").Call()
+		g.Id("mux").Op(":=").Qual(PackagePathGorillaMux, "NewRouter").Call()
 		for _, fn := range t.Info.Iface.Methods {
-			g.Id("handler").Dot("Handle").Call(
-				Lit("/"+util.ToURLSnakeCase(fn.Name)),
-				Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
+			g.Id("mux").Dot("Methods").Call(Lit(t.methods[fn.Name])).Dot("Path").
+				Call(Lit(t.paths[fn.Name])).Dot("Handler").Call(
+				Line().Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeRequestName(fn)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpEncodeResponseName(fn)),
-					Line().Id("opts").Op("..."),
-				),
+					Line().Id("opts").Op("...")),
 			)
 		}
-		g.Return(Id("handler"))
+		g.Return(Id("mux"))
 	})
 
 	return f

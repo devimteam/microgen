@@ -156,8 +156,15 @@ func (t *gRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.
 // or
 //		*stringsvc.CountRequest
 func (t *gRPCServerTemplate) grpcServerReqStruct(fn *types.Function) *Statement {
-	if len(removeContextIfFirst(fn.Args)) == 0 {
+	args := RemoveContextIfFirst(fn.Args)
+	if len(args) == 0 {
 		return Op("*").Qual(PackagePathEmptyProtobuf, "Empty")
+	}
+	if len(args) == 1 {
+		sp := specialTypeConverter(args[0].Type)
+		if sp != nil {
+			return sp
+		}
 	}
 	return Op("*").Qual(t.Info.ProtobufPackage, requestStructName(fn))
 }
@@ -168,8 +175,15 @@ func (t *gRPCServerTemplate) grpcServerReqStruct(fn *types.Function) *Statement 
 // or
 //		*stringsvc.CountResponse
 func (t *gRPCServerTemplate) grpcServerRespStruct(fn *types.Function) *Statement {
-	if len(removeErrorIfLast(fn.Results)) == 0 {
+	results := removeErrorIfLast(fn.Results)
+	if len(results) == 0 {
 		return Op("*").Qual(PackagePathEmptyProtobuf, "Empty")
+	}
+	if len(results) == 1 {
+		sp := specialTypeConverter(results[0].Type)
+		if sp != nil {
+			return sp
+		}
 	}
 	return Op("*").Qual(t.Info.ProtobufPackage, responseStructName(fn))
 }

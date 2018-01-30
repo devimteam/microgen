@@ -47,7 +47,7 @@ func (t *exchangeTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(`Please, do not edit.`)
 
 	for _, signature := range t.Info.Iface.Methods {
-		f.Add(exchange(requestStructName(signature), removeContextIfFirst(signature.Args))).Line()
+		f.Add(exchange(requestStructName(signature), RemoveContextIfFirst(signature.Args))).Line()
 		f.Add(exchange(responseStructName(signature), removeErrorIfLast(signature.Results))).Line()
 	}
 

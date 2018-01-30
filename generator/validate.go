@@ -37,5 +37,25 @@ func validateFunction(fn *types.Function) (errs []error) {
 			errs = append(errs, fmt.Errorf("%s: unnamed result of type %s", fn.Name, param.Type.String()))
 		}
 	}
+	if template.FetchHttpMethodTag(fn.Docs) == "GET" && !isArgumentsAllowSmartPath(fn) {
+		errs = append(errs, fmt.Errorf("%s: can't use GET method with provided arguments", fn.Name))
+	}
 	return
+}
+
+func isArgumentsAllowSmartPath(fn *types.Function) bool {
+	for _, arg := range template.RemoveContextIfFirst(fn.Args) {
+		if !canInsertToPath(&arg) {
+			return false
+		}
+	}
+	return true
+}
+
+var insertableToUrlTypes = []string{"string", "int", "int32", "int64", "uint", "uint32", "uint64"}
+
+// We can make url variable from string, int, int32, int64, uint, uint32, uint64
+func canInsertToPath(p *types.Variable) bool {
+	name := types.TypeName(p.Type)
+	return name != nil && util.IsInStringSlice(*name, insertableToUrlTypes)
 }

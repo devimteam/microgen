@@ -145,8 +145,9 @@ func (t *httpClientTemplate) clientBody() *Statement {
 		Line().Return(Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(
 		func(d Dict) {
 			for _, fn := range t.Info.Iface.Methods {
+				method := FetchHttpMethodTag(fn.Docs)
 				d[Id(endpointStructName(fn.Name))] = Qual(PackagePathGoKitTransportHTTP, "NewClient").Call(
-					Line().Lit("POST"), // TODO: customize POST
+					Line().Lit(method),
 					Line().Id("u"),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpEncodeRequestName(fn)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeResponseName(fn)),

@@ -12,7 +12,8 @@ import (
 type StringService interface {
 	// @logs-ignore ans, err
 	Uppercase(ctx context.Context, stringsMap map[string]string) (ans string, err error)
-	Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error)
+	// @http-method geT
+	Count(ctx context.Context, text string, symbol int) (count int, positions []int, err error)
 	// @logs-len comments
 	TestCase(ctx context.Context, comments []*entity.Comment) (tree map[string]int, err error)
 }

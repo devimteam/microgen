@@ -136,7 +136,7 @@ func (t *endpointsTemplate) serviceEndpointMethodBody(fn *types.Function) func(g
 	reqName := endpointExchange("request", fn)
 	respName := endpointExchange("response", fn)
 	return func(g *Group) {
-		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByVariables(removeContextIfFirst(fn.Args)))
+		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByVariables(RemoveContextIfFirst(fn.Args)))
 		g.Add(endpointResponse(respName, fn)).Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(fn)), Op("&").Id(reqName))
 		g.If(Id(nameOfLastResultError(fn)).Op("!=").Nil().BlockFunc(func(ifg *Group) {
 			if t.grpc {
@@ -197,7 +197,7 @@ func createEndpointBody(signature *types.Function) *Statement {
 		Interface(),
 		Error(),
 	).BlockFunc(func(g *Group) {
-		methodParams := removeContextIfFirst(signature.Args)
+		methodParams := RemoveContextIfFirst(signature.Args)
 		if len(methodParams) > 0 {
 			g.Id("_req").Op(":=").Id("request").Assert(Op("*").Id(requestStructName(signature)))
 		}

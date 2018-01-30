@@ -14,7 +14,7 @@ type UppercaseResponse struct {
 
 type CountRequest struct {
 	Text   string `json:"text"`
-	Symbol string `json:"symbol"`
+	Symbol int    `json:"symbol"`
 }
 
 type CountResponse struct {
