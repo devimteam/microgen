@@ -6,7 +6,7 @@ import (
 	"github.com/devimteam/microgen/example/svc/entity"
 )
 
-// @microgen middleware, logging, grpc, http, recover, main
+// @microgen middleware, logging, grpc, http, recover, main, error-logging
 // @grpc-addr service.string
 // @protobuf github.com/devimteam/microgen/example/protobuf
 type StringService interface {

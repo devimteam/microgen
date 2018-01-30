@@ -2,12 +2,12 @@ package generator
 
 import (
 	"fmt"
-	"strings"
-
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/devimteam/microgen/generator/template"
+	lg "github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 )
@@ -18,16 +18,17 @@ const (
 	ProtobufTag     = "protobuf"
 	GRPCRegAddr     = "grpc-addr"
 
-	MiddlewareTag        = template.MiddlewareTag
-	LoggingMiddlewareTag = template.LoggingMiddlewareTag
-	RecoverMiddlewareTag = template.RecoverMiddlewareTag
-	HttpTag              = template.HttpTag
-	HttpServerTag        = template.HttpServerTag
-	HttpClientTag        = template.HttpClientTag
-	GrpcTag              = template.GrpcTag
-	GrpcServerTag        = template.GrpcServerTag
-	GrpcClientTag        = template.GrpcClientTag
-	MainTag              = template.MainTag
+	MiddlewareTag             = template.MiddlewareTag
+	LoggingMiddlewareTag      = template.LoggingMiddlewareTag
+	RecoverMiddlewareTag      = template.RecoverMiddlewareTag
+	HttpTag                   = template.HttpTag
+	HttpServerTag             = template.HttpServerTag
+	HttpClientTag             = template.HttpClientTag
+	GrpcTag                   = template.GrpcTag
+	GrpcServerTag             = template.GrpcServerTag
+	GrpcClientTag             = template.GrpcClientTag
+	MainTag                   = template.MainTag
+	ErrorLoggingMiddlewareTag = template.ErrorLoggingMiddlewareTag
 )
 
 func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, absOutPath, sourcePath string) (units []*generationUnit, err error) {
@@ -48,6 +49,7 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 		SourceFilePath:           absSourcePath,
 		ProtobufPackage:          fetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
 		GRPCRegAddr:              fetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
+		FileHeader:               defaultFileHeader,
 	}
 	stubSvc, err := NewGenUnit(template.NewStubInterfaceTemplate(info), absOutPath)
 	if err != nil {
@@ -64,11 +66,11 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 	units = append(units, stubSvc, exch, endp)
 
 	genTags := util.FetchTags(iface.Docs, TagMark+MicrogenMainTag)
-	fmt.Println("Tags:", strings.Join(genTags, ", "))
+	lg.Logger.Logln(2, "Tags:", strings.Join(genTags, ", "))
 	for _, tag := range genTags {
 		templates := tagToTemplate(tag, info)
 		if templates == nil {
-			fmt.Printf("Warning! unexpected tag %s\n", tag)
+			lg.Logger.Logf(1, "Warning! unexpected tag %s\n", tag)
 			continue
 		}
 		for _, t := range templates {
@@ -138,11 +140,14 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 		return append(tmpls, template.NewRecoverTemplate(info))
 	case MainTag:
 		return append(tmpls, template.NewMainTemplate(info))
+	case ErrorLoggingMiddlewareTag:
+		return append(tmpls, template.NewErrorLoggingTemplate(info))
 	}
 	return nil
 }
 
 func resolvePackagePath(outPath string) (string, error) {
+	lg.Logger.Logln(3, "try to resolve current package")
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		return "", fmt.Errorf("GOPATH is empty")

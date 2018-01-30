@@ -43,7 +43,7 @@ func responseStructName(signature *types.Function) string {
 //
 func (t *exchangeTemplate) Render() write_strategy.Renderer {
 	f := NewFile(t.Info.ServiceImportPackageName)
-	f.PackageComment(FileHeader)
+	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
 	for _, signature := range t.Info.Iface.Methods {
@@ -74,7 +74,7 @@ func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 //
 func exchange(name string, params []types.Variable) Code {
 	if len(params) == 0 {
-		return Comment("Formal exchange type, please do not delete").Line().
+		return Comment("Formal exchange type, please do not delete.").Line().
 			Type().Id(name).Struct().
 			Line()
 	}

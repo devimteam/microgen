@@ -61,7 +61,7 @@ func converterToProtoBody(field *types.Variable) Code {
 			Return().List(Lit(""), Nil()),
 		).Line()
 		s.Return().List(Id(util.ToLowerFirst(field.Name)).Dot("Error").Call(), Nil())
-	case "ByteListToProto":
+	case "ByteListToProto", "ListByteToProto":
 		s.Return().List(Id(util.ToLowerFirst(field.Name)), Nil())
 	case "TimeTimeToProto":
 		s.Return().Qual(GolangProtobufPtypes, "TimestampProto").Call(Id(field.Name))
@@ -90,7 +90,7 @@ func converterProtoToBody(field *types.Variable) Code {
 			Return().List(Nil(), Nil()),
 		).Line()
 		s.Return().List(Qual("errors", "New").Call(Id("proto"+util.ToUpperFirst(field.Name))), Nil())
-	case "ProtoToByteList":
+	case "ProtoToByteList", "ProtoToListByte":
 		s.Return().List(Id("proto"+util.ToUpperFirst(field.Name)), Nil())
 	case "ProtoToTimeTime":
 		s.Return().Qual(GolangProtobufPtypes, "Timestamp").Call(Id("proto" + util.ToUpperFirst(field.Name)))
@@ -142,7 +142,7 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 	}
 
 	file := NewFile("protobuf")
-	file.PackageComment(FileHeader)
+	file.PackageComment(t.Info.FileHeader)
 	file.PackageComment(`It is better for you if you do not change functions names!`)
 	file.PackageComment(`This file will never be overwritten.`)
 	file.Add(f)

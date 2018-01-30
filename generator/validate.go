@@ -13,7 +13,7 @@ func ValidateInterface(iface *types.Interface) error {
 	for _, m := range iface.Methods {
 		errs = append(errs, validateFunction(m)...)
 	}
-	return util.ComposeErrors(errs)
+	return util.ComposeErrors(errs...)
 }
 
 // Rules:
