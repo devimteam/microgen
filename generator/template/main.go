@@ -87,8 +87,10 @@ func (t *mainTemplate) mainFunc() *Statement {
 	return Func().Id("main").Call().BlockFunc(func(main *Group) {
 		main.Id("logger").Op(":=").
 			Qual(PackagePathGoKitLog, "With").Call(Id("InitLogger").Call(Qual(PackagePathOs, "Stdout")), Lit("level"), Lit("info"))
-		main.Id("errorLogger").Op(":=").
-			Qual(PackagePathGoKitLog, "With").Call(Id("InitLogger").Call(Qual(PackagePathOs, "Stderr")), Lit("level"), Lit("error"))
+		if t.recovering {
+			main.Id("errorLogger").Op(":=").
+				Qual(PackagePathGoKitLog, "With").Call(Id("InitLogger").Call(Qual(PackagePathOs, "Stderr")), Lit("level"), Lit("error"))
+		}
 		main.Id("logger").Dot("Log").Call(Lit("message"), Lit("Hello, I am alive"))
 		main.Defer().Id("logger").Dot("Log").Call(Lit("message"), Lit("goodbye, good luck"))
 		main.Line()
