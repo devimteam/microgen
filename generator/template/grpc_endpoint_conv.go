@@ -473,7 +473,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 	return Line().Func().Id(requestDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) == 1 {
-				sp := specialEndpointConverterFromProto(methodParams[0], fullName, shortName)
+				sp := specialEndpointConverterFromProto(methodParams[0], signature, requestStructName, t.Info.ServiceImportPath, fullName, shortName)
 				if sp != nil {
 					group.Add(sp)
 					return
@@ -516,7 +516,7 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 	return Line().Func().Id(responseDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) == 1 {
-				sp := specialEndpointConverterFromProto(methodResults[0], fullName, shortName)
+				sp := specialEndpointConverterFromProto(methodResults[0], signature, responseStructName, t.Info.ServiceImportPath, fullName, shortName)
 				if sp != nil {
 					group.Add(sp)
 					return
@@ -562,9 +562,9 @@ func specialEndpointConverterToProto(v types.Variable,
 }
 
 func specialEndpointConverterFromProto(v types.Variable,
-	//fn *types.Function,
-	//strNameFn func(*types.Function) string,
-	//pkg string,
+	fn *types.Function,
+	strNameFn func(*types.Function) string,
+	pkg string,
 	fullName string,
 	shortName string,
 	//typeToProtoFn func(string, *types.Variable) (*Statement, bool),
@@ -578,7 +578,7 @@ func specialEndpointConverterFromProto(v types.Variable,
 		s.Line().If(Id(shortName).Op("==").Nil()).Block(
 			Return(Nil(), Nil()),
 		)
-		s.Line().Return(Op("&").Id(shortName).Dot("Value"), Nil())
+		s.Line().Return(Op("&").Qual(pkg, strNameFn(fn)).Values(structFieldName(&v).Op(":&").Id(shortName).Dot("Value")), Nil())
 		return s
 	}
 	return nil
