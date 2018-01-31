@@ -372,7 +372,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 	return Line().Func().Id(requestEncodeName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) == 1 {
-				sp := specialEndpointConverterToProto(methodParams[0], fullName, shortName)
+				sp := specialEndpointConverterToProto(methodParams[0], signature, requestStructName, t.Info.ServiceImportPath, fullName, shortName)
 				if sp != nil {
 					group.Add(sp)
 					return
@@ -434,7 +434,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 	return Line().Func().Id(responseEncodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) == 1 {
-				sp := specialEndpointConverterToProto(methodResults[0], fullName, shortName)
+				sp := specialEndpointConverterToProto(methodResults[0], signature, responseStructName, t.Info.ServiceImportPath, fullName, shortName)
 				if sp != nil {
 					group.Add(sp)
 					return
@@ -539,9 +539,9 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 }
 
 func specialEndpointConverterToProto(v types.Variable,
-	//fn *types.Function,
-	//strNameFn func(*types.Function) string,
-	//pkg string,
+	fn *types.Function,
+	strNameFn func(*types.Function) string,
+	pkg string,
 	fullName string,
 	shortName string,
 	//typeToProtoFn func(string, *types.Variable) (*Statement, bool),
@@ -550,12 +550,12 @@ func specialEndpointConverterToProto(v types.Variable,
 	imp := types.TypeImport(v.Type)
 	// *string -> *wrappers.StringValue
 	if name != nil && *name == "string" && imp == nil && v.Type.TypeOf() == types.T_Pointer {
-		sp := Op("*").Id("string")
-		s := Id(shortName).Op(":=").Id(fullName).Assert(sp)
-		s.Line().If(Id(shortName).Op("==").Nil()).Block(
+		s := If(Id(fullName).Op("==").Nil()).Block(
 			Return(Nil(), Nil()),
 		)
-		s.Line().Return(Op("&").Qual(GolangProtobufWrappers, "StringValue").Values(Dict{Id("Value"): Op("*").Id(shortName)}), Nil())
+		sp := Op("*").Qual(pkg, strNameFn(fn))
+		s.Line().Id(shortName).Op(":=").Id(fullName).Assert(sp)
+		s.Line().Return(Op("&").Qual(GolangProtobufWrappers, "StringValue").Values(Dict{Id("Value"): Op("*").Id(shortName).Op(".").Add(structFieldName(&v))}), Nil())
 		return s
 	}
 	return nil
@@ -573,12 +573,12 @@ func specialEndpointConverterFromProto(v types.Variable,
 	imp := types.TypeImport(v.Type)
 	// *string <- *wrappers.StringValue
 	if name != nil && *name == "string" && imp == nil && v.Type.TypeOf() == types.T_Pointer {
-		sp := Op("*").Qual(GolangProtobufWrappers, "StringValue")
-		s := Id(shortName).Op(":=").Id(fullName).Assert(sp)
-		s.Line().If(Id(shortName).Op("==").Nil()).Block(
+		s := If(Id(fullName).Op("==").Nil()).Block(
 			Return(Nil(), Nil()),
 		)
-		s.Line().Return(Op("&").Qual(pkg, strNameFn(fn)).Values(structFieldName(&v).Op(":&").Id(shortName).Dot("Value")), Nil())
+		sp := Op("*").Qual(GolangProtobufWrappers, "StringValue")
+		s.Line().Id(shortName).Op(":=").Id(fullName).Assert(sp)
+		s.Line().Return(Op("&").Qual(pkg, strNameFn(fn)).Values(Dict{structFieldName(&v): Op("&").Id(shortName).Dot("Value")}), Nil())
 		return s
 	}
 	return nil
