@@ -41,7 +41,7 @@ Example:
 ```go
 // @microgen middleware, logging
 type StringService interface {
-    ServiceMethod()
+    ServiceMethod(ctx context.Context) (err error)
 }
 ```
 #### @protobuf
@@ -51,7 +51,7 @@ Example:
 // @microgen grpc-server
 // @protobuf github.com/user/repo/path/to/protobuf
 type StringService interface {
-    ServiceMethod()
+    ServiceMethod(ctx context.Context) (err error)
 }
 ```
 `@protobuf` tag is optional, but required for `grpc`, `grpc-server`, `grpc-client` generation.  
@@ -63,7 +63,7 @@ Example:
 // @protobuf github.com/user/repo/path/to/protobuf
 // @grpc-addr some.service.address
 type StringService interface {
-    ServiceMethod()
+    ServiceMethod(ctx context.Context) (err error)
 }
 ```
 `@grpc-addr` tag is optional, but required for `grpc-client` generation.
@@ -97,6 +97,17 @@ type FileService interface {
 }
 ```
 
+#### @http-method
+This tag is used for http server and client to set different from POST method. This tag has special validation rules for GET method.
+Example:  
+```go
+// @microgen logging
+type StringService interface {
+    // @http-method GET
+    Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error)
+}
+```
+
 ### Tags
 All allowed tags for customize generation provided here.
 
@@ -104,6 +115,7 @@ All allowed tags for customize generation provided here.
 |:------------|:------------------------------------------------------------------------------------------------------------------------------|
 | middleware  | General application middleware interface. Generates every time.                                                               |
 | logging     | Middleware that writes to logger all request/response information with handled time. Generates every time.                    |
+| error-logging | Middleware that writes to logger errors of method calls, if error not nil.                                                  |
 | recover     | Middleware that recovers panics and writes errors to logger. Generates every time.                                            |
 | grpc-client | Generates client for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | grpc-server | Generates server for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
@@ -123,6 +135,7 @@ All allowed tags for customize generation provided here.
 | Middleware     | ./middleware/middleware.go     |  Overwrites old file every time.|
 | Logging middleware     |  ./middleware/logging.go    |  Overwrites old file every time.|
 | Recovering middleware  | ./middleware/recovering.go  |  Overwrites old file every time.|
+| Error-logging middleware  | ./middleware/error-logging.go  |  Overwrites old file every time.|
 
 ## Example
 You may find examples in `example` directory, where `svc` contains all, what you need for successful generation, and `generated` contains what you will get after `microgen`.  
@@ -178,16 +191,22 @@ __*__ `GOPATH/bin` should be in your PATH.
 ## Interface declaration rules
 For correct generation, please, follow rules below.
 
+General:
 * All interface method's arguments and results should be named and should be different (name duplicating unacceptable).
 * First argument of each method should be of type `context.Context` (from [standard library](https://golang.org/pkg/context/)).
 * Last result should be builtin `error` type.
 ---
+GRPC and Protobuf:  
 * Name of _protobuf_ service should be the same, as interface name.
 * Function names in _protobuf_ should be the same, as in interface.
 * Message names in _protobuf_ should be named `<FunctionName>Request` or `<FunctionName>Response` for request/response message respectively.
 * Field names in _protobuf_ messages should be the same, as in interface methods (_protobuf_ - snake_case, interface - camelCase).
+---
+HTTP GET method (`// @http-method GET`)
+* Parameters types should be `string`, `int`, `int32`, `int64`, `uint`, `uint32` or `uint64`.
 
 ## Dependency
+list out of date!
 After generation your service may depend on this packages:
 ```
     "net/http"      // for http purposes
