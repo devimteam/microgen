@@ -2,7 +2,13 @@
 // Please, do not edit.
 package middleware
 
-import generated "github.com/devimteam/microgen/example/generated"
+import (
+	generated "github.com/devimteam/microgen/example/generated"
+	endpoint "github.com/go-kit/kit/endpoint"
+)
 
 // Service middleware
 type Middleware func(generated.StringService) generated.StringService
+
+// Endpoint middleware
+type EndpointMiddleware func(endpoint.Endpoint) endpoint.Endpoint

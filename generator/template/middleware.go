@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	MiddlewareTypeName = "Middleware"
+	MiddlewareTypeName     = "Middleware"
+	EndpointMiddelwareName = "EndpointMiddleware"
 )
 
 type middlewareTemplate struct {
@@ -35,6 +36,8 @@ func (t *middlewareTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(`Please, do not edit.`)
 	f.Comment("Service middleware").
 		Line().Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)
+	f.Comment("Endpoint middleware").
+		Line().Type().Id(EndpointMiddelwareName).Func().Call(Qual(PackagePathGoKitEndpoint, "Endpoint")).Qual(PackagePathGoKitEndpoint, "Endpoint")
 	return f
 }
 

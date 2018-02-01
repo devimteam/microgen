@@ -8,8 +8,9 @@ import (
 )
 
 type endpointsTemplate struct {
-	Info *GenerationInfo
-	grpc bool
+	Info    *GenerationInfo
+	grpc    bool
+	tracing bool
 }
 
 func NewEndpointsTemplate(info *GenerationInfo) Template {
@@ -65,12 +66,12 @@ func (t *endpointsTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
+	f.Add(t.allEndpoints()).Line()
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {
 		for _, signature := range t.Info.Iface.Methods {
 			g.Id(endpointStructName(signature.Name)).Qual(PackagePathGoKitEndpoint, "Endpoint")
 		}
 	}).Line()
-
 	for _, signature := range t.Info.Iface.Methods {
 		f.Add(t.serviceEndpointMethod(signature)).Line().Line()
 	}
@@ -92,6 +93,8 @@ func (t *endpointsTemplate) Prepare() error {
 		switch tag {
 		case GrpcTag, GrpcServerTag, GrpcClientTag:
 			t.grpc = true
+		case TracingTag:
+			t.tracing = true
 		}
 	}
 	return nil
@@ -245,4 +248,36 @@ func createEndpoint(signature *types.Function, info *GenerationInfo) *Statement 
 
 func endpointExchange(base string, fn *types.Function) string {
 	return "endpoint" + util.ToUpperFirst(fn.Name) + util.ToUpperFirst(base)
+}
+
+func (t *endpointsTemplate) allEndpoints() *Statement {
+	s := &Statement{}
+	s.Func().Id("AllEndpoints").Call(t.allEndpointsArguments()).Op("*").Id("Endpoints").BlockFunc(func(g *Group) {
+		g.Return(Op("&").Id("Endpoints").Values(DictFunc(func(d Dict) {
+			for _, signature := range t.Info.Iface.Methods {
+				d[Id(endpointStructName(signature.Name))] = t.setupEndpointWithMiddlewares(signature)
+			}
+		})))
+	})
+	return s
+}
+
+func (t *endpointsTemplate) allEndpointsArguments() *Statement {
+	s := &Statement{}
+	s.Id("service").Id(t.Info.Iface.Name)
+	if t.tracing {
+		s.Op(",").Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
+	}
+	return s
+}
+
+func (t *endpointsTemplate) setupEndpointWithMiddlewares(fn *types.Function) *Statement {
+	s := &Statement{}
+	if t.tracing {
+		s.Qual(PackagePathGoKitTracing, "TraceServer").Call(Id("tracer"), Lit(fn.Name))
+		s.Op("(")
+		defer s.Op(")")
+	}
+	s.Id(endpointStructName(fn.Name)).Params(Id("service"))
+	return s
 }

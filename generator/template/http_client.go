@@ -4,10 +4,12 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/godecl/types"
 )
 
 type httpClientTemplate struct {
-	Info *GenerationInfo
+	Info    *GenerationInfo
+	tracing bool
 }
 
 func NewHttpClientTemplate(info *GenerationInfo) Template {
@@ -31,6 +33,13 @@ func (t *httpClientTemplate) Prepare() error {
 	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
 	if util.IsInStringSlice("http", tags) || util.IsInStringSlice("http-client", tags) {
 		t.Info.Force = true
+	}
+	tags = util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
+	for _, tag := range tags {
+		switch tag {
+		case TracingTag:
+			t.tracing = true
+		}
 	}
 	return nil
 }
@@ -86,10 +95,16 @@ func (t *httpClientTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
-	f.Func().Id("NewHTTPClient").Params(
-		Id("addr").Id("string"),
-		Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption"),
-	).Params(
+	f.Func().Id("NewHTTPClient").ParamsFunc(func(p *Group) {
+		p.Id("addr").Id("string")
+		if t.tracing {
+			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
+		}
+		if t.tracing {
+			p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
+		}
+		p.Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption")
+	}).Params(
 		Qual(t.Info.ServiceImportPath, t.Info.Iface.Name),
 		Error(),
 	).Block(
@@ -151,9 +166,24 @@ func (t *httpClientTemplate) clientBody() *Statement {
 					Line().Id("u"),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpEncodeRequestName(fn)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeResponseName(fn)),
-					Line().Id("opts").Op("...").Line(),
+					Line().Add(t.clientOpts(fn)).Op("...").Line(),
 				).Dot("Endpoint").Call()
 			}
 		},
 	)), Nil())
+}
+
+func (t *httpClientTemplate) clientOpts(fn *types.Function) *Statement {
+	s := &Statement{}
+	if t.tracing {
+		s.Op("append(")
+		defer s.Op(")")
+	}
+	s.Id("opts")
+	if t.tracing {
+		s.Op(",").Qual(PackagePathGoKitTransportHTTP, "ClientBefore").Call(
+			Line().Qual(PackagePathGoKitTracing, "ContextToHTTP").Call(Id("tracer"), Id("logger")),
+		)
+	}
+	return s
 }

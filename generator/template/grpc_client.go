@@ -15,7 +15,8 @@ var (
 )
 
 type gRPCClientTemplate struct {
-	Info *GenerationInfo
+	Info    *GenerationInfo
+	tracing bool
 }
 
 func NewGRPCClientTemplate(info *GenerationInfo) Template {
@@ -60,10 +61,16 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(`Please, do not edit.`)
 
 	f.Func().Id("NewGRPCClient").
-		Params(
-			Id("conn").Op("*").Qual(PackagePathGoogleGRPC, "ClientConn"),
-			Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption"),
-		).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name).
+		ParamsFunc(func(p *Group) {
+			p.Id("conn").Op("*").Qual(PackagePathGoogleGRPC, "ClientConn")
+			if t.tracing {
+				p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
+			}
+			if t.tracing {
+				p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
+			}
+			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption")
+		}).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name).
 		BlockFunc(func(g *Group) {
 			g.Return().Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(func(d Dict) {
 				for _, m := range t.Info.Iface.Methods {
@@ -74,7 +81,7 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 						Line().Qual(pathToConverter(t.Info.ServiceImportPath), requestEncodeName(m)),
 						Line().Qual(pathToConverter(t.Info.ServiceImportPath), responseDecodeName(m)),
 						Line().Add(t.replyType(m)),
-						Line().Id("opts").Op("...").Line(),
+						Line().Add(t.clientOpts(m)).Op("...").Line(),
 					).Dot("Endpoint").Call()
 				}
 			}))
@@ -124,6 +131,13 @@ func (t *gRPCClientTemplate) Prepare() error {
 	if util.IsInStringSlice("grpc", tags) || util.IsInStringSlice("grpc-client", tags) {
 		t.Info.Force = true
 	}
+	tags = util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
+	for _, tag := range tags {
+		switch tag {
+		case TracingTag:
+			t.tracing = true
+		}
+	}
 	return nil
 }
 
@@ -132,4 +146,19 @@ func (t *gRPCClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 		return nil, nil
 	}
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+}
+
+func (t *gRPCClientTemplate) clientOpts(fn *types.Function) *Statement {
+	s := &Statement{}
+	if t.tracing {
+		s.Op("append(")
+		defer s.Op(")")
+	}
+	s.Id("opts")
+	if t.tracing {
+		s.Op(",").Qual(PackagePathGoKitTransportGRPC, "ClientBefore").Call(
+			Line().Qual(PackagePathGoKitTracing, "ContextToGRPC").Call(Id("tracer"), Id("logger")),
+		)
+	}
+	return s
 }

@@ -33,11 +33,7 @@ func main() {
 	service = middleware.ServiceErrorLogging(logger)(service)    // Setup error logging.
 	service = middleware.ServiceRecovering(errorLogger)(service) // Setup service recovering.
 
-	endpoints := &generated.Endpoints{
-		CountEndpoint:     generated.CountEndpoint(service),
-		TestCaseEndpoint:  generated.TestCaseEndpoint(service),
-		UppercaseEndpoint: generated.UppercaseEndpoint(service),
-	}
+	endpoints := generated.AllEndpoints(service)
 
 	grpcAddr := ":8081"
 	// Start grpc server.

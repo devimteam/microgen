@@ -7,9 +7,19 @@ import (
 	errors "errors"
 	entity "github.com/devimteam/microgen/example/svc/entity"
 	endpoint "github.com/go-kit/kit/endpoint"
+	opentracing "github.com/go-kit/kit/tracing/opentracing"
+	opentracinggo "github.com/opentracing/opentracing-go"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 )
+
+func AllEndpoints(service StringService, tracer opentracinggo.Tracer) *Endpoints {
+	return &Endpoints{
+		CountEndpoint:     opentracing.TraceServer(tracer, "Count")(CountEndpoint(service)),
+		TestCaseEndpoint:  opentracing.TraceServer(tracer, "TestCase")(TestCaseEndpoint(service)),
+		UppercaseEndpoint: opentracing.TraceServer(tracer, "Uppercase")(UppercaseEndpoint(service)),
+	}
+}
 
 type Endpoints struct {
 	UppercaseEndpoint endpoint.Endpoint

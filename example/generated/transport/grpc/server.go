@@ -6,7 +6,10 @@ import (
 	generated "github.com/devimteam/microgen/example/generated"
 	protobuf1 "github.com/devimteam/microgen/example/generated/transport/converter/protobuf"
 	protobuf "github.com/devimteam/microgen/example/protobuf"
+	log "github.com/go-kit/kit/log"
+	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	grpc "github.com/go-kit/kit/transport/grpc"
+	opentracinggo "github.com/opentracing/opentracing-go"
 	context "golang.org/x/net/context"
 )
 
@@ -16,25 +19,28 @@ type stringServiceServer struct {
 	testCase  grpc.Handler
 }
 
-func NewGRPCServer(endpoints *generated.Endpoints, opts ...grpc.ServerOption) protobuf.StringServiceServer {
+func NewGRPCServer(endpoints *generated.Endpoints, logger log.Logger, tracer opentracinggo.Tracer, opts ...grpc.ServerOption) protobuf.StringServiceServer {
 	return &stringServiceServer{
 		count: grpc.NewServer(
 			endpoints.CountEndpoint,
 			protobuf1.DecodeCountRequest,
 			protobuf1.EncodeCountResponse,
-			opts...,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "Count", logger)))...,
 		),
 		testCase: grpc.NewServer(
 			endpoints.TestCaseEndpoint,
 			protobuf1.DecodeTestCaseRequest,
 			protobuf1.EncodeTestCaseResponse,
-			opts...,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "TestCase", logger)))...,
 		),
 		uppercase: grpc.NewServer(
 			endpoints.UppercaseEndpoint,
 			protobuf1.DecodeUppercaseRequest,
 			protobuf1.EncodeUppercaseResponse,
-			opts...,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "Uppercase", logger)))...,
 		),
 	}
 }

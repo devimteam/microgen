@@ -10,7 +10,8 @@ import (
 )
 
 type gRPCServerTemplate struct {
-	Info *GenerationInfo
+	Info    *GenerationInfo
+	tracing bool
 }
 
 func NewGRPCServerTemplate(info *GenerationInfo) Template {
@@ -78,10 +79,16 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 	}).Line()
 
 	f.Func().Id("NewGRPCServer").
-		Params(
-			Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints"),
-			Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ServerOption"),
-		).Params(
+		ParamsFunc(func(p *Group) {
+			p.Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints")
+			if t.tracing {
+				p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
+			}
+			if t.tracing {
+				p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
+			}
+			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ServerOption")
+		}).Params(
 		Qual(t.Info.ProtobufPackage, serverStructName(t.Info.Iface)),
 	).
 		Block(
@@ -92,7 +99,7 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
 							Line().Qual(pathToConverter(t.Info.ServiceImportPath), requestDecodeName(m)),
 							Line().Qual(pathToConverter(t.Info.ServiceImportPath), responseEncodeName(m)),
-							Line().Id("opts").Op("...").Line(),
+							Line().Add(t.serverOpts(m)).Op("...").Line(),
 						)
 				}
 			}),
@@ -120,6 +127,13 @@ func (t *gRPCServerTemplate) Prepare() error {
 	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
 	if util.IsInStringSlice("grpc", tags) || util.IsInStringSlice("grpc-server", tags) {
 		t.Info.Force = true
+	}
+	tags = util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
+	for _, tag := range tags {
+		switch tag {
+		case TracingTag:
+			t.tracing = true
+		}
 	}
 	return nil
 }
@@ -208,4 +222,19 @@ func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 
 		g.Return().List(Id("resp").Assert(t.grpcServerRespStruct(signature)), Nil())
 	}
+}
+
+func (t *gRPCServerTemplate) serverOpts(fn *types.Function) *Statement {
+	s := &Statement{}
+	if t.tracing {
+		s.Op("append(")
+		defer s.Op(")")
+	}
+	s.Id("opts")
+	if t.tracing {
+		s.Op(",").Qual(PackagePathGoKitTransportGRPC, "ServerBefore").Call(
+			Line().Qual(PackagePathGoKitTracing, "GRPCToContext").Call(Id("tracer"), Lit(fn.Name), Id("logger")),
+		)
+	}
+	return s
 }

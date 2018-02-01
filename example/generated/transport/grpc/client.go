@@ -6,11 +6,14 @@ import (
 	generated "github.com/devimteam/microgen/example/generated"
 	protobuf "github.com/devimteam/microgen/example/generated/transport/converter/protobuf"
 	protobuf1 "github.com/devimteam/microgen/example/protobuf"
+	log "github.com/go-kit/kit/log"
+	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	grpc1 "github.com/go-kit/kit/transport/grpc"
+	opentracinggo "github.com/opentracing/opentracing-go"
 	grpc "google.golang.org/grpc"
 )
 
-func NewGRPCClient(conn *grpc.ClientConn, opts ...grpc1.ClientOption) generated.StringService {
+func NewGRPCClient(conn *grpc.ClientConn, logger log.Logger, tracer opentracinggo.Tracer, opts ...grpc1.ClientOption) generated.StringService {
 	return &generated.Endpoints{
 		CountEndpoint: grpc1.NewClient(
 			conn,
@@ -19,7 +22,8 @@ func NewGRPCClient(conn *grpc.ClientConn, opts ...grpc1.ClientOption) generated.
 			protobuf.EncodeCountRequest,
 			protobuf.DecodeCountResponse,
 			protobuf1.CountResponse{},
-			opts...,
+			append(opts, grpc1.ClientBefore(
+				opentracing.ContextToGRPC(tracer, logger)))...,
 		).Endpoint(),
 		TestCaseEndpoint: grpc1.NewClient(
 			conn,
@@ -28,7 +32,8 @@ func NewGRPCClient(conn *grpc.ClientConn, opts ...grpc1.ClientOption) generated.
 			protobuf.EncodeTestCaseRequest,
 			protobuf.DecodeTestCaseResponse,
 			protobuf1.TestCaseResponse{},
-			opts...,
+			append(opts, grpc1.ClientBefore(
+				opentracing.ContextToGRPC(tracer, logger)))...,
 		).Endpoint(),
 		UppercaseEndpoint: grpc1.NewClient(
 			conn,
@@ -37,7 +42,8 @@ func NewGRPCClient(conn *grpc.ClientConn, opts ...grpc1.ClientOption) generated.
 			protobuf.EncodeUppercaseRequest,
 			protobuf.DecodeUppercaseResponse,
 			protobuf1.UppercaseResponse{},
-			opts...,
+			append(opts, grpc1.ClientBefore(
+				opentracing.ContextToGRPC(tracer, logger)))...,
 		).Endpoint(),
 	}
 }

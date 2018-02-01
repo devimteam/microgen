@@ -36,6 +36,8 @@ const (
 	PackagePathGorillaMux         = "github.com/gorilla/mux"
 	PackagePathPath               = "path"
 	PackagePathStrconv            = "strconv"
+	PackagePathOpenTracingGo      = "github.com/opentracing/opentracing-go"
+	PackagePathGoKitTracing       = "github.com/go-kit/kit/tracing/opentracing"
 
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"
@@ -54,6 +56,7 @@ const (
 	GrpcClientTag             = "grpc-client"
 	MainTag                   = "main"
 	ErrorLoggingMiddlewareTag = "error-logging"
+	TracingTag                = "tracing"
 )
 
 type WriteStrategyState int

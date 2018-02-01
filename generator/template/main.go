@@ -115,11 +115,12 @@ func (t *mainTemplate) mainFunc() *Statement {
 				Comment(`Setup service recovering.`)
 		}
 		main.Line()
-		main.Id("endpoints").Op(":=").Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(func(p Dict) {
+		/*main.Id("endpoints").Op(":=").Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(func(p Dict) {
 			for _, method := range t.Info.Iface.Methods {
 				p[Id(endpointStructName(method.Name))] = Qual(t.Info.ServiceImportPath, endpointStructName(method.Name)).Call(Id("service"))
 			}
-		}))
+		}))*/
+		main.Id("endpoints").Op(":=").Qual(t.Info.ServiceImportPath, "AllEndpoints").Call(Id("service"))
 		if t.grpcServer {
 			main.Line()
 			main.Id("grpcAddr").Op(":=").Lit(":8081")

@@ -5,12 +5,15 @@ package transporthttp
 import (
 	generated "github.com/devimteam/microgen/example/generated"
 	http1 "github.com/devimteam/microgen/example/generated/transport/converter/http"
+	log "github.com/go-kit/kit/log"
+	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	http "github.com/go-kit/kit/transport/http"
+	opentracinggo "github.com/opentracing/opentracing-go"
 	url "net/url"
 	strings "strings"
 )
 
-func NewHTTPClient(addr string, opts ...http.ClientOption) (generated.StringService, error) {
+func NewHTTPClient(addr string, logger log.Logger, tracer opentracinggo.Tracer, opts ...http.ClientOption) (generated.StringService, error) {
 	if !strings.HasPrefix(addr, "http") {
 		addr = "http://" + addr
 	}
@@ -24,21 +27,24 @@ func NewHTTPClient(addr string, opts ...http.ClientOption) (generated.StringServ
 			u,
 			http1.EncodeHTTPCountRequest,
 			http1.DecodeHTTPCountResponse,
-			opts...,
+			append(opts, http.ClientBefore(
+				opentracing.ContextToHTTP(tracer, logger)))...,
 		).Endpoint(),
 		TestCaseEndpoint: http.NewClient(
 			"POST",
 			u,
 			http1.EncodeHTTPTestCaseRequest,
 			http1.DecodeHTTPTestCaseResponse,
-			opts...,
+			append(opts, http.ClientBefore(
+				opentracing.ContextToHTTP(tracer, logger)))...,
 		).Endpoint(),
 		UppercaseEndpoint: http.NewClient(
 			"POST",
 			u,
 			http1.EncodeHTTPUppercaseRequest,
 			http1.DecodeHTTPUppercaseResponse,
-			opts...,
+			append(opts, http.ClientBefore(
+				opentracing.ContextToHTTP(tracer, logger)))...,
 		).Endpoint(),
 	}, nil
 }
