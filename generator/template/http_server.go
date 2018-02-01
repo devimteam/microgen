@@ -146,7 +146,7 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 		g.Id("mux").Op(":=").Qual(PackagePathGorillaMux, "NewRouter").Call()
 		for _, fn := range t.Info.Iface.Methods {
 			g.Id("mux").Dot("Methods").Call(Lit(t.methods[fn.Name])).Dot("Path").
-				Call(Lit(t.paths[fn.Name])).Dot("Handler").Call(
+				Call(Lit("/" + t.paths[fn.Name])).Dot("Handler").Call(
 				Line().Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeRequestName(fn)),
