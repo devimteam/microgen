@@ -30,6 +30,7 @@ const (
 	GrpcClientTag             = template.GrpcClientTag
 	MainTag                   = template.MainTag
 	ErrorLoggingMiddlewareTag = template.ErrorLoggingMiddlewareTag
+	TracingTag                = template.TracingTag
 
 	HttpMethodTag  = template.HttpMethodTag
 	HttpMethodPath = template.HttpMethodPath
@@ -135,6 +136,8 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 		return append(tmpls, template.NewMainTemplate(info))
 	case ErrorLoggingMiddlewareTag:
 		return append(tmpls, template.NewErrorLoggingTemplate(info))
+	case TracingTag:
+		return append(tmpls, &template.EmptyTemplate{})
 	}
 	return nil
 }
