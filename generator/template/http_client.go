@@ -147,43 +147,50 @@ func (t *httpClientTemplate) Render() write_strategy.Renderer {
 //		}, nil
 //
 func (t *httpClientTemplate) clientBody() *Statement {
-	return If(
+	g := &Statement{}
+	g.If(
 		Op("!").Qual(PackagePathStrings, "HasPrefix").Call(Id("addr"), Lit("http")),
 	).Block(
 		Id("addr").Op("=").Lit("http://").Op("+").Id("addr"),
-	).
-		Line().List(Id("u"), Err()).Op(":=").Qual(PackagePathUrl, "Parse").Call(Id("addr")).
-		Line().If(Err().Op("!=").Nil()).
-		Block(
-			Return(Nil(), Err()),
-		).
-		Line().Return(Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(
+	)
+	g.Line().List(Id("u"), Err()).Op(":=").Qual(PackagePathUrl, "Parse").Call(Id("addr"))
+	g.Line().If(Err().Op("!=").Nil()).Block(
+		Return(Nil(), Err()),
+	)
+	if t.tracing {
+		g.Line().Id("opts").Op("=").Append(Id("opts"), Qual(PackagePathGoKitTransportHTTP, "ClientBefore").Call(
+			Line().Qual(PackagePathGoKitTracing, "ContextToHTTP").Call(Id("tracer"), Id("logger")).Op(",").Line(),
+		))
+	}
+	g.Line().Return(Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(
 		func(d Dict) {
 			for _, fn := range t.Info.Iface.Methods {
 				method := FetchHttpMethodTag(fn.Docs)
-				d[Id(endpointStructName(fn.Name))] = Qual(PackagePathGoKitTransportHTTP, "NewClient").Call(
+				client := &Statement{}
+				if t.tracing {
+					client.Qual(PackagePathGoKitTracing, "TraceClient").Call(
+						Line().Id("tracer"),
+						Line().Lit(fn.Name),
+						Line(),
+					).Op("(").Line()
+					defer func() { client.Op(",").Line().Op(")") }() // defer in for loop is OK
+				}
+				client.Qual(PackagePathGoKitTransportHTTP, "NewClient").Call(
 					Line().Lit(method),
 					Line().Id("u"),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpEncodeRequestName(fn)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeResponseName(fn)),
 					Line().Add(t.clientOpts(fn)).Op("...").Line(),
 				).Dot("Endpoint").Call()
+				d[Id(endpointStructName(fn.Name))] = client
 			}
 		},
 	)), Nil())
+	return g
 }
 
 func (t *httpClientTemplate) clientOpts(fn *types.Function) *Statement {
 	s := &Statement{}
-	if t.tracing {
-		s.Op("append(")
-		defer s.Op(")")
-	}
 	s.Id("opts")
-	if t.tracing {
-		s.Op(",").Qual(PackagePathGoKitTransportHTTP, "ClientBefore").Call(
-			Line().Qual(PackagePathGoKitTracing, "ContextToHTTP").Call(Id("tracer"), Id("logger")),
-		)
-	}
 	return s
 }

@@ -72,9 +72,23 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption")
 		}).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name).
 		BlockFunc(func(g *Group) {
+			if t.tracing {
+				g.Id("opts").Op("=").Append(Id("opts"), Qual(PackagePathGoKitTransportGRPC, "ClientBefore").Call(
+					Line().Qual(PackagePathGoKitTracing, "ContextToGRPC").Call(Id("tracer"), Id("logger")).Op(",").Line(),
+				))
+			}
 			g.Return().Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(func(d Dict) {
 				for _, m := range t.Info.Iface.Methods {
-					d[Id(endpointStructName(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewClient").Call(
+					client := &Statement{}
+					if t.tracing {
+						client.Qual(PackagePathGoKitTracing, "TraceClient").Call(
+							Line().Id("tracer"),
+							Line().Lit(m.Name),
+							Line(),
+						).Op("(").Line()
+						defer func() { client.Op(",").Line().Op(")") }() // defer in for loop is OK
+					}
+					client.Qual(PackagePathGoKitTransportGRPC, "NewClient").Call(
 						Line().Id("conn"),
 						Line().Lit(t.Info.GRPCRegAddr),
 						Line().Lit(m.Name),
@@ -83,6 +97,7 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 						Line().Add(t.replyType(m)),
 						Line().Add(t.clientOpts(m)).Op("...").Line(),
 					).Dot("Endpoint").Call()
+					d[Id(endpointStructName(m.Name))] = client
 				}
 			}))
 		})
@@ -150,15 +165,6 @@ func (t *gRPCClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 
 func (t *gRPCClientTemplate) clientOpts(fn *types.Function) *Statement {
 	s := &Statement{}
-	if t.tracing {
-		s.Op("append(")
-		defer s.Op(")")
-	}
 	s.Id("opts")
-	if t.tracing {
-		s.Op(",").Qual(PackagePathGoKitTransportGRPC, "ClientBefore").Call(
-			Line().Qual(PackagePathGoKitTracing, "ContextToGRPC").Call(Id("tracer"), Id("logger")),
-		)
-	}
 	return s
 }
