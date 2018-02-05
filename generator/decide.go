@@ -137,7 +137,7 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 	case ErrorLoggingMiddlewareTag:
 		return append(tmpls, template.NewErrorLoggingTemplate(info))
 	case TracingTag:
-		return append(tmpls, &template.EmptyTemplate{})
+		return append(tmpls, template.EmptyTemplate{})
 	}
 	return nil
 }

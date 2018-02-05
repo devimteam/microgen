@@ -33,7 +33,9 @@ func main() {
 	service = middleware.ServiceErrorLogging(logger)(service)    // Setup error logging.
 	service = middleware.ServiceRecovering(errorLogger)(service) // Setup service recovering.
 
-	endpoints := generated.AllEndpoints(service)
+	endpoints := generated.AllEndpoints(service,
+		nil, // TODO: Add tracer
+	)
 
 	grpcAddr := ":8081"
 	// Start grpc server.
@@ -69,7 +71,10 @@ func ServeGRPC(endpoints *generated.Endpoints, ch chan<- error, addr string, log
 		return
 	}
 	// Here you can add middlewares for grpc server.
-	server := grpc.NewGRPCServer(endpoints)
+	server := grpc.NewGRPCServer(endpoints,
+		logger,
+		nil, // TODO: Add tracer
+	)
 	grpcServer := grpc1.NewServer()
 	protobuf.RegisterStringServiceServer(grpcServer, server)
 	logger.Log("listen on", addr)
@@ -78,7 +83,10 @@ func ServeGRPC(endpoints *generated.Endpoints, ch chan<- error, addr string, log
 
 // ServeHTTP starts new HTTP server on address and sends first error to channel.
 func ServeHTTP(endpoints *generated.Endpoints, ch chan<- error, addr string, logger log.Logger) {
-	handler := http.NewHTTPHandler(endpoints)
+	handler := http.NewHTTPHandler(endpoints,
+		logger,
+		nil, // TODO: Add tracer
+	)
 	httpServer := &http1.Server{
 		Addr:    addr,
 		Handler: handler,

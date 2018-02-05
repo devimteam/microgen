@@ -16,6 +16,7 @@ type mainTemplate struct {
 	errorLogging bool
 	grpcServer   bool
 	httpServer   bool
+	tracing      bool
 }
 
 func NewMainTemplate(info *GenerationInfo) Template {
@@ -56,6 +57,8 @@ func (t *mainTemplate) Prepare() error {
 			t.grpcServer = true
 		case ErrorLoggingMiddlewareTag:
 			t.errorLogging = true
+		case TracingTag:
+			t.tracing = true
 		}
 	}
 	return nil
@@ -114,13 +117,7 @@ func (t *mainTemplate) mainFunc() *Statement {
 				Qual(filepath.Join(t.Info.ServiceImportPath, "middleware"), "ServiceRecovering").Call(Id("errorLogger")).Call(Id("service")).
 				Comment(`Setup service recovering.`)
 		}
-		main.Line()
-		/*main.Id("endpoints").Op(":=").Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(func(p Dict) {
-			for _, method := range t.Info.Iface.Methods {
-				p[Id(endpointStructName(method.Name))] = Qual(t.Info.ServiceImportPath, endpointStructName(method.Name)).Call(Id("service"))
-			}
-		}))*/
-		main.Id("endpoints").Op(":=").Qual(t.Info.ServiceImportPath, "AllEndpoints").Call(Id("service"))
+		main.Line().Id("endpoints").Op(":=").Qual(t.Info.ServiceImportPath, "AllEndpoints").Call(t.endpointsParams())
 		if t.grpcServer {
 			main.Line()
 			main.Id("grpcAddr").Op(":=").Lit(":8081")
@@ -203,7 +200,7 @@ func (t *mainTemplate) serveGrpc() *Statement {
 			Return(),
 		)
 		body.Comment(`Here you can add middlewares for grpc server.`)
-		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.ServiceImportPath, "transport/grpc"), "NewGRPCServer").Call(Id("endpoints"))
+		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.ServiceImportPath, "transport/grpc"), "NewGRPCServer").Call(t.newServerParams())
 		body.Id("grpcServer").Op(":=").Qual(PackagePathGoogleGRPC, "NewServer").Call()
 		body.Qual(t.Info.ProtobufPackage, "Register"+util.ToUpperFirst(t.Info.Iface.Name)+"Server").Call(Id("grpcServer"), Id("server"))
 		body.Id("logger").Dot("Log").Call(Lit("listen on"), Id("addr"))
@@ -222,7 +219,7 @@ func (t *mainTemplate) serveHTTP() *Statement {
 		Id("addr").Id("string"),
 		Id("logger").Qual(PackagePathGoKitLog, "Logger"),
 	).BlockFunc(func(body *Group) {
-		body.Id("handler").Op(":=").Qual(t.Info.ServiceImportPath+"/transport/http", "NewHTTPHandler").Call(Id("endpoints"))
+		body.Id("handler").Op(":=").Qual(t.Info.ServiceImportPath+"/transport/http", "NewHTTPHandler").Call(t.newServerParams())
 		body.Id("httpServer").Op(":=").Op("&").Qual(PackagePathHttp, "Server").Values(DictFunc(func(d Dict) {
 			d[Id("Addr")] = Id("addr")
 			d[Id("Handler")] = Id("handler")
@@ -230,4 +227,25 @@ func (t *mainTemplate) serveHTTP() *Statement {
 		body.Id("logger").Dot("Log").Call(Lit("listen on"), Id("addr"))
 		body.Id("ch").Op("<-").Id("httpServer").Dot("ListenAndServe").Call()
 	})
+}
+
+func (t *mainTemplate) endpointsParams() *Statement {
+	s := &Statement{}
+	s.Id("service")
+	if t.tracing {
+		s.Op(",").Line().Nil().Op(",").Comment("TODO: Add tracer").Line()
+	}
+	return s
+}
+
+func (t *mainTemplate) newServerParams() *Statement {
+	s := &Statement{}
+	s.Id("endpoints")
+	if t.tracing {
+		s.Op(",").Line().Id("logger")
+	}
+	if t.tracing {
+		s.Op(",").Line().Nil().Op(",").Comment("TODO: Add tracer").Line()
+	}
+	return s
 }

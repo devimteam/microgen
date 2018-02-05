@@ -14,12 +14,12 @@ type Template interface {
 	Render() write_strategy.Renderer
 }
 
-type EmptyTemplate struct {
-}
+// Template for tags, that not produce any files.
+type EmptyTemplate struct{}
 
-func (*EmptyTemplate) Prepare() error      { return nil }
-func (*EmptyTemplate) DefaultPath() string { return "" }
-func (*EmptyTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (EmptyTemplate) Prepare() error      { return nil }
+func (EmptyTemplate) DefaultPath() string { return "" }
+func (EmptyTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 	return write_strategy.NewNopStrategy("", ""), nil
 }
-func (*EmptyTemplate) Render() write_strategy.Renderer { return nil }
+func (EmptyTemplate) Render() write_strategy.Renderer { return nil }
