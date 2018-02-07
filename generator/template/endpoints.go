@@ -141,10 +141,10 @@ func (t *endpointsTemplate) serviceEndpointMethodBody(fn *types.Function, normal
 	respName := "response"
 	return func(g *Group) {
 		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByNormalVariables(RemoveContextIfFirst(fn.Args), RemoveContextIfFirst(normal.Args)))
-		g.Add(endpointResponse(respName, fn)).Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(normal)), Op("&").Id(reqName))
-		g.If(Id(nameOfLastResultError(fn)).Op("!=").Nil().BlockFunc(func(ifg *Group) {
+		g.Add(endpointResponse(respName, normal)).Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(normal)), Op("&").Id(reqName))
+		g.If(Id(nameOfLastResultError(normal)).Op("!=").Nil().BlockFunc(func(ifg *Group) {
 			if t.grpc {
-				ifg.Add(checkGRPCError(fn))
+				ifg.Add(checkGRPCError(normal))
 			}
 			ifg.Return()
 		}))
@@ -152,7 +152,7 @@ func (t *endpointsTemplate) serviceEndpointMethodBody(fn *types.Function, normal
 			for _, field := range removeErrorIfLast(fn.Results) {
 				group.Id(respName).Assert(Op("*").Id(responseStructName(fn))).Op(".").Add(structFieldName(&field))
 			}
-			group.Id(nameOfLastResultError(fn))
+			group.Id(nameOfLastResultError(normal))
 		})
 	}
 }

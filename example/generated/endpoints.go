@@ -29,14 +29,14 @@ type Endpoints struct {
 
 func (E *Endpoints) Uppercase(arg0 context.Context, arg1 map[string]string) (res0 string, res1 error) {
 	request := UppercaseRequest{StringsMap: arg1}
-	response, err := E.UppercaseEndpoint(arg0, &request)
-	if err != nil {
-		if e, ok := status.FromError(err); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
-			err = errors.New(e.Message())
+	response, res1 := E.UppercaseEndpoint(arg0, &request)
+	if res1 != nil {
+		if e, ok := status.FromError(res1); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
+			res1 = errors.New(e.Message())
 		}
 		return
 	}
-	return response.(*UppercaseResponse).Ans, err
+	return response.(*UppercaseResponse).Ans, res1
 }
 
 func (E *Endpoints) Count(arg0 context.Context, arg1 string, arg2 string) (res0 int, res1 []int, res2 error) {
@@ -44,26 +44,26 @@ func (E *Endpoints) Count(arg0 context.Context, arg1 string, arg2 string) (res0 
 		Symbol: arg2,
 		Text:   arg1,
 	}
-	response, err := E.CountEndpoint(arg0, &request)
-	if err != nil {
-		if e, ok := status.FromError(err); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
-			err = errors.New(e.Message())
+	response, res2 := E.CountEndpoint(arg0, &request)
+	if res2 != nil {
+		if e, ok := status.FromError(res2); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
+			res2 = errors.New(e.Message())
 		}
 		return
 	}
-	return response.(*CountResponse).Count, response.(*CountResponse).Positions, err
+	return response.(*CountResponse).Count, response.(*CountResponse).Positions, res2
 }
 
 func (E *Endpoints) TestCase(arg0 context.Context, arg1 []*entity.Comment) (res0 map[string]int, res1 error) {
 	request := TestCaseRequest{Comments: arg1}
-	response, err := E.TestCaseEndpoint(arg0, &request)
-	if err != nil {
-		if e, ok := status.FromError(err); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
-			err = errors.New(e.Message())
+	response, res1 := E.TestCaseEndpoint(arg0, &request)
+	if res1 != nil {
+		if e, ok := status.FromError(res1); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
+			res1 = errors.New(e.Message())
 		}
 		return
 	}
-	return response.(*TestCaseResponse).Tree, err
+	return response.(*TestCaseResponse).Tree, res1
 }
 
 func UppercaseEndpoint(svc StringService) endpoint.Endpoint {
