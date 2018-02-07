@@ -25,47 +25,47 @@ type serviceLogging struct {
 	next   generated.StringService
 }
 
-func (L *serviceLogging) Uppercase(ctx context.Context, stringsMap map[string]string) (ans string, err error) {
+func (L *serviceLogging) Uppercase(arg0 context.Context, arg1 map[string]string) (res0 string, res1 error) {
 	defer func(begin time.Time) {
 		L.logger.Log(
 			"method", "Uppercase",
-			"request", logUppercaseRequest{StringsMap: stringsMap},
+			"request", logUppercaseRequest{StringsMap: arg1},
 			"took", time.Since(begin))
 	}(time.Now())
-	return L.next.Uppercase(ctx, stringsMap)
+	return L.next.Uppercase(arg0, arg1)
 }
 
-func (L *serviceLogging) Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error) {
+func (L *serviceLogging) Count(arg0 context.Context, arg1 string, arg2 string) (res0 int, res1 []int, res2 error) {
 	defer func(begin time.Time) {
 		L.logger.Log(
 			"method", "Count",
 			"request", logCountRequest{
-				Symbol: symbol,
-				Text:   text,
+				Symbol: arg2,
+				Text:   arg1,
 			},
 			"response", logCountResponse{
-				Count:     count,
-				Positions: positions,
+				Count:     res0,
+				Positions: res1,
 			},
-			"err", err,
+			"err", res2,
 			"took", time.Since(begin))
 	}(time.Now())
-	return L.next.Count(ctx, text, symbol)
+	return L.next.Count(arg0, arg1, arg2)
 }
 
-func (L *serviceLogging) TestCase(ctx context.Context, comments []*entity.Comment) (tree map[string]int, err error) {
+func (L *serviceLogging) TestCase(arg0 context.Context, arg1 []*entity.Comment) (res0 map[string]int, res1 error) {
 	defer func(begin time.Time) {
 		L.logger.Log(
 			"method", "TestCase",
 			"request", logTestCaseRequest{
-				Comments:    comments,
-				LenComments: len(comments),
+				Comments:    arg1,
+				LenComments: len(arg1),
 			},
-			"response", logTestCaseResponse{Tree: tree},
-			"err", err,
+			"response", logTestCaseResponse{Tree: res0},
+			"err", res1,
 			"took", time.Since(begin))
 	}(time.Now())
-	return L.next.TestCase(ctx, comments)
+	return L.next.TestCase(arg0, arg1)
 }
 
 type logUppercaseRequest struct {

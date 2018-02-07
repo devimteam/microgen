@@ -177,7 +177,8 @@ func (t *loggingTemplate) loggingEntity(name string, fn *types.Function, params 
 //		}
 //
 func (t *loggingTemplate) loggingFunc(signature *types.Function) *Statement {
-	return methodDefinition(serviceLoggingStructName, signature).
+	normal := normalizeFunction(signature)
+	return methodDefinition(serviceLoggingStructName, &normal.Function).
 		BlockFunc(t.loggingFuncBody(signature))
 }
 
@@ -193,6 +194,7 @@ func (t *loggingTemplate) loggingFunc(signature *types.Function) *Statement {
 //		return s.next.Count(ctx, text, symbol)
 //
 func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Group) {
+	normal := normalizeFunction(signature)
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
 			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").CallFunc(func(g *Group) {
@@ -200,13 +202,13 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 				g.Lit(signature.Name)
 
 				if t.calcParamAmount(signature.Name, RemoveContextIfFirst(signature.Args)) > 0 {
-					g.Line().List(Lit("request"), t.logRequest(signature))
+					g.Line().List(Lit("request"), t.logRequest(normal))
 				}
 				if t.calcParamAmount(signature.Name, removeErrorIfLast(signature.Results)) > 0 {
-					g.Line().List(Lit("response"), t.logResponse(signature))
+					g.Line().List(Lit("response"), t.logResponse(normal))
 				}
 				if !util.IsInStringSlice(nameOfLastResultError(signature), t.ignoreParams[signature.Name]) {
-					g.Line().List(Lit(nameOfLastResultError(signature)), Id(nameOfLastResultError(signature)))
+					g.Line().List(Lit(nameOfLastResultError(signature)), Id(nameOfLastResultError(&normal.Function)))
 				}
 
 				g.Line().Lit("took")
@@ -214,7 +216,7 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 			}),
 		).Call(Qual(PackagePathTime, "Now").Call())
 
-		g.Return().Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
+		g.Return().Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(normal.Args))
 	}
 }
 
@@ -239,35 +241,35 @@ func (t *loggingTemplate) paramsNameAndValue(fields []types.Variable, functionNa
 	})
 }
 
-func (t *loggingTemplate) fillMap(fn *types.Function, params []types.Variable) *Statement {
+func (t *loggingTemplate) fillMap(fn *types.Function, params, normal []types.Variable) *Statement {
 	return Values(DictFunc(func(d Dict) {
 		ignore := t.ignoreParams[fn.Name]
 		lenParams := t.lenParams[fn.Name]
-		for _, field := range params {
+		for i, field := range params {
 			if !util.IsInStringSlice(field.Name, ignore) {
-				d[Id(util.ToUpperFirst(field.Name))] = Id(field.Name)
+				d[Id(util.ToUpperFirst(field.Name))] = Id(normal[i].Name)
 			}
 			if util.IsInStringSlice(field.Name, lenParams) {
-				d[Id("Len"+util.ToUpperFirst(field.Name))] = Len(Id(field.Name))
+				d[Id("Len"+util.ToUpperFirst(field.Name))] = Len(Id(normal[i].Name))
 			}
 		}
 	}))
 }
 
-func (t *loggingTemplate) logRequest(fn *types.Function) *Statement {
-	paramAmount := t.calcParamAmount(fn.Name, RemoveContextIfFirst(fn.Args))
+func (t *loggingTemplate) logRequest(fn *normalizedFunction) *Statement {
+	paramAmount := t.calcParamAmount(fn.parent.Name, RemoveContextIfFirst(fn.parent.Args))
 	if paramAmount <= 0 {
 		return Lit("")
 	}
-	return Id("log" + requestStructName(fn)).Add(t.fillMap(fn, RemoveContextIfFirst(fn.Args)))
+	return Id("log" + requestStructName(fn.parent)).Add(t.fillMap(fn.parent, RemoveContextIfFirst(fn.parent.Args), RemoveContextIfFirst(fn.Args)))
 }
 
-func (t *loggingTemplate) logResponse(fn *types.Function) *Statement {
-	paramAmount := t.calcParamAmount(fn.Name, removeErrorIfLast(fn.Results))
+func (t *loggingTemplate) logResponse(fn *normalizedFunction) *Statement {
+	paramAmount := t.calcParamAmount(fn.parent.Name, removeErrorIfLast(fn.parent.Results))
 	if paramAmount <= 0 {
 		return Lit("")
 	}
-	return Id("log" + responseStructName(fn)).Add(t.fillMap(fn, removeErrorIfLast(fn.Results)))
+	return Id("log" + responseStructName(fn.parent)).Add(t.fillMap(fn.parent, removeErrorIfLast(fn.parent.Results), RemoveContextIfFirst(fn.Results)))
 }
 
 func (t *loggingTemplate) calcParamAmount(name string, params []types.Variable) int {

@@ -119,8 +119,9 @@ func (t *endpointsTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 //		}
 //
 func (t *endpointsTemplate) serviceEndpointMethod(signature *types.Function) *Statement {
-	return methodDefinition("Endpoints", signature).
-		BlockFunc(t.serviceEndpointMethodBody(signature))
+	normal := normalizeFunction(signature)
+	return methodDefinition("Endpoints", &normal.Function).
+		BlockFunc(t.serviceEndpointMethodBody(signature, &normal.Function))
 }
 
 // Render interface method body.
@@ -135,12 +136,12 @@ func (t *endpointsTemplate) serviceEndpointMethod(signature *types.Function) *St
 //		}
 //		return endpointCountResponse.(*CountResponse).Count, endpointCountResponse.(*CountResponse).Positions, err
 //
-func (t *endpointsTemplate) serviceEndpointMethodBody(fn *types.Function) func(g *Group) {
-	reqName := endpointExchange("request", fn)
-	respName := endpointExchange("response", fn)
+func (t *endpointsTemplate) serviceEndpointMethodBody(fn *types.Function, normal *types.Function) func(g *Group) {
+	reqName := "request"
+	respName := "response"
 	return func(g *Group) {
-		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByVariables(RemoveContextIfFirst(fn.Args)))
-		g.Add(endpointResponse(respName, fn)).Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(fn)), Op("&").Id(reqName))
+		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByNormalVariables(RemoveContextIfFirst(fn.Args), RemoveContextIfFirst(normal.Args)))
+		g.Add(endpointResponse(respName, fn)).Id(util.LastUpperOrFirst("Endpoint")).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(normal)), Op("&").Id(reqName))
 		g.If(Id(nameOfLastResultError(fn)).Op("!=").Nil().BlockFunc(func(ifg *Group) {
 			if t.grpc {
 				ifg.Add(checkGRPCError(fn))
@@ -192,17 +193,17 @@ func firstArgName(signature *types.Function) string {
 //			}, nil
 //		}
 //
-func createEndpointBody(signature *types.Function) *Statement {
+func createEndpointBody(signature *normalizedFunction) *Statement {
 	return Return(Func().Params(
-		Id(firstArgName(signature)).Qual("context", "Context"),
+		Id(firstArgName(&signature.Function)).Qual("context", "Context"),
 		Id("request").Interface(),
 	).Params(
 		Interface(),
 		Error(),
 	).BlockFunc(func(g *Group) {
-		methodParams := RemoveContextIfFirst(signature.Args)
+		methodParams := RemoveContextIfFirst(signature.parent.Args)
 		if len(methodParams) > 0 {
-			g.Id("_req").Op(":=").Id("request").Assert(Op("*").Id(requestStructName(signature)))
+			g.Id("req").Op(":=").Id("request").Assert(Op("*").Id(requestStructName(signature.parent)))
 		}
 
 		g.Add(paramNames(signature.Results).
@@ -210,19 +211,22 @@ func createEndpointBody(signature *types.Function) *Statement {
 			Id("svc").
 			Dot(signature.Name).
 			CallFunc(func(g *Group) {
-				g.Add(Id(firstArgName(signature)))
+				g.Add(Id(firstArgName(&signature.Function)))
 				for _, field := range methodParams {
 					v := Dot(util.ToUpperFirst(field.Name))
 					if types.IsEllipsis(field.Type) {
 						v.Op("...")
 					}
-					g.Add(Id("_req").Add(v))
+					g.Add(Id("req").Add(v))
 				}
 			}))
 
 		g.Return(
-			Op("&").Id(responseStructName(signature)).Values(dictByVariables(removeErrorIfLast(signature.Results))),
-			Id(nameOfLastResultError(signature)),
+			Op("&").Id(responseStructName(signature.parent)).Values(dictByNormalVariables(
+				removeErrorIfLast(signature.parent.Results),
+				removeErrorIfLast(signature.Results),
+			)),
+			Id(nameOfLastResultError(&signature.Function)),
 		)
 	}))
 }
@@ -241,9 +245,10 @@ func createEndpointBody(signature *types.Function) *Statement {
 //		}
 //
 func createEndpoint(signature *types.Function, info *GenerationInfo) *Statement {
+	normal := normalizeFunction(signature)
 	return Func().
 		Id(endpointStructName(signature.Name)).Params(Id("svc").Id(info.Iface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
-		Block(createEndpointBody(signature))
+		Block(createEndpointBody(normal))
 }
 
 func endpointExchange(base string, fn *types.Function) string {

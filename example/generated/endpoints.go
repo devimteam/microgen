@@ -27,68 +27,68 @@ type Endpoints struct {
 	TestCaseEndpoint  endpoint.Endpoint
 }
 
-func (E *Endpoints) Uppercase(ctx context.Context, stringsMap map[string]string) (ans string, err error) {
-	endpointUppercaseRequest := UppercaseRequest{StringsMap: stringsMap}
-	endpointUppercaseResponse, err := E.UppercaseEndpoint(ctx, &endpointUppercaseRequest)
+func (E *Endpoints) Uppercase(arg0 context.Context, arg1 map[string]string) (res0 string, res1 error) {
+	request := UppercaseRequest{StringsMap: arg1}
+	response, err := E.UppercaseEndpoint(arg0, &request)
 	if err != nil {
 		if e, ok := status.FromError(err); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
 			err = errors.New(e.Message())
 		}
 		return
 	}
-	return endpointUppercaseResponse.(*UppercaseResponse).Ans, err
+	return response.(*UppercaseResponse).Ans, err
 }
 
-func (E *Endpoints) Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error) {
-	endpointCountRequest := CountRequest{
-		Symbol: symbol,
-		Text:   text,
+func (E *Endpoints) Count(arg0 context.Context, arg1 string, arg2 string) (res0 int, res1 []int, res2 error) {
+	request := CountRequest{
+		Symbol: arg2,
+		Text:   arg1,
 	}
-	endpointCountResponse, err := E.CountEndpoint(ctx, &endpointCountRequest)
+	response, err := E.CountEndpoint(arg0, &request)
 	if err != nil {
 		if e, ok := status.FromError(err); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
 			err = errors.New(e.Message())
 		}
 		return
 	}
-	return endpointCountResponse.(*CountResponse).Count, endpointCountResponse.(*CountResponse).Positions, err
+	return response.(*CountResponse).Count, response.(*CountResponse).Positions, err
 }
 
-func (E *Endpoints) TestCase(ctx context.Context, comments []*entity.Comment) (tree map[string]int, err error) {
-	endpointTestCaseRequest := TestCaseRequest{Comments: comments}
-	endpointTestCaseResponse, err := E.TestCaseEndpoint(ctx, &endpointTestCaseRequest)
+func (E *Endpoints) TestCase(arg0 context.Context, arg1 []*entity.Comment) (res0 map[string]int, res1 error) {
+	request := TestCaseRequest{Comments: arg1}
+	response, err := E.TestCaseEndpoint(arg0, &request)
 	if err != nil {
 		if e, ok := status.FromError(err); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
 			err = errors.New(e.Message())
 		}
 		return
 	}
-	return endpointTestCaseResponse.(*TestCaseResponse).Tree, err
+	return response.(*TestCaseResponse).Tree, err
 }
 
 func UppercaseEndpoint(svc StringService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		_req := request.(*UppercaseRequest)
-		ans, err := svc.Uppercase(ctx, _req.StringsMap)
-		return &UppercaseResponse{Ans: ans}, err
+	return func(arg0 context.Context, request interface{}) (interface{}, error) {
+		req := request.(*UppercaseRequest)
+		res0, res1 := svc.Uppercase(arg0, req.StringsMap)
+		return &UppercaseResponse{Ans: res0}, res1
 	}
 }
 
 func CountEndpoint(svc StringService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		_req := request.(*CountRequest)
-		count, positions, err := svc.Count(ctx, _req.Text, _req.Symbol)
+	return func(arg0 context.Context, request interface{}) (interface{}, error) {
+		req := request.(*CountRequest)
+		res0, res1, res2 := svc.Count(arg0, req.Text, req.Symbol)
 		return &CountResponse{
-			Count:     count,
-			Positions: positions,
-		}, err
+			Count:     res0,
+			Positions: res1,
+		}, res2
 	}
 }
 
 func TestCaseEndpoint(svc StringService) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		_req := request.(*TestCaseRequest)
-		tree, err := svc.TestCase(ctx, _req.Comments)
-		return &TestCaseResponse{Tree: tree}, err
+	return func(arg0 context.Context, request interface{}) (interface{}, error) {
+		req := request.(*TestCaseRequest)
+		res0, res1 := svc.TestCase(arg0, req.Comments)
+		return &TestCaseResponse{Tree: res0}, res1
 	}
 }
