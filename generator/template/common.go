@@ -303,6 +303,22 @@ func normalizeFunction(signature *types.Function) *normalizedFunction {
 	return newFunc
 }
 
+func normalizeFunctionArgs(signature *types.Function) *normalizedFunction {
+	newFunc := &normalizedFunction{parent: signature}
+	newFunc.Name = signature.Name
+	newFunc.Args = normalizeVariables(signature.Args, normalArgPrefix)
+	newFunc.Results = signature.Results
+	return newFunc
+}
+
+func normalizeFunctionResults(signature *types.Function) *normalizedFunction {
+	newFunc := &normalizedFunction{parent: signature}
+	newFunc.Name = signature.Name
+	newFunc.Args = signature.Args
+	newFunc.Results = normalizeVariables(signature.Results, normalResultPrefix)
+	return newFunc
+}
+
 func normalizeVariables(old []types.Variable, prefix string) (new []types.Variable) {
 	for i := range old {
 		v := old[i]

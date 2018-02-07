@@ -30,7 +30,7 @@ type serviceCache struct {
 	next   generated.StringService
 }
 
-func (C *serviceCache) Uppercase(arg0 context.Context, arg1 map[string]string) (res0 string, res1 error) {
+func (C *serviceCache) Uppercase(ctx context.Context, stringsMap map[string]string) (res0 string, res1 error) {
 	value, e := C.cache.Get("Uppercase")
 	if e == nil {
 		return value.(*uppercaseResponseCacheEntity).Ans, res1
@@ -38,10 +38,10 @@ func (C *serviceCache) Uppercase(arg0 context.Context, arg1 map[string]string) (
 	defer func() {
 		C.cache.Set("Uppercase", &uppercaseResponseCacheEntity{Ans: res0})
 	}()
-	return C.next.Uppercase(arg0, arg1)
+	return C.next.Uppercase(ctx, stringsMap)
 }
 
-func (C *serviceCache) Count(arg0 context.Context, arg1 string, arg2 string) (res0 int, res1 []int, res2 error) {
+func (C *serviceCache) Count(ctx context.Context, text string, symbol string) (res0 int, res1 []int, res2 error) {
 	value, e := C.cache.Get(arg1)
 	if e == nil {
 		return value.(*countResponseCacheEntity).Count, value.(*countResponseCacheEntity).Positions, res2
@@ -52,11 +52,11 @@ func (C *serviceCache) Count(arg0 context.Context, arg1 string, arg2 string) (re
 			Positions: res1,
 		})
 	}()
-	return C.next.Count(arg0, arg1, arg2)
+	return C.next.Count(ctx, text, symbol)
 }
 
-func (C *serviceCache) TestCase(arg0 context.Context, arg1 []*entity.Comment) (res0 map[string]int, res1 error) {
-	return C.next.TestCase(arg0, arg1)
+func (C *serviceCache) TestCase(ctx context.Context, comments []*entity.Comment) (res0 map[string]int, res1 error) {
+	return C.next.TestCase(ctx, comments)
 }
 
 type uppercaseResponseCacheEntity struct {

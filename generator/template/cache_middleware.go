@@ -102,7 +102,7 @@ func (t *cacheMiddlewareTemplate) newCacheBody(i *types.Interface) *Statement {
 }
 
 func (t *cacheMiddlewareTemplate) cacheFunc(signature *types.Function) *Statement {
-	normalized := normalizeFunction(signature)
+	normalized := normalizeFunctionResults(signature)
 	return methodDefinition(cacheMiddlewareStructName, &normalized.Function).
 		BlockFunc(t.cacheFuncBody(signature, &normalized.Function))
 }
