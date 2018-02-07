@@ -1,6 +1,7 @@
 package template
 
 import (
+	"strconv"
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
@@ -57,6 +58,7 @@ const (
 	MainTag                   = "main"
 	ErrorLoggingMiddlewareTag = "error-logging"
 	TracingTag                = "tracing"
+	CacheTag                  = "cache"
 )
 
 type WriteStrategyState int
@@ -281,4 +283,42 @@ func removeAlreadyExistingFunctions(existing []types.Function, generating *[]*ty
 		}
 	}
 	*generating = x
+}
+
+type normalizedFunction struct {
+	types.Function
+	parent *types.Function
+}
+
+const (
+	normalArgPrefix    = "arg"
+	normalResultPrefix = "res"
+)
+
+func normalizeFunction(signature *types.Function) *normalizedFunction {
+	newFunc := &normalizedFunction{parent: signature}
+	newFunc.Name = signature.Name
+	newFunc.Args = normalizeVariables(signature.Args, normalArgPrefix)
+	newFunc.Results = normalizeVariables(signature.Results, normalResultPrefix)
+	return newFunc
+}
+
+func normalizeVariables(old []types.Variable, prefix string) (new []types.Variable) {
+	for i := range old {
+		v := old[i]
+		v.Name = prefix + strconv.Itoa(i)
+		new = append(new, v)
+	}
+	return
+}
+
+func dictByNormalVariables(fields []types.Variable, normals []types.Variable) Dict {
+	if len(fields) != len(normals) {
+		panic("len of fields and normals on the same")
+	}
+	return DictFunc(func(d Dict) {
+		for i, field := range fields {
+			d[structFieldName(&field)] = Id(util.ToLowerFirst(normals[i].Name))
+		}
+	})
 }
