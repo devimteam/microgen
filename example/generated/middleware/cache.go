@@ -42,12 +42,12 @@ func (C *serviceCache) Uppercase(ctx context.Context, stringsMap map[string]stri
 }
 
 func (C *serviceCache) Count(ctx context.Context, text string, symbol string) (res0 int, res1 []int, res2 error) {
-	value, e := C.cache.Get(arg1)
+	value, e := C.cache.Get(text)
 	if e == nil {
 		return value.(*countResponseCacheEntity).Count, value.(*countResponseCacheEntity).Positions, res2
 	}
 	defer func() {
-		C.cache.Set(arg1, &countResponseCacheEntity{
+		C.cache.Set(text, &countResponseCacheEntity{
 			Count:     res0,
 			Positions: res1,
 		})
