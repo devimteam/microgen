@@ -55,7 +55,9 @@ func (t *cacheMiddlewareTemplate) Render() write_strategy.Renderer {
 		f.Add(t.cacheFunc(signature)).Line()
 	}
 	for _, signature := range t.Info.Iface.Methods {
-		f.Add(t.cacheEntity(signature)).Line()
+		if t.caching[signature.Name] {
+			f.Add(t.cacheEntity(signature)).Line()
+		}
 	}
 	return f
 }

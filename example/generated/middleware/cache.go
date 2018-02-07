@@ -67,7 +67,3 @@ type countResponseCacheEntity struct {
 	Count     int
 	Positions []int
 }
-
-type testCaseResponseCacheEntity struct {
-	Tree map[string]int
-}
