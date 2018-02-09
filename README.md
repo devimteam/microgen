@@ -115,8 +115,9 @@ All allowed tags for customize generation provided here.
 |:------------|:------------------------------------------------------------------------------------------------------------------------------|
 | middleware  | General application middleware interface. Generates every time.                                                               |
 | logging     | Middleware that writes to logger all request/response information with handled time. Generates every time.                    |
-| error-logging | Middleware that writes to logger errors of method calls, if error not nil.                                                  |
+| error-logging | Middleware that writes to logger errors of method calls, if error is not nil.                                               |
 | recover     | Middleware that recovers panics and writes errors to logger. Generates every time.                                            |
+| cache       | Middleware that caches responses of service. Generates every time.                                                            |
 | grpc-client | Generates client for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | grpc-server | Generates server for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | grpc        | Generates client and server for grpc transport with request/response encoders/decoders. Do not generates again if file exist. |
@@ -136,6 +137,7 @@ All allowed tags for customize generation provided here.
 | Logging middleware     |  ./middleware/logging.go    |  Overwrites old file every time.|
 | Recovering middleware  | ./middleware/recovering.go  |  Overwrites old file every time.|
 | Error-logging middleware  | ./middleware/error-logging.go  |  Overwrites old file every time.|
+| Cache middleware  | ./middleware/cache.go  |  Overwrites old file every time.|
 
 ## Example
 You may find examples in `example` directory, where `svc` contains all, what you need for successful generation, and `generated` contains what you will get after `microgen`.  
@@ -168,20 +170,7 @@ type StringService interface {
 4. You should see something like that:
 ```
 @microgen 0.5.0
-Tags: middleware, logging, grpc, http, recover, main
-New cmd/string_service/main.go
-Add .../svc.go
-New exchanges.go
-New endpoints.go
-New middleware/middleware.go
-Add transport/converter/http/exchange_converters.go
-New middleware/logging.go
-New middleware/recovering.go
-New transport/grpc/server.go
-New transport/grpc/client.go
-New transport/converter/protobuf/type_converters.go
-New transport/converter/protobuf/endpoint_converters.go
-All files successfully generated
+all files successfully generated
 ```
 5. Now, add and generate protobuf file (if you use grpc transport) and write transport converters (from protobuf/json to golang and _vise versa_).
 6. Use endpoints in your `package main` or wherever you want. (tag `main` generates some code for `package main`)
@@ -192,6 +181,7 @@ __*__ `GOPATH/bin` should be in your PATH.
 For correct generation, please, follow rules below.
 
 General:
+* Interface should be valid golang code.
 * All interface method's arguments and results should be named and should be different (name duplicating unacceptable).
 * First argument of each method should be of type `context.Context` (from [standard library](https://golang.org/pkg/context/)).
 * Last result should be builtin `error` type.
