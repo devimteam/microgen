@@ -379,10 +379,10 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 				}
 			}
 			if len(methodParams) > 0 {
-				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ServiceImportPath, requestStructName(signature)))
-				group.If(Id(shortName).Op("==").Nil()).Block(
+				group.If(Id(fullName).Op("==").Nil()).Block(
 					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+requestStructName(signature)))),
 				)
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ServiceImportPath, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := golangTypeToProto("", &field); !ok {
 						group.Add(t.convertCustomType(shortName, typeToProto(field.Type, 0), &field))
@@ -441,10 +441,10 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 				}
 			}
 			if len(methodResults) > 0 {
-				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ServiceImportPath, responseStructName(signature)))
-				group.If(Id(shortName).Op("==").Nil()).Block(
+				group.If(Id(fullName).Op("==").Nil()).Block(
 					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+responseStructName(signature)))),
 				)
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ServiceImportPath, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := golangTypeToProto("", &field); !ok {
 						group.Add(t.convertCustomType(shortName, typeToProto(field.Type, 0), &field))
@@ -480,10 +480,10 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 				}
 			}
 			if len(methodParams) > 0 {
-				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature)))
-				group.If(Id(shortName).Op("==").Nil()).Block(
+				group.If(Id(fullName).Op("==").Nil()).Block(
 					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+requestStructName(signature)))),
 				)
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := protoTypeToGolang("", &field); !ok {
 						group.Add(t.convertCustomType(shortName, protoToType(field.Type, 0), &field))
@@ -523,10 +523,10 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 				}
 			}
 			if len(methodResults) > 0 {
-				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)))
-				group.If(Id(shortName).Op("==").Nil()).Block(
+				group.If(Id(fullName).Op("==").Nil()).Block(
 					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+responseStructName(signature)))),
 				)
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := protoTypeToGolang("", &field); !ok {
 						group.Add(t.convertCustomType(shortName, protoToType(field.Type, 0), &field))

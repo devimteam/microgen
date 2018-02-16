@@ -9,7 +9,7 @@ import (
 	log "github.com/go-kit/kit/log"
 )
 
-// Cache
+// Cache interface uses for middleware as key-value storage for requests.
 type Cache interface {
 	Set(key, value interface{}) (err error)
 	Get(key interface{}) (value interface{}, err error)

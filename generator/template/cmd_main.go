@@ -233,7 +233,7 @@ func (t *mainTemplate) endpointsParams() *Statement {
 	s := &Statement{}
 	s.Id("service")
 	if t.tracing {
-		s.Op(",").Line().Nil().Op(",").Comment("TODO: Add tracer").Line()
+		s.Op(",").Line().Qual(PackagePathOpenTracingGo, "NoopTracer{}").Op(",").Comment("TODO: Add tracer").Line()
 	}
 	return s
 }

@@ -32,7 +32,7 @@ func (t *cacheMiddlewareTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(`Please, do not edit.`)
 
 	// Render type Cache
-	f.Comment("Cache")
+	f.Comment("Cache interface uses for middleware as key-value storage for requests.")
 	f.Type().Id(cacheInterfaceName).Interface(
 		Id("Set").Call(Op("key, value interface{}")).Call(Op("err error")),
 		Id("Get").Call(Op("key interface{}")).Call(Op("value interface{}, err error")),
