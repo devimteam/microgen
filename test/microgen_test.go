@@ -1,8 +1,9 @@
 package test
 
 import (
-	"fmt"
-	"strings"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -12,84 +13,72 @@ type TestCase struct {
 	Want string
 }
 
-var assestsPath = "./assets"
-
-var cases = []TestCase{
-	{
-		Name: "1",
-		Got:  `1234567890`,
-		Want: `qwertyuiop`,
-	},
-	{
-		Name: "2",
-		Got: `1234567890
-		1234567890`,
-		Want: `qwertyuiop
-		qwertyuiop`,
-	},
-	{
-		Name: "3",
-		Got: `1234567890
-		1234567890
-		1234567890
-		1234567890
-		1234567890
-		1234567890
-		1234567890`,
-		Want: `1234567890
-		1234567890
-		1234567890
-		1234567890
-		1234567890
-		qwertyuiop
-		qwertyuiop
-		1234567890`,
-	},
-}
+const (
+	assestsPath = "./assets"
+	wantSubPath = "./want"
+	gotSubPath  = "./got"
+)
 
 func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func TestGenerationCases(t *testing.T) {
-	for _, tt := range cases {
-		t.Run(tt.Name, func(t *testing.T) {
-			line, _ := findStringDifference(tt.Want, tt.Got)
-			fmt.Println(cutWithLinesAround(tt.Want, line))
-			fmt.Println(cutWithLinesAround(tt.Got, line))
-		})
+func TestAssets(t *testing.T) {
+	cases, err := ioutil.ReadDir(assestsPath)
+	if err != nil {
+		t.Fatal(err)
 	}
-}
-
-func findStringDifference(str1, str2 string) (lineNum, symbolNum int) {
-	splited1 := strings.Split(str1, "\n")
-	splited2 := strings.Split(str2, "\n")
-	for ; lineNum < len(splited1) && lineNum < len(splited2); lineNum++ {
-		if splited1[lineNum] == splited2[lineNum] {
+	for _, c := range cases {
+		if !c.IsDir() {
 			continue
 		}
-		line1, line2 := splited1[lineNum], splited2[lineNum]
-		for i := 0; i < len(line1) && i < len(line2); i++ {
-			if line1[i] != line2[i] {
-				symbolNum = i
-				break
+		t.Run(c.Name(), func(t *testing.T) {
+			path := filepath.Join(c.Name(), wantSubPath)
+			wantFiles := make(map[string][]byte)
+			err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if info.IsDir() {
+					return nil
+				}
+				data, err := ioutil.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				wantFiles[path] = data
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
 			}
-		}
-	}
-	return
-}
 
-const around = 2
-
-func cutWithLinesAround(str string, lineNum int) string {
-	splited := strings.Split(str, "\n")
-	i := 0
-	var ans []string
-	for lineNum-around < i && i < lineNum+around && i < len(splited) {
-		if lineNum-around < i && i < lineNum+around {
-			ans = append(ans, fmt.Sprintf("%d\t%s", i+1, splited[i]))
-		}
-		i++
+			path = filepath.Join(c.Name(), gotSubPath)
+			gotFiles := make(map[string][]byte)
+			err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if info.IsDir() {
+					return nil
+				}
+				data, err := ioutil.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				gotFiles[path] = data
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for k, v := range wantFiles {
+				if v2, ok := gotFiles[k]; !ok {
+					t.Fatal(k, "not found")
+				} else if string(v) != string(v2) {
+					t.Fatal("not same")
+				}
+			}
+		})
 	}
-	return strings.Join(ans, "\n")
 }
