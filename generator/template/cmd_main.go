@@ -55,7 +55,7 @@ func (t *mainTemplate) Render() write_strategy.Renderer {
 	file.PackageComment(`This file will never be overwritten.`)
 	file.Add(f)
 
-	return f
+	return file
 }
 
 func (t *mainTemplate) DefaultPath() string {

@@ -74,7 +74,7 @@ func ServeGRPC(endpoints *generated.Endpoints, ch chan<- error, addr string, log
 	// Here you can add middlewares for grpc server.
 	server := grpc.NewGRPCServer(endpoints,
 		logger,
-		nil, // TODO: Add tracer
+		opentracinggo.NoopTracer{}, // TODO: Add tracer
 	)
 	grpcServer := grpc1.NewServer()
 	protobuf.RegisterStringServiceServer(grpcServer, server)
@@ -86,7 +86,7 @@ func ServeGRPC(endpoints *generated.Endpoints, ch chan<- error, addr string, log
 func ServeHTTP(endpoints *generated.Endpoints, ch chan<- error, addr string, logger log.Logger) {
 	handler := http.NewHTTPHandler(endpoints,
 		logger,
-		nil, // TODO: Add tracer
+		opentracinggo.NoopTracer{}, // TODO: Add tracer
 	)
 	httpServer := &http1.Server{
 		Addr:    addr,
