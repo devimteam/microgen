@@ -8,6 +8,7 @@ import (
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
+	"github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 )
@@ -168,7 +169,8 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 	}
 	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
 	if err != nil {
-		return nil, err
+		logger.Logger.Log(0, "can't parse", t.DefaultPath(), ":", err)
+		return write_strategy.NewNopStrategy("", ""), nil
 	}
 
 	for i := range file.Functions {

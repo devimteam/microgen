@@ -60,12 +60,13 @@ func (s createFileStrategy) Save(f Renderer, filename string) error {
 	if err := f.Render(buf); err != nil {
 		return err
 	}
-	// Stop saving because nothing
+	// Stop saving because nothing to save
 	if len(buf.Bytes()) == 0 {
 		return nil
 	}
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {
+		fmt.Println(buf.String())
 		return fmt.Errorf("error when format source: %v", err)
 	}
 	if err := ioutil.WriteFile(filename, formatted, 0644); err != nil {
@@ -140,6 +141,7 @@ func (s appendFileStrategy) Save(renderer Renderer, filename string) error {
 	// Use trick for top-level formatting.
 	formatted, err := format.Source(append([]byte(formatTrick), buf.Bytes()...))
 	if err != nil {
+		fmt.Println(buf.String())
 		return fmt.Errorf("error when format source: %v", err)
 	}
 

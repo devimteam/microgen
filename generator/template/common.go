@@ -274,6 +274,10 @@ func functionDefinition(signature *types.Function) *Statement {
 		Params(funcDefinitionParams(signature.Results))
 }
 
+func defaultNameFormer(f *types.Function) string {
+	return f.Name
+}
+
 // Remove from generating functions that already in existing.
 func removeAlreadyExistingFunctions(existing []types.Function, generating *[]*types.Function, nameFormer func(*types.Function) string) {
 	x := (*generating)[:0]
@@ -330,7 +334,7 @@ func normalizeVariables(old []types.Variable, prefix string) (new []types.Variab
 
 func dictByNormalVariables(fields []types.Variable, normals []types.Variable) Dict {
 	if len(fields) != len(normals) {
-		panic("len of fields and normals on the same")
+		panic("len of fields and normals not the same")
 	}
 	return DictFunc(func(d Dict) {
 		for i, field := range fields {
@@ -338,3 +342,7 @@ func dictByNormalVariables(fields []types.Variable, normals []types.Variable) Di
 		}
 	})
 }
+
+// Hard
+// Soft
+// Nop?
