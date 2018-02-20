@@ -1,8 +1,12 @@
 package template
 
 import (
+	"os"
+	"path/filepath"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
+	"github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 )
@@ -18,6 +22,9 @@ type cacheMiddlewareTemplate struct {
 	Info      *GenerationInfo
 	cacheKeys map[string]string
 	caching   map[string]bool
+
+	rendered Rendered
+	state    WriteStrategyState
 }
 
 func NewCacheMiddlewareTemplate(info *GenerationInfo) Template {
@@ -27,39 +34,52 @@ func NewCacheMiddlewareTemplate(info *GenerationInfo) Template {
 }
 
 func (t *cacheMiddlewareTemplate) Render() write_strategy.Renderer {
-	f := NewFile("middleware")
-	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`Please, do not edit.`)
-
-	// Render type Cache
-	f.Comment("Cache interface uses for middleware as key-value storage for requests.")
-	f.Type().Id(cacheInterfaceName).Interface(
-		Id("Set").Call(Op("key, value interface{}")).Call(Op("err error")),
-		Id("Get").Call(Op("key interface{}")).Call(Op("value interface{}, err error")),
-	)
-	f.Line()
-
-	f.Line().Func().Id(util.ToUpperFirst(cacheMiddlewareStructName)).Params(Id("cache").Id(cacheInterfaceName)).Params(Id(MiddlewareTypeName)).
-		Block(t.newCacheBody(t.Info.Iface))
-
-	f.Line()
-
-	// Render middleware struct
-	f.Type().Id(cacheMiddlewareStructName).Struct(
-		Id("cache").Id(cacheInterfaceName),
-		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name),
-	)
-	for _, signature := range t.Info.Iface.Methods {
+	f := &Statement{}
+	if t.rendered.NotContain(cacheInterfaceName) {
+		// Render type Cache
+		f.Comment("Cache interface uses for middleware as key-value storage for requests.")
+		f.Line().Type().Id(cacheInterfaceName).Interface(
+			Id("Set").Call(Op("key, value interface{}")).Call(Op("err error")),
+			Id("Get").Call(Op("key interface{}")).Call(Op("value interface{}, err error")),
+		)
 		f.Line()
-		f.Add(t.cacheFunc(signature)).Line()
+	}
+
+	if t.rendered.NotContain(util.ToUpperFirst(cacheMiddlewareStructName)) {
+		f.Line().Func().Id(util.ToUpperFirst(cacheMiddlewareStructName)).Params(Id("cache").Id(cacheInterfaceName)).Params(Id(MiddlewareTypeName)).
+			Block(t.newCacheBody(t.Info.Iface))
+
+		f.Line()
+	}
+
+	if t.rendered.NotContain(cacheMiddlewareStructName) {
+		// Render middleware struct
+		f.Type().Id(cacheMiddlewareStructName).Struct(
+			Id("cache").Id(cacheInterfaceName),
+			Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
+			Id(nextVarName).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name),
+		)
 	}
 	for _, signature := range t.Info.Iface.Methods {
-		if t.caching[signature.Name] {
+		if t.rendered.NotContain("*" + cacheMiddlewareStructName + signature.Name) {
+			f.Line()
+			f.Add(t.cacheFunc(signature)).Line()
+		}
+	}
+	for _, signature := range t.Info.Iface.Methods {
+		if t.caching[signature.Name] && t.rendered.NotContain(cacheEntityStructName(signature)) {
 			f.Add(t.cacheEntity(signature)).Line()
 		}
 	}
-	return f
+
+	if t.state == AppendStrat {
+		return f
+	}
+	file := NewFile("middleware")
+	file.PackageComment(t.Info.FileHeader)
+	file.PackageComment(`Microgen appends missed functions.`)
+	file.Add(f)
+	return file
 }
 
 func (cacheMiddlewareTemplate) DefaultPath() string {
@@ -83,7 +103,29 @@ func (t *cacheMiddlewareTemplate) Prepare() error {
 }
 
 func (t *cacheMiddlewareTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); os.IsNotExist(err) {
+		t.state = FileStrat
+		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	}
+	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
+	if err != nil {
+		logger.Logger.Logln(0, "can't parse", t.DefaultPath(), ":", err)
+		return write_strategy.NewNopStrategy("", ""), nil
+	}
+	for _, method := range file.Methods {
+		t.rendered.Add(method.Receiver.Type.String() + method.Name)
+	}
+	for _, iface := range file.Interfaces {
+		t.rendered.Add(iface.Name)
+	}
+	for _, fn := range file.Functions {
+		t.rendered.Add(fn.Name)
+	}
+	for _, str := range file.Structures {
+		t.rendered.Add(str.Name)
+	}
+	t.state = AppendStrat
+	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
 }
 
 func (t *cacheMiddlewareTemplate) newCacheBody(i *types.Interface) *Statement {

@@ -52,7 +52,7 @@ func (t *mainTemplate) Render() write_strategy.Renderer {
 
 	file := NewFile("main")
 	file.PackageComment(t.Info.FileHeader)
-	file.PackageComment(`This file will never be overwritten.`)
+	file.PackageComment(`Microgen appends missed functions.`)
 	file.Add(f)
 
 	return file
@@ -92,9 +92,6 @@ func (t *mainTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 	if err != nil {
 		logger.Logger.Logln(0, "can't parse", t.DefaultPath(), ":", err)
 		return write_strategy.NewNopStrategy("", ""), nil
-	}
-	for _, f := range file.Functions {
-		t.rendered = append(t.rendered, f.Name)
 	}
 	for _, f := range file.Functions {
 		t.rendered = append(t.rendered, f.Name)

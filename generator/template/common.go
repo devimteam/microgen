@@ -343,6 +343,22 @@ func dictByNormalVariables(fields []types.Variable, normals []types.Variable) Di
 	})
 }
 
+type Rendered struct {
+	slice []string
+}
+
+func (r *Rendered) Add(s string) {
+	r.slice = append(r.slice, s)
+}
+
+func (r *Rendered) Contain(s string) bool {
+	return util.IsInStringSlice(s, r.slice)
+}
+
+func (r *Rendered) NotContain(s string) bool {
+	return !r.Contain(s)
+}
+
 // Hard
 // Soft
 // Nop?

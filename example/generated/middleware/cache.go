@@ -4,6 +4,7 @@ package middleware
 
 import (
 	context "context"
+
 	generated "github.com/devimteam/microgen/example/generated"
 	entity "github.com/devimteam/microgen/example/svc/entity"
 	log "github.com/go-kit/kit/log"
