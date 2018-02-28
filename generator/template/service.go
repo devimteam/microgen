@@ -51,14 +51,14 @@ func (t *stubInterfaceTemplate) Render() write_strategy.Renderer {
 
 	if !t.isConstructorExist {
 		f.Func().Id(constructorName(t.Info.Iface)).Params().Id(t.Info.Iface.Name).Block(
-			Panic(Lit("constructor not provided")),
+			Panic(Lit("constructor not provided")).Comment("// TODO: provide constructor"),
 		).Line()
 	}
 
 	for _, signature := range t.Info.Iface.Methods {
 		if !util.IsInStringSlice(signature.Name, t.alreadyRenderedMethods) {
 			f.Line().Add(methodDefinition(util.ToLower(t.Info.Iface.Name), signature)).Block(
-				Panic(Lit("method not provided")),
+				Panic(Lit("method not provided")).Comment("// TODO: provide method"),
 			).Line()
 		}
 	}
