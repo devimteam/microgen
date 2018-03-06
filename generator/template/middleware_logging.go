@@ -90,14 +90,19 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 		f.Line()
 		f.Add(t.loggingFunc(signature)).Line()
 	}
-
+	if len(t.Info.Iface.Methods) > 0 {
+		f.Type().Op("(")
+	}
 	for _, signature := range t.Info.Iface.Methods {
 		if params := RemoveContextIfFirst(signature.Args); t.calcParamAmount(signature.Name, params) > 0 {
-			f.Add(t.loggingEntity("log"+requestStructName(signature), signature, params)).Line()
+			f.Add(t.loggingEntity("log"+requestStructName(signature), signature, params))
 		}
 		if params := removeErrorIfLast(signature.Results); t.calcParamAmount(signature.Name, params) > 0 {
-			f.Add(t.loggingEntity("log"+responseStructName(signature), signature, params)).Line()
+			f.Add(t.loggingEntity("log"+responseStructName(signature), signature, params))
 		}
+	}
+	if len(t.Info.Iface.Methods) > 0 {
+		f.Op(")")
 	}
 
 	return f
@@ -149,7 +154,7 @@ func (t *loggingTemplate) loggingEntity(name string, fn *types.Function, params 
 	if len(params) == 0 {
 		return nil
 	}
-	return Type().Id(name).StructFunc(func(g *Group) {
+	return Id(name).StructFunc(func(g *Group) {
 		ignore := t.ignoreParams[fn.Name]
 		lenParams := t.lenParams[fn.Name]
 		for _, field := range params {
@@ -160,7 +165,7 @@ func (t *loggingTemplate) loggingEntity(name string, fn *types.Function, params 
 				g.Id("Len" + util.ToUpperFirst(field.Name)).Int().Tag(map[string]string{"json": "len(" + util.ToUpperFirst(field.Name) + ")"})
 			}
 		}
-	}).Line()
+	})
 }
 
 // Render logging middleware for interface method.

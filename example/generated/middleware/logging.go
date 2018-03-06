@@ -68,25 +68,23 @@ func (L *serviceLogging) TestCase(arg0 context.Context, arg1 []*entity.Comment) 
 	return L.next.TestCase(arg0, arg1)
 }
 
-type logUppercaseRequest struct {
-	StringsMap map[string]string
-}
-
-type logCountRequest struct {
-	Text   string
-	Symbol string
-}
-
-type logCountResponse struct {
-	Count     int
-	Positions []int
-}
-
-type logTestCaseRequest struct {
-	Comments    []*entity.Comment
-	LenComments int `json:"len(Comments)"`
-}
-
-type logTestCaseResponse struct {
-	Tree map[string]int
-}
+type (
+	logUppercaseRequest struct {
+		StringsMap map[string]string
+	}
+	logCountRequest struct {
+		Text   string
+		Symbol string
+	}
+	logCountResponse struct {
+		Count     int
+		Positions []int
+	}
+	logTestCaseRequest struct {
+		Comments    []*entity.Comment
+		LenComments int `json:"len(Comments)"`
+	}
+	logTestCaseResponse struct {
+		Tree map[string]int
+	}
+)
