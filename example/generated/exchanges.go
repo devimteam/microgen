@@ -4,28 +4,27 @@ package stringsvc
 
 import entity "github.com/devimteam/microgen/example/svc/entity"
 
-type UppercaseRequest struct {
-	StringsMap map[string]string `json:"strings_map"`
-}
+type (
+	UppercaseRequest struct {
+		StringsMap map[string]string `json:"strings_map"`
+	}
+	UppercaseResponse struct {
+		Ans string `json:"ans"`
+	}
 
-type UppercaseResponse struct {
-	Ans string `json:"ans"`
-}
+	CountRequest struct {
+		Text   string `json:"text"`
+		Symbol string `json:"symbol"`
+	}
+	CountResponse struct {
+		Count     int   `json:"count"`
+		Positions []int `json:"positions"`
+	}
 
-type CountRequest struct {
-	Text   string `json:"text"`
-	Symbol string `json:"symbol"`
-}
-
-type CountResponse struct {
-	Count     int   `json:"count"`
-	Positions []int `json:"positions"`
-}
-
-type TestCaseRequest struct {
-	Comments []*entity.Comment `json:"comments"`
-}
-
-type TestCaseResponse struct {
-	Tree map[string]int `json:"tree"`
-}
+	TestCaseRequest struct {
+		Comments []*entity.Comment `json:"comments"`
+	}
+	TestCaseResponse struct {
+		Tree map[string]int `json:"tree"`
+	}
+)

@@ -46,9 +46,15 @@ func (t *exchangeTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
+	if len(t.Info.Iface.Methods) > 0 {
+		f.Type().Op("(")
+	}
 	for _, signature := range t.Info.Iface.Methods {
-		f.Add(exchange(requestStructName(signature), RemoveContextIfFirst(signature.Args))).Line()
+		f.Add(exchange(requestStructName(signature), RemoveContextIfFirst(signature.Args))) //.Line()
 		f.Add(exchange(responseStructName(signature), removeErrorIfLast(signature.Results))).Line()
+	}
+	if len(t.Info.Iface.Methods) > 0 {
+		f.Op(")")
 	}
 
 	return f
@@ -75,12 +81,12 @@ func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 func exchange(name string, params []types.Variable) Code {
 	if len(params) == 0 {
 		return Comment("Formal exchange type, please do not delete.").Line().
-			Type().Id(name).Struct().
-			Line()
+			Id(name).Struct()
+		//Line()
 	}
-	return Type().Id(name).StructFunc(func(g *Group) {
+	return Id(name).StructFunc(func(g *Group) {
 		for _, param := range params {
 			g.Add(structField(&param))
 		}
-	}).Line()
+	}) //.Line()
 }
