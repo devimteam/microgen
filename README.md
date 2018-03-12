@@ -117,7 +117,7 @@ All allowed tags for customize generation provided here.
 | logging     | Middleware that writes to logger all request/response information with handled time. Generates every time.                    |
 | error-logging | Middleware that writes to logger errors of method calls, if error is not nil.                                               |
 | recover     | Middleware that recovers panics and writes errors to logger. Generates every time.                                            |
-| cache       | Middleware that caches responses of service. Generates every time.                                                            |
+| cache       | Middleware that caches responses of service. Adds missed functions.                                                           |
 | grpc-client | Generates client for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | grpc-server | Generates server for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | grpc        | Generates client and server for grpc transport with request/response encoders/decoders. Do not generates again if file exist. |
@@ -125,19 +125,20 @@ All allowed tags for customize generation provided here.
 | http-server | Generates server for http transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | http        | Generates client and server for http transport with request/response encoders/decoders. Do not generates again if file exist. |
 | main        | Generates basic `package main` for starting service. Uses other tags for minimal user changes.                                |
+| tracing     | Generates options and params for opentracing.                                                                                 |
 
 ### Files
 
 | Name  | Default path |  Generation logic |
 |---|----|------------------|
-| Service interface |./service.go | Add service entity, constructor and methods if it missed. Checks function names to understand it. |
+| Service interface |./service.go | Adds service entity, constructor and methods if they were missed. Checks function names to understand it. |
 | Exchanges     | ./exchanges.go     |  Overwrites old file every time.|
 | Endpoints     |  ./endpoints.go    |  Overwrites old file every time.|
 | Middleware     | ./middleware/middleware.go     |  Overwrites old file every time.|
 | Logging middleware     |  ./middleware/logging.go    |  Overwrites old file every time.|
 | Recovering middleware  | ./middleware/recovering.go  |  Overwrites old file every time.|
 | Error-logging middleware  | ./middleware/error-logging.go  |  Overwrites old file every time.|
-| Cache middleware  | ./middleware/cache.go  |  Overwrites old file every time.|
+| Cache middleware  | ./middleware/cache.go  |  Adds methods if they were missed. Checks function names to understand it.|
 
 ## Example
 You may find examples in `example` directory, where `svc` contains all, what you need for successful generation, and `generated` contains what you will get after `microgen`.  
