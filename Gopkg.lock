@@ -31,13 +31,16 @@
 
 [[projects]]
   name = "github.com/vetcher/godecl"
-  packages = [".","types"]
-  revision = "e7cd2d121489c49a27b9551244c5f7a9e9bad729"
-  version = "v1.0.1"
+  packages = [
+    ".",
+    "types"
+  ]
+  revision = "e604edf6c9f8abae969b1ab08605f3908b49c164"
+  version = "v1.1.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6bf3fdf9732def77dd3bdddc13983f001c50c4e799595d7a31500de3dd34d7ac"
+  inputs-digest = "32f798572e14435aee5ef2e91f16c6af4f5895bb368b28df621801edef6f829e"
   solver-name = "gps-cdcl"
   solver-version = 1

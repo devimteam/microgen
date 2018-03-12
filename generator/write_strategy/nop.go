@@ -1,16 +1,11 @@
 package write_strategy
 
 type nopStrategy struct {
-	absPath string
-	relPath string
 }
 
 // Do nothing strategy
-func NewNopStrategy(absPath, relPath string) Strategy {
-	return nopStrategy{
-		absPath: absPath,
-		relPath: relPath,
-	}
+func NewNopStrategy(string, string) Strategy {
+	return nopStrategy{}
 }
 
 func (s nopStrategy) Write(Renderer) error {

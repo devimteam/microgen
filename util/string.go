@@ -60,6 +60,15 @@ func FetchTags(strs []string, prefix string) (tags []string) {
 	return
 }
 
+func HasTag(strs []string, prefix string) bool {
+	for _, comment := range strs {
+		if strings.HasPrefix(comment, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func ToLower(str string) string {
 	if len(str) > 0 && unicode.IsLower(rune(str[0])) {
 		return str

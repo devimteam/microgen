@@ -23,6 +23,7 @@ type httpServerTemplate struct {
 	Info    *GenerationInfo
 	methods map[string]string
 	paths   map[string]string
+	tracing bool
 }
 
 func NewHttpServerTemplate(info *GenerationInfo) Template {
@@ -48,6 +49,13 @@ func (t *httpServerTemplate) Prepare() error {
 	for _, fn := range t.Info.Iface.Methods {
 		t.methods[fn.Name] = FetchHttpMethodTag(fn.Docs)
 		t.paths[fn.Name] = buildMethodPath(fn)
+	}
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
+	for _, tag := range tags {
+		switch tag {
+		case TracingTag:
+			t.tracing = true
+		}
 	}
 	return nil
 }
@@ -137,10 +145,16 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
-	f.Func().Id("NewHTTPHandler").Params(
-		Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints"),
-		Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ServerOption"),
-	).Params(
+	f.Func().Id("NewHTTPHandler").ParamsFunc(func(p *Group) {
+		p.Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints")
+		if t.tracing {
+			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
+		}
+		if t.tracing {
+			p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
+		}
+		p.Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ServerOption")
+	}).Params(
 		Qual(PackagePathHttp, "Handler"),
 	).BlockFunc(func(g *Group) {
 		g.Id("mux").Op(":=").Qual(PackagePathGorillaMux, "NewRouter").Call()
@@ -151,13 +165,28 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeRequestName(fn)),
 					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpEncodeResponseName(fn)),
-					Line().Id("opts").Op("...")),
+					Line().Add(t.serverOpts(fn)).Op("...")),
 			)
 		}
 		g.Return(Id("mux"))
 	})
 
 	return f
+}
+
+func (t *httpServerTemplate) serverOpts(fn *types.Function) *Statement {
+	s := &Statement{}
+	if t.tracing {
+		s.Op("append(")
+		defer s.Op(")")
+	}
+	s.Id("opts")
+	if t.tracing {
+		s.Op(",").Qual(PackagePathGoKitTransportHTTP, "ServerBefore").Call(
+			Line().Qual(PackagePathGoKitTracing, "HTTPToContext").Call(Id("tracer"), Lit(fn.Name), Id("logger")),
+		)
+	}
+	return s
 }
 
 func pathToHttpConverter(servicePath string) string {

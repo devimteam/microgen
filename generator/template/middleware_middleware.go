@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	MiddlewareTypeName = "Middleware"
+	MiddlewareTypeName     = "Middleware"
+	EndpointMiddelwareName = "EndpointMiddleware"
 )
 
 type middlewareTemplate struct {

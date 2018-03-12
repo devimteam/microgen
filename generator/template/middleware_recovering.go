@@ -26,7 +26,7 @@ func (t *recoverTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
-	f.Comment("ServiceRecovering recovers panics from method calls, writes to provided logger and returns the error of panic as method error.").
+	f.Comment(util.ToUpperFirst(serviceRecoverStructName) + " recovers panics from method calls, writes to provided logger and returns the error of panic as method error.").
 		Line().Func().Id(util.ToUpperFirst(serviceRecoverStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newRecoverBody(t.Info.Iface))
 

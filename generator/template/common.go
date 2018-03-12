@@ -1,6 +1,7 @@
 package template
 
 import (
+	"strconv"
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
@@ -36,6 +37,8 @@ const (
 	PackagePathGorillaMux         = "github.com/gorilla/mux"
 	PackagePathPath               = "path"
 	PackagePathStrconv            = "strconv"
+	PackagePathOpenTracingGo      = "github.com/opentracing/opentracing-go"
+	PackagePathGoKitTracing       = "github.com/go-kit/kit/tracing/opentracing"
 
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"
@@ -54,6 +57,8 @@ const (
 	GrpcClientTag             = "grpc-client"
 	MainTag                   = "main"
 	ErrorLoggingMiddlewareTag = "error-logging"
+	TracingTag                = "tracing"
+	CacheTag                  = "cache"
 )
 
 type WriteStrategyState int
@@ -269,6 +274,10 @@ func functionDefinition(signature *types.Function) *Statement {
 		Params(funcDefinitionParams(signature.Results))
 }
 
+func defaultNameFormer(f *types.Function) string {
+	return f.Name
+}
+
 // Remove from generating functions that already in existing.
 func removeAlreadyExistingFunctions(existing []types.Function, generating *[]*types.Function, nameFormer func(*types.Function) string) {
 	x := (*generating)[:0]
@@ -279,3 +288,77 @@ func removeAlreadyExistingFunctions(existing []types.Function, generating *[]*ty
 	}
 	*generating = x
 }
+
+type normalizedFunction struct {
+	types.Function
+	parent *types.Function
+}
+
+const (
+	normalArgPrefix    = "arg"
+	normalResultPrefix = "res"
+)
+
+func normalizeFunction(signature *types.Function) *normalizedFunction {
+	newFunc := &normalizedFunction{parent: signature}
+	newFunc.Name = signature.Name
+	newFunc.Args = normalizeVariables(signature.Args, normalArgPrefix)
+	newFunc.Results = normalizeVariables(signature.Results, normalResultPrefix)
+	return newFunc
+}
+
+func normalizeFunctionArgs(signature *types.Function) *normalizedFunction {
+	newFunc := &normalizedFunction{parent: signature}
+	newFunc.Name = signature.Name
+	newFunc.Args = normalizeVariables(signature.Args, normalArgPrefix)
+	newFunc.Results = signature.Results
+	return newFunc
+}
+
+func normalizeFunctionResults(signature *types.Function) *normalizedFunction {
+	newFunc := &normalizedFunction{parent: signature}
+	newFunc.Name = signature.Name
+	newFunc.Args = signature.Args
+	newFunc.Results = normalizeVariables(signature.Results, normalResultPrefix)
+	return newFunc
+}
+
+func normalizeVariables(old []types.Variable, prefix string) (new []types.Variable) {
+	for i := range old {
+		v := old[i]
+		v.Name = prefix + strconv.Itoa(i)
+		new = append(new, v)
+	}
+	return
+}
+
+func dictByNormalVariables(fields []types.Variable, normals []types.Variable) Dict {
+	if len(fields) != len(normals) {
+		panic("len of fields and normals not the same")
+	}
+	return DictFunc(func(d Dict) {
+		for i, field := range fields {
+			d[structFieldName(&field)] = Id(util.ToLowerFirst(normals[i].Name))
+		}
+	})
+}
+
+type Rendered struct {
+	slice []string
+}
+
+func (r *Rendered) Add(s string) {
+	r.slice = append(r.slice, s)
+}
+
+func (r *Rendered) Contain(s string) bool {
+	return util.IsInStringSlice(s, r.slice)
+}
+
+func (r *Rendered) NotContain(s string) bool {
+	return !r.Contain(s)
+}
+
+// Hard
+// Soft
+// Nop?

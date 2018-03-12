@@ -8,6 +8,7 @@ import (
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
+	"github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/godecl/types"
 )
@@ -77,7 +78,7 @@ func converterToProtoBody(field *types.Variable) Code {
 		)
 		s.Line().Return().List(Op("&").Qual(GolangProtobufWrappers, "StringValue").Block(Dict{Id("Value"): Op("*").Id(util.ToLowerFirst(field.Name)).Op(",")}), Nil())
 	default:
-		s.Panic(Lit("function not provided"))
+		s.Panic(Lit("function not provided")).Comment("// TODO: provide converter")
 	}
 	return s
 }
@@ -102,7 +103,7 @@ func converterProtoToBody(field *types.Variable) Code {
 		)
 		s.Line().Return().List(Op("&").Id("proto"+util.ToUpperFirst(field.Name)).Dot("Value"), Nil())
 	default:
-		s.Panic(Lit("function not provided"))
+		s.Panic(Lit("function not provided")).Comment("// TODO: provide converter")
 	}
 	return s
 }
@@ -168,7 +169,8 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 	}
 	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
 	if err != nil {
-		return nil, err
+		logger.Logger.Log(0, "can't parse", t.DefaultPath(), ":", err)
+		return write_strategy.NewNopStrategy("", ""), nil
 	}
 
 	for i := range file.Functions {
