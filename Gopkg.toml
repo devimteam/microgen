@@ -21,6 +21,10 @@
 #  version = "2.4.0"
 
 [[constraint]]
+  name = "github.com/go-kit/kit"
+  version = "0.7.0"
+
+[[constraint]]
   name = "github.com/dave/jennifer"
   revision = "97587ff16f680f25594335a26c03ef6a1b7311b7"
 

@@ -91,7 +91,7 @@ func (t *httpClientTemplate) Prepare() error {
 //		}
 //
 func (t *httpClientTemplate) Render() write_strategy.Renderer {
-	f := NewFile("transporthttp")
+	f := NewFile("transportjsonrpc")
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
@@ -178,8 +178,8 @@ func (t *httpClientTemplate) clientBody() *Statement {
 				client.Qual(PackagePathGoKitTransportHTTP, "NewClient").Call(
 					Line().Lit(method),
 					Line().Id("u"),
-					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpEncodeRequestName(fn)),
-					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeResponseName(fn)),
+					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), encodeRequestName(fn)),
+					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), decodeResponseName(fn)),
 					Line().Add(t.clientOpts(fn)).Op("...").Line(),
 				).Dot("Endpoint").Call()
 				d[Id(endpointStructName(fn.Name))] = client

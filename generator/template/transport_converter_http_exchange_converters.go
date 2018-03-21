@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	commonResponseEncoderName = "CommonHTTPResponseEncoder"
-	commonRequestEncoderName  = "CommonHTTPRequestEncoder"
+	commonHTTPResponseEncoderName = "CommonHTTPResponseEncoder"
+	commonHTTPRequestEncoderName  = "CommonHTTPRequestEncoder"
 )
 
 type httpConverterTemplate struct {
@@ -45,17 +45,17 @@ func (t *httpConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error
 		return nil, err
 	}
 
-	removeAlreadyExistingFunctions(file.Functions, &t.encodersRequest, httpEncodeRequestName)
-	removeAlreadyExistingFunctions(file.Functions, &t.decodersRequest, httpDecodeRequestName)
-	removeAlreadyExistingFunctions(file.Functions, &t.encodersResponse, httpEncodeResponseName)
-	removeAlreadyExistingFunctions(file.Functions, &t.decodersResponse, httpDecodeResponseName)
+	removeAlreadyExistingFunctions(file.Functions, &t.encodersRequest, encodeRequestName)
+	removeAlreadyExistingFunctions(file.Functions, &t.decodersRequest, decodeRequestName)
+	removeAlreadyExistingFunctions(file.Functions, &t.encodersResponse, encodeResponseName)
+	removeAlreadyExistingFunctions(file.Functions, &t.decodersResponse, decodeResponseName)
 
 	for i := range file.Functions {
-		if file.Functions[i].Name == commonResponseEncoderName {
+		if file.Functions[i].Name == commonHTTPResponseEncoderName {
 			t.isCommonEncoderResponseExist = true
 			continue
 		}
-		if file.Functions[i].Name == commonRequestEncoderName {
+		if file.Functions[i].Name == commonHTTPRequestEncoderName {
 			t.isCommonEncoderRequestExist = true
 			continue
 		}
@@ -130,10 +130,10 @@ func (t *httpConverterTemplate) Render() write_strategy.Renderer {
 	f := &Statement{}
 
 	if !t.isCommonEncoderRequestExist {
-		f.Line().Add(commonEncoderRequest()).Line()
+		f.Line().Add(commonHTTPRequestEncoder()).Line()
 	}
 	if !t.isCommonEncoderResponseExist {
-		f.Line().Add(commonEncoderResponse()).Line()
+		f.Line().Add(commonHTTPResponseEncoder()).Line()
 	}
 
 	for _, fn := range t.decodersRequest {
@@ -162,8 +162,8 @@ func (t *httpConverterTemplate) Render() write_strategy.Renderer {
 }
 
 // https://github.com/go-kit/kit/blob/master/examples/addsvc/pkg/addtransport/http.go#L201
-func commonEncoderRequest() *Statement {
-	return Func().Id(commonRequestEncoderName).
+func commonHTTPRequestEncoder() *Statement {
+	return Func().Id(commonHTTPRequestEncoderName).
 		Params(
 			Id("_").Qual(PackagePathContext, "Context"),
 			Id("r").Op("*").Qual(PackagePathHttp, "Request"),
@@ -184,8 +184,8 @@ func commonEncoderRequest() *Statement {
 }
 
 // https://github.com/go-kit/kit/blob/master/examples/addsvc/pkg/addtransport/http.go#L212
-func commonEncoderResponse() *Statement {
-	return Func().Id(commonResponseEncoderName).
+func commonHTTPResponseEncoder() *Statement {
+	return Func().Id(commonHTTPResponseEncoderName).
 		Params(
 			Id("_").Qual(PackagePathContext, "Context"),
 			Id("w").Qual(PackagePathHttp, "ResponseWriter"),
@@ -206,7 +206,7 @@ func commonEncoderResponse() *Statement {
 //			return req, err
 //		}
 func (t *httpConverterTemplate) decodeHTTPRequest(fn *types.Function) *Statement {
-	return Func().Id(httpDecodeRequestName(fn)).
+	return Func().Id(decodeRequestName(fn)).
 		Params(
 			Id("_").Qual(PackagePathContext, "Context"),
 			Id("r").Op("*").Qual(PackagePathHttp, "Request"),
@@ -283,7 +283,7 @@ func stringToTypeConverter(arg *types.Variable) *Statement {
 //			return resp, err
 //		}
 func (t *httpConverterTemplate) decodeHTTPResponse(fn *types.Function) *Statement {
-	return Func().Id(httpDecodeResponseName(fn)).
+	return Func().Id(decodeResponseName(fn)).
 		Params(
 			Id("_").Qual(PackagePathContext, "Context"),
 			Id("r").Op("*").Qual(PackagePathHttp, "Response"),
@@ -304,14 +304,14 @@ func (t *httpConverterTemplate) decodeHTTPResponse(fn *types.Function) *Statemen
 //		}
 //
 func encodeHTTPResponse(fn *types.Function) *Statement {
-	return Func().Id(httpEncodeResponseName(fn)).Params(
+	return Func().Id(encodeResponseName(fn)).Params(
 		Id("ctx").Qual(PackagePathContext, "Context"),
 		Id("w").Qual(PackagePathHttp, "ResponseWriter"),
 		Id("response").Interface(),
 	).Params(
 		Error(),
 	).Block(
-		Return().Id(commonResponseEncoderName).Call(Id("ctx"), Id("w"), Id("response")),
+		Return().Id(commonHTTPResponseEncoderName).Call(Id("ctx"), Id("w"), Id("response")),
 	)
 }
 
@@ -321,7 +321,7 @@ func encodeHTTPResponse(fn *types.Function) *Statement {
 //		}
 //
 func (t *httpConverterTemplate) encodeHTTPRequest(fn *types.Function) *Statement {
-	return Func().Id(httpEncodeRequestName(fn)).Params(
+	return Func().Id(encodeRequestName(fn)).Params(
 		Id("ctx").Qual(PackagePathContext, "Context"),
 		Id("r").Op("*").Qual(PackagePathHttp, "Request"),
 		Id("request").Interface(),
@@ -344,7 +344,7 @@ func (t *httpConverterTemplate) encodeHTTPRequestBody(fn *types.Function) *State
 	if FetchHttpMethodTag(fn.Docs) == "GET" {
 		s.Line().Return(Nil())
 	} else {
-		s.Line().Return(Id(commonRequestEncoderName).Call(Id("ctx"), Id("r"), Id("request")))
+		s.Line().Return(Id(commonHTTPRequestEncoderName).Call(Id("ctx"), Id("r"), Id("request")))
 	}
 	return s
 }
@@ -375,20 +375,4 @@ func typeToStringConverters(arg *types.Variable) *Statement {
 		return Line().Qual(PackagePathStrconv, "FormatUint").Call(Int64().Call(Id("req").Op(".").Add(structFieldName(arg))), Lit(10))
 	}
 	return Line().Lit(arg.Name)
-}
-
-func httpDecodeRequestName(f *types.Function) string {
-	return "DecodeHTTP" + util.ToUpperFirst(f.Name) + "Request"
-}
-
-func httpEncodeRequestName(f *types.Function) string {
-	return "EncodeHTTP" + util.ToUpperFirst(f.Name) + "Request"
-}
-
-func httpEncodeResponseName(f *types.Function) string {
-	return "EncodeHTTP" + util.ToUpperFirst(f.Name) + "Response"
-}
-
-func httpDecodeResponseName(f *types.Function) string {
-	return "DecodeHTTP" + util.ToUpperFirst(f.Name) + "Response"
 }

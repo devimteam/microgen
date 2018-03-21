@@ -32,6 +32,9 @@ const (
 	ErrorLoggingMiddlewareTag = template.ErrorLoggingMiddlewareTag
 	TracingTag                = template.TracingTag
 	CacheTag                  = template.CacheTag
+	JSONRPCTag                = template.JSONRPCTag
+	JSONRPCServerTag          = template.JSONRPCServerTag
+	JSONRPCClientTag          = template.JSONRPCClientTag
 
 	HttpMethodTag  = template.HttpMethodTag
 	HttpMethodPath = template.HttpMethodPath
@@ -141,6 +144,22 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 		return append(tmpls, template.NewCacheMiddlewareTemplate(info))
 	case TracingTag:
 		return append(tmpls, template.EmptyTemplate{})
+	case JSONRPCTag:
+		return append(tmpls,
+			template.NewJSONRPCEndpointConverterTemplate(info),
+			template.NewJSONRPCClientTemplate(info),
+			template.NewJSONRPCServerTemplate(info),
+		)
+	case JSONRPCClientTag:
+		return append(tmpls,
+			template.NewJSONRPCEndpointConverterTemplate(info),
+			template.NewJSONRPCClientTemplate(info),
+		)
+	case JSONRPCServerTag:
+		return append(tmpls,
+			template.NewJSONRPCEndpointConverterTemplate(info),
+			template.NewJSONRPCServerTemplate(info),
+		)
 	}
 	return nil
 }

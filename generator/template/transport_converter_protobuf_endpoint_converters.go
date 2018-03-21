@@ -34,19 +34,19 @@ func NewGRPCEndpointConverterTemplate(info *GenerationInfo) Template {
 	}
 }
 
-func requestDecodeName(f *types.Function) string {
+func decodeRequestName(f *types.Function) string {
 	return "Decode" + f.Name + "Request"
 }
 
-func responseDecodeName(f *types.Function) string {
+func decodeResponseName(f *types.Function) string {
 	return "Decode" + f.Name + "Response"
 }
 
-func requestEncodeName(f *types.Function) string {
+func encodeRequestName(f *types.Function) string {
 	return "Encode" + f.Name + "Request"
 }
 
-func responseEncodeName(f *types.Function) string {
+func encodeResponseName(f *types.Function) string {
 	return "Encode" + f.Name + "Response"
 }
 
@@ -131,14 +131,14 @@ func (t *gRPCEndpointConverterTemplate) Render() write_strategy.Renderer {
 }
 
 const (
-	_pointer   = "Ptr"
-	_list      = "List"
-	_slice     = "List"
-	_map       = "Map"
-	_interface = "Interface"
-	_toProto   = "ToProto"
-	_protoTo   = "ProtoTo"
-	_ellipsis  = "El"
+	iPointer   = "Ptr"
+	iList      = "List"
+	iSlice     = "List"
+	iMap       = "Map"
+	iInterface = "Interface"
+	iToProto   = "ToProto"
+	iProtoTo   = "ProtoTo"
+	iEllipsis  = "El"
 )
 
 // Returns FieldTypeToProto.
@@ -157,33 +157,33 @@ Loop:
 			field = nil
 		case types.TArray:
 			if f.IsSlice {
-				methodName += _slice
+				methodName += iSlice
 			} else if f.ArrayLen > 0 {
-				methodName += _list
+				methodName += iList
 			}
 			field = f.Next
 		case types.TMap:
-			methodName += _map + typeToProto(f.Key, 1) + typeToProto(f.Value, 1)
+			methodName += iMap + typeToProto(f.Key, 1) + typeToProto(f.Value, 1)
 			field = nil
 		case types.TPointer:
 			if f.NumberOfPointers > 1 {
-				methodName += fmt.Sprintf("%sX%d", _pointer, f.NumberOfPointers)
+				methodName += fmt.Sprintf("%sX%d", iPointer, f.NumberOfPointers)
 			} else {
-				methodName += _pointer
+				methodName += iPointer
 			}
 			field = f.Next
 		case types.TInterface:
-			methodName += _interface
+			methodName += iInterface
 			field = nil
 		case types.TEllipsis:
-			methodName += _ellipsis
+			methodName += iEllipsis
 			field = f.Next
 		default:
 			break Loop
 		}
 	}
 	if depth == 0 {
-		methodName += _toProto
+		methodName += iToProto
 	}
 	return methodName
 }
@@ -192,7 +192,7 @@ Loop:
 func protoToType(field types.Type, depth int) string {
 	methodName := ""
 	if depth == 0 {
-		methodName += _protoTo
+		methodName += iProtoTo
 	}
 Loop:
 	for field != nil {
@@ -207,26 +207,26 @@ Loop:
 			field = nil
 		case types.TArray:
 			if f.IsSlice {
-				methodName += _slice
+				methodName += iSlice
 			} else if f.ArrayLen > 0 {
-				methodName += _list
+				methodName += iList
 			}
 			field = f.Next
 		case types.TMap:
-			methodName += _map + typeToProto(f.Key, 1) + typeToProto(f.Value, 1)
+			methodName += iMap + typeToProto(f.Key, 1) + typeToProto(f.Value, 1)
 			field = nil
 		case types.TPointer:
 			if f.NumberOfPointers > 1 {
-				methodName += fmt.Sprintf("%sX%d", _pointer, f.NumberOfPointers)
+				methodName += fmt.Sprintf("%sX%d", iPointer, f.NumberOfPointers)
 			} else {
-				methodName += _pointer
+				methodName += iPointer
 			}
 			field = f.Next
 		case types.TInterface:
-			methodName += _interface
+			methodName += iInterface
 			field = nil
 		case types.TEllipsis:
-			methodName += _ellipsis
+			methodName += iEllipsis
 			field = f.Next
 		default:
 			break Loop
@@ -262,10 +262,10 @@ func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 		return nil, err
 	}
 
-	removeAlreadyExistingFunctions(file.Functions, &t.requestEncoders, requestEncodeName)
-	removeAlreadyExistingFunctions(file.Functions, &t.requestDecoders, requestDecodeName)
-	removeAlreadyExistingFunctions(file.Functions, &t.responseEncoders, responseEncodeName)
-	removeAlreadyExistingFunctions(file.Functions, &t.responseDecoders, responseDecodeName)
+	removeAlreadyExistingFunctions(file.Functions, &t.requestEncoders, encodeRequestName)
+	removeAlreadyExistingFunctions(file.Functions, &t.requestDecoders, decodeRequestName)
+	removeAlreadyExistingFunctions(file.Functions, &t.responseEncoders, encodeResponseName)
+	removeAlreadyExistingFunctions(file.Functions, &t.responseDecoders, decodeResponseName)
 
 	t.state = AppendStrat
 	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
@@ -342,13 +342,13 @@ func isDefaultGolangField(field *types.Variable) bool {
 //			return nil, err
 //		}
 //
-func (t *gRPCEndpointConverterTemplate) convertCustomType(structName, converterName string, field *types.Variable) *Statement {
+func convertCustomType(structName, converterName string, field *types.Variable) *Statement {
 	return List(Id(structName+util.ToUpperFirst(field.Name)), Err()).
 		Op(":=").
 		Add(
-			Id(converterName).
-				Call(Id(structName).
-					Dot(util.ToUpperFirst(field.Name))),
+			Id(converterName).Call(
+				Id(structName).Dot(util.ToUpperFirst(field.Name)),
+			),
 		).
 		Line().If(Err().Op("!=").Nil()).Block(
 		Return().List(Nil(), Err()),
@@ -369,7 +369,8 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 	methodParams := RemoveContextIfFirst(signature.Args)
 	fullName := "request"
 	shortName := "req"
-	return Line().Func().Id(requestEncodeName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(encodeRequestName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).
+		Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) == 1 {
 				sp := specialEndpointConverterToProto(methodParams[0], signature, requestStructName, t.Info.ServiceImportPath, fullName, shortName)
@@ -385,7 +386,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ServiceImportPath, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := golangTypeToProto("", &field); !ok {
-						group.Add(t.convertCustomType(shortName, typeToProto(field.Type, 0), &field))
+						group.Add(convertCustomType(shortName, typeToProto(field.Type, 0), &field))
 					}
 				}
 			}
@@ -431,7 +432,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 	methodResults := removeErrorIfLast(signature.Results)
 	fullName := "response"
 	shortName := "resp"
-	return Line().Func().Id(responseEncodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(encodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) == 1 {
 				sp := specialEndpointConverterToProto(methodResults[0], signature, responseStructName, t.Info.ServiceImportPath, fullName, shortName)
@@ -447,7 +448,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ServiceImportPath, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := golangTypeToProto("", &field); !ok {
-						group.Add(t.convertCustomType(shortName, typeToProto(field.Type, 0), &field))
+						group.Add(convertCustomType(shortName, typeToProto(field.Type, 0), &field))
 					}
 				}
 			}
@@ -470,7 +471,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 	methodParams := RemoveContextIfFirst(signature.Args)
 	fullName := "request"
 	shortName := "req"
-	return Line().Func().Id(requestDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(decodeRequestName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) == 1 {
 				sp := specialEndpointConverterFromProto(methodParams[0], signature, requestStructName, t.Info.ServiceImportPath, fullName, shortName)
@@ -486,7 +487,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackage, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := protoTypeToGolang("", &field); !ok {
-						group.Add(t.convertCustomType(shortName, protoToType(field.Type, 0), &field))
+						group.Add(convertCustomType(shortName, protoToType(field.Type, 0), &field))
 					}
 				}
 			}
@@ -513,7 +514,7 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 	methodResults := removeErrorIfLast(signature.Results)
 	fullName := "response"
 	shortName := "resp"
-	return Line().Func().Id(responseDecodeName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(decodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) == 1 {
 				sp := specialEndpointConverterFromProto(methodResults[0], signature, responseStructName, t.Info.ServiceImportPath, fullName, shortName)
@@ -529,7 +530,7 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackage, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := protoTypeToGolang("", &field); !ok {
-						group.Add(t.convertCustomType(shortName, protoToType(field.Type, 0), &field))
+						group.Add(convertCustomType(shortName, protoToType(field.Type, 0), &field))
 					}
 				}
 			}

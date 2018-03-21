@@ -110,3 +110,86 @@ func EncodeHTTPCountResponse(ctx context.Context, w http.ResponseWriter, respons
 func EncodeHTTPTestCaseResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	return CommonHTTPResponseEncoder(ctx, w, response)
 }
+
+func DecodeUppercaseRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req generated.UppercaseRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	return &req, err
+}
+
+func DecodeCountRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var (
+		_param string
+	)
+	var ok bool
+	_vars := mux.Vars(r)
+	_param, ok = _vars["text"]
+	if !ok {
+		return nil, errors.New("param text not found")
+	}
+	text := _param
+	_param, ok = _vars["symbol"]
+	if !ok {
+		return nil, errors.New("param symbol not found")
+	}
+	symbol := _param
+	return &generated.CountRequest{
+		Symbol: string(symbol),
+		Text:   string(text),
+	}, nil
+}
+
+func DecodeTestCaseRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req generated.TestCaseRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	return &req, err
+}
+
+func DecodeUppercaseResponse(_ context.Context, r *http.Response) (interface{}, error) {
+	var resp generated.UppercaseResponse
+	err := json.NewDecoder(r.Body).Decode(&resp)
+	return &resp, err
+}
+
+func DecodeCountResponse(_ context.Context, r *http.Response) (interface{}, error) {
+	var resp generated.CountResponse
+	err := json.NewDecoder(r.Body).Decode(&resp)
+	return &resp, err
+}
+
+func DecodeTestCaseResponse(_ context.Context, r *http.Response) (interface{}, error) {
+	var resp generated.TestCaseResponse
+	err := json.NewDecoder(r.Body).Decode(&resp)
+	return &resp, err
+}
+
+func EncodeUppercaseRequest(ctx context.Context, r *http.Request, request interface{}) error {
+	r.URL.Path = path.Join(r.URL.Path, "uppercase")
+	return CommonHTTPRequestEncoder(ctx, r, request)
+}
+
+func EncodeCountRequest(ctx context.Context, r *http.Request, request interface{}) error {
+	req := request.(*generated.CountRequest)
+	r.URL.Path = path.Join(r.URL.Path, "count",
+		req.Text,
+		req.Symbol,
+	)
+	return nil
+}
+
+func EncodeTestCaseRequest(ctx context.Context, r *http.Request, request interface{}) error {
+	r.URL.Path = path.Join(r.URL.Path, "test-case")
+	return CommonHTTPRequestEncoder(ctx, r, request)
+}
+
+func EncodeUppercaseResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	return CommonHTTPResponseEncoder(ctx, w, response)
+}
+
+func EncodeCountResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	return CommonHTTPResponseEncoder(ctx, w, response)
+}
+
+func EncodeTestCaseResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	return CommonHTTPResponseEncoder(ctx, w, response)
+}

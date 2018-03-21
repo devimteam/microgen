@@ -163,8 +163,8 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 				Call(Lit("/" + t.paths[fn.Name])).Dot("Handler").Call(
 				Line().Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
-					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpDecodeRequestName(fn)),
-					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), httpEncodeResponseName(fn)),
+					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), decodeRequestName(fn)),
+					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), encodeResponseName(fn)),
 					Line().Add(t.serverOpts(fn)).Op("...")),
 			)
 		}
