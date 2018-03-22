@@ -25,7 +25,8 @@
     "log",
     "tracing/opentracing",
     "transport/grpc",
-    "transport/http"
+    "transport/http",
+    "transport/http/jsonrpc"
   ]
   revision = "ca4112baa34cb55091301bdc13b1420a122b1b9e"
   version = "v0.7.0"
@@ -176,6 +177,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c739b3572e621f04fb1564eb2f4cda6ccd0132b5c0c69325b0f2cbfda04ed5f6"
+  inputs-digest = "495d7f4b1e73b2b2202ff7c46abc56925a8405fa7ba32a9e2fb7d7dfa8ff8cff"
   solver-name = "gps-cdcl"
   solver-version = 1

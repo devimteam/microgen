@@ -3,39 +3,52 @@
 package transportjsonrpc
 
 import (
-	http "net/http"
-
 	generated "github.com/devimteam/microgen/example/generated"
-	http1 "github.com/devimteam/microgen/example/generated/transport/converter/http"
+	protobuf "github.com/devimteam/microgen/example/generated/transport/converter/protobuf"
 	log "github.com/go-kit/kit/log"
 	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	jsonrpc "github.com/go-kit/kit/transport/http/jsonrpc"
-	"github.com/gorilla/mux"
 	opentracinggo "github.com/opentracing/opentracing-go"
+	http "net/http"
 )
 
-func NewJSONRPCHandler(endpoints *generated.Endpoints, logger log.Logger, tracer opentracinggo.Tracer, opts ...jsonrpc.ServerOption) http.Handler {
-	handler := jsonrpc.NewServer()
-	mux.Methods("POST").Path("/uppercase").Handler(
-		jsonrpc.NewServer(
-			endpoints.UppercaseEndpoint,
-			http1.DecodeUppercaseRequest,
-			http1.EncodeUppercaseResponse,
+type stringServiceServer struct {
+	uppercase http.Handler
+	count     http.Handler
+	testCase  http.Handler
+}
+
+func NewJSONRPCServer(endpoints *generated.Endpoints, logger log.Logger, tracer opentracinggo.Tracer, opts ...jsonrpc.ServerOption) http.Handler {
+	return &stringServiceServer{
+		count: jsonrpc.NewServer(
+			jsonrpc.EndpointCodecMap{
+				"v1.Count": jsonrpc.EndpointCodec{
+					Decode:   protobuf.DecodeCountRequest,
+					Encode:   protobuf.EncodeCountResponse,
+					Endpoint: endpoints.CountEndpoint,
+				}},
 			append(opts, jsonrpc.ServerBefore(
-				opentracing.HTTPToContext(tracer, "Uppercase", logger)))...))
-	mux.Methods("GET").Path("/count/{text}/{symbol}").Handler(
-		jsonrpc.NewServer(
-			endpoints.CountEndpoint,
-			http1.DecodeCountRequest,
-			http1.EncodeCountResponse,
+				opentracing.HTTPToContext(tracer, "Count", logger)))...,
+		),
+		testCase: jsonrpc.NewServer(
+			jsonrpc.EndpointCodecMap{
+				"TestCase": jsonrpc.EndpointCodec{
+					Decode:   protobuf.DecodeTestCaseRequest,
+					Encode:   protobuf.EncodeTestCaseResponse,
+					Endpoint: endpoints.TestCaseEndpoint,
+				}},
 			append(opts, jsonrpc.ServerBefore(
-				opentracing.HTTPToContext(tracer, "Count", logger)))...))
-	mux.Methods("POST").Path("/test-case").Handler(
-		jsonrpc.NewServer(
-			endpoints.TestCaseEndpoint,
-			http1.DecodeTestCaseRequest,
-			http1.EncodeTestCaseResponse,
+				opentracing.HTTPToContext(tracer, "TestCase", logger)))...,
+		),
+		uppercase: jsonrpc.NewServer(
+			jsonrpc.EndpointCodecMap{
+				"Uppercase": jsonrpc.EndpointCodec{
+					Decode:   protobuf.DecodeUppercaseRequest,
+					Encode:   protobuf.EncodeUppercaseResponse,
+					Endpoint: endpoints.UppercaseEndpoint,
+				}},
 			append(opts, jsonrpc.ServerBefore(
-				opentracing.HTTPToContext(tracer, "TestCase", logger)))...))
-	return handler
+				opentracing.HTTPToContext(tracer, "Uppercase", logger)))...,
+		),
+	}
 }

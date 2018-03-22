@@ -7,11 +7,16 @@ import (
 	"github.com/vetcher/godecl/types"
 )
 
+const (
+	prefixJSONRPCAnnotationTag = "json-rpc-prefix"
+	suffixJSONRPCAnnotationTag = "json-rpc-suffix"
+)
+
 type jsonrpcServerTemplate struct {
-	Info    *GenerationInfo
-	methods map[string]string
-	paths   map[string]string
-	tracing bool
+	Info     *GenerationInfo
+	prefixes map[string]string
+	suffixes map[string]string
+	tracing  bool
 }
 
 func NewJSONRPCServerTemplate(info *GenerationInfo) Template {
@@ -32,11 +37,15 @@ func (t *jsonrpcServerTemplate) ChooseStrategy() (write_strategy.Strategy, error
 }
 
 func (t *jsonrpcServerTemplate) Prepare() error {
-	t.methods = make(map[string]string)
-	t.paths = make(map[string]string)
+	t.prefixes = make(map[string]string)
+	t.suffixes = make(map[string]string)
 	for _, fn := range t.Info.Iface.Methods {
-		t.methods[fn.Name] = FetchHttpMethodTag(fn.Docs)
-		t.paths[fn.Name] = buildMethodPath(fn)
+		if s := util.FetchTags(fn.Docs, TagMark+prefixJSONRPCAnnotationTag); len(s) > 0 {
+			t.prefixes[fn.Name] = s[0]
+		}
+		if s := util.FetchTags(fn.Docs, TagMark+suffixJSONRPCAnnotationTag); len(s) > 0 {
+			t.suffixes[fn.Name] = s[0]
+		}
 	}
 	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
 	for _, tag := range tags {
@@ -53,7 +62,13 @@ func (t *jsonrpcServerTemplate) Render() write_strategy.Renderer {
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
-	f.Func().Id("NewJSONRPCHandler").ParamsFunc(func(p *Group) {
+	f.Type().Id(privateServerStructName(t.Info.Iface)).StructFunc(func(g *Group) {
+		for _, method := range t.Info.Iface.Methods {
+			g.Id(util.ToLowerFirst(method.Name)).Qual(PackagePathHttp, "Handler")
+		}
+	}).Line()
+
+	f.Func().Id("NewJSONRPCServer").ParamsFunc(func(p *Group) {
 		p.Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints")
 		if t.tracing {
 			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
@@ -64,20 +79,24 @@ func (t *jsonrpcServerTemplate) Render() write_strategy.Renderer {
 		p.Id("opts").Op("...").Qual(PackagePathGoKitTransportJSONRPC, "ServerOption")
 	}).Params(
 		Qual(PackagePathHttp, "Handler"),
-	).BlockFunc(func(g *Group) {
-		g.Id("handler").Op(":=").Qual(PackagePathGoKitTransportJSONRPC, "NewServer").Call()
-		for _, fn := range t.Info.Iface.Methods {
-			g.Id("mux").Dot("Methods").Call(Lit(t.methods[fn.Name])).Dot("Path").
-				Call(Lit("/" + t.paths[fn.Name])).Dot("Handler").Call(
-				Line().Qual(PackagePathGoKitTransportJSONRPC, "NewServer").Call(
-					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
-					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), decodeRequestName(fn)),
-					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), encodeResponseName(fn)),
-					Line().Add(t.serverOpts(fn)).Op("...")),
-			)
-		}
-		g.Return(Id("handler"))
-	})
+	).Block(
+		Return().Op("&").Id(privateServerStructName(t.Info.Iface)).Values(DictFunc(func(g Dict) {
+			for _, m := range t.Info.Iface.Methods {
+				g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportJSONRPC, "NewServer").
+					Call(
+						Line().Qual(PackagePathGoKitTransportJSONRPC, "EndpointCodecMap").Values(Dict{
+							Line().Lit(t.prefixes[m.Name] + m.Name + t.suffixes[m.Name]): Qual(PackagePathGoKitTransportJSONRPC, "EndpointCodec").Values(Dict{
+								Id("Endpoint"): Id("endpoints").Dot(endpointStructName(m.Name)),
+								Id("Decode"):   Qual(pathToConverter(t.Info.ServiceImportPath), decodeRequestName(m)),
+								Id("Encode"):   Qual(pathToConverter(t.Info.ServiceImportPath), encodeResponseName(m)),
+							}),
+						}),
+						Line().Add(t.serverOpts(m)).Op("...").Line(),
+					)
+			}
+		}),
+		),
+	)
 
 	return f
 }

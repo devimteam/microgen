@@ -10,8 +10,10 @@ import (
 )
 
 type jsonrpcClientTemplate struct {
-	Info    *GenerationInfo
-	tracing bool
+	Info     *GenerationInfo
+	tracing  bool
+	prefixes map[string]string
+	suffixes map[string]string
 }
 
 func NewJSONRPCClientTemplate(info *GenerationInfo) Template {
@@ -43,11 +45,21 @@ func (t *jsonrpcClientTemplate) Prepare() error {
 			t.tracing = true
 		}
 	}
+	t.prefixes = make(map[string]string)
+	t.suffixes = make(map[string]string)
+	for _, fn := range t.Info.Iface.Methods {
+		if s := util.FetchTags(fn.Docs, TagMark+prefixJSONRPCAnnotationTag); len(s) > 0 {
+			t.prefixes[fn.Name] = s[0]
+		}
+		if s := util.FetchTags(fn.Docs, TagMark+suffixJSONRPCAnnotationTag); len(s) > 0 {
+			t.suffixes[fn.Name] = s[0]
+		}
+	}
 	return nil
 }
 
 func (t *jsonrpcClientTemplate) Render() write_strategy.Renderer {
-	f := NewFile("transporthttp")
+	f := NewFile("transportjsonrpc")
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`Please, do not edit.`)
 
@@ -100,7 +112,7 @@ func (t *jsonrpcClientTemplate) clientBody() *Statement {
 				}
 				client.Qual(PackagePathGoKitTransportJSONRPC, "NewClient").Call(
 					Line().Id("u"),
-					Line().Lit(util.ToUpperFirst(fn.Name)),
+					Line().Lit(t.prefixes[fn.Name]+fn.Name+t.suffixes[fn.Name]),
 					Line().Append(
 						Line().Add(t.clientOpts(fn)),
 						Line().Qual(PackagePathGoKitTransportJSONRPC, "ClientRequestEncoder").
