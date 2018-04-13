@@ -60,8 +60,9 @@ func (t *jsonrpcClientTemplate) Prepare() error {
 
 func (t *jsonrpcClientTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transportjsonrpc")
+	f.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`Please, do not edit.`)
+	f.PackageComment(`DO NOT EDIT.`)
 
 	f.Func().Id("NewJSONRPCClient").ParamsFunc(func(p *Group) {
 		p.Id("addr").Id("string")

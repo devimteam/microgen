@@ -23,8 +23,9 @@ func NewErrorLoggingTemplate(info *GenerationInfo) Template {
 
 func (t *errorLoggingTemplate) Render() write_strategy.Renderer {
 	f := NewFile("middleware")
+	f.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`Please, do not edit.`)
+	f.PackageComment(`DO NOT EDIT.`)
 
 	f.Comment("ServiceErrorLogging writes to logger any error, if it is not nil.").
 		Line().Func().Id(util.ToUpperFirst(serviceErrorLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).

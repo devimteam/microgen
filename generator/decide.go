@@ -144,7 +144,8 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 		return append(tmpls, template.NewCacheMiddlewareTemplate(info))
 	case TracingTag:
 		return append(tmpls, template.EmptyTemplate{})
-	case JSONRPCTag:
+	// JSON-RPC commented for now, and, I think, will be deleted in feature.
+	/*case JSONRPCTag:
 		return append(tmpls,
 			template.NewJSONRPCEndpointConverterTemplate(info),
 			template.NewJSONRPCClientTemplate(info),
@@ -159,7 +160,7 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 		return append(tmpls,
 			template.NewJSONRPCEndpointConverterTemplate(info),
 			template.NewJSONRPCServerTemplate(info),
-		)
+		)*/
 	}
 	return nil
 }

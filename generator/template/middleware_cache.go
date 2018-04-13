@@ -76,6 +76,7 @@ func (t *cacheMiddlewareTemplate) Render() write_strategy.Renderer {
 		return f
 	}
 	file := NewFile("middleware")
+	file.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
 	file.PackageComment(t.Info.FileHeader)
 	file.PackageComment(`Microgen appends missed functions.`)
 	file.Add(f)

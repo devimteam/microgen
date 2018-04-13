@@ -44,6 +44,7 @@ const (
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"
 	ForceTag        = "force"
+	serviceAlias    = "service"
 )
 
 const (

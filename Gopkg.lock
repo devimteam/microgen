@@ -4,7 +4,8 @@
 [[projects]]
   name = "github.com/dave/jennifer"
   packages = ["jen"]
-  revision = "97587ff16f680f25594335a26c03ef6a1b7311b7"
+  revision = "0264ec47f284c27fe4f52072dc0f4da5a5771c04"
+  version = "v0.19.0"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -177,6 +178,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "495d7f4b1e73b2b2202ff7c46abc56925a8405fa7ba32a9e2fb7d7dfa8ff8cff"
+  inputs-digest = "6a60ab0faac406209f7f7bdcba86ddc00f913d3827ed85b92ed6977d2d33cd6d"
   solver-name = "gps-cdcl"
   solver-version = 1

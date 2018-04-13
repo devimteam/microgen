@@ -44,7 +44,7 @@ func responseStructName(signature *types.Function) string {
 func (t *exchangeTemplate) Render() write_strategy.Renderer {
 	f := NewFile(t.Info.ServiceImportPackageName)
 	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`Please, do not edit.`)
+	f.PackageComment(`DO NOT EDIT.`)
 
 	if len(t.Info.Iface.Methods) > 0 {
 		f.Type().Op("(")

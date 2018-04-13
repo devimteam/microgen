@@ -12,27 +12,35 @@ func ToUpperFirst(s string) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
-// Works only with english symbols.
-func toSomeCase(sep string) func(string) string {
+func ToSomeCaseWithSep(sep rune, runeConv func(rune) rune) func(string) string {
 	return func(s string) string {
-		for i := range s {
-			if unicode.IsUpper(rune(s[i])) {
-				if i != 0 {
-					s = strings.Join([]string{s[:i], ToLowerFirst(s[i:])}, sep)
-				} else {
-					s = ToLowerFirst(s)
-				}
+		in := []rune(s)
+		n := len(in)
+		var runes []rune
+		for i, r := range in {
+			if isExtendedSpace(r) {
+				runes = append(runes, sep)
+				continue
 			}
+			if unicode.IsUpper(r) {
+				if i > 0 && sep != runes[i-1] && ((i+1 < n && unicode.IsLower(in[i+1])) || unicode.IsLower(in[i-1])) {
+					runes = append(runes, sep)
+				}
+				r = runeConv(r)
+			}
+			runes = append(runes, r)
 		}
-		return s
+		return string(runes)
 	}
 }
 
+func isExtendedSpace(r rune) bool {
+	return unicode.IsSpace(r) || r == '_' || r == '-' || r == '.'
+}
+
 var (
-	// Works only with english symbols.
-	ToSnakeCase = toSomeCase("_")
-	// Works only with english symbols.
-	ToURLSnakeCase = toSomeCase("-")
+	ToSnakeCase = ToSomeCaseWithSep('_', unicode.ToLower)
+	ToURLSnakeCase = ToSomeCaseWithSep('-', unicode.ToLower)
 )
 
 func ToLowerFirst(s string) string {
