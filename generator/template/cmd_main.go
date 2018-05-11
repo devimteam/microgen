@@ -84,11 +84,11 @@ func (t *mainTemplate) Prepare() error {
 }
 
 func (t *mainTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); os.IsNotExist(err) {
+	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
+	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
 	if err != nil {
 		logger.Logger.Logln(0, "can't parse", t.DefaultPath(), ":", err)
 		return write_strategy.NewNopStrategy("", ""), nil
@@ -97,7 +97,7 @@ func (t *mainTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 		t.rendered = append(t.rendered, f.Name)
 	}
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *mainTemplate) interruptHandler() *Statement {
@@ -135,24 +135,24 @@ func (t *mainTemplate) mainFunc() *Statement {
 		main.Id("errorChan").Op(":=").Make(Id("chan error"))
 		main.Go().Id(nameInterruptHandler).Call(Id("errorChan"))
 		main.Line()
-		main.Id("service").Op(":=").Qual(t.Info.ServiceImportPath, constructorName(t.Info.Iface)).Call().
+		main.Id("service").Op(":=").Qual(t.Info.SourcePackageImport, constructorName(t.Info.Iface)).Call().
 			Comment(`Create new service.`)
 		if t.logging {
 			main.Id("service").Op("=").
-				Qual(filepath.Join(t.Info.ServiceImportPath, "middleware"), "ServiceLogging").Call(Id("logger")).Call(Id("service")).
+				Qual(filepath.Join(t.Info.SourcePackageImport, "middleware"), "ServiceLogging").Call(Id("logger")).Call(Id("service")).
 				Comment(`Setup service logging.`)
 		}
 		if t.errorLogging {
 			main.Id("service").Op("=").
-				Qual(filepath.Join(t.Info.ServiceImportPath, "middleware"), "ServiceErrorLogging").Call(Id("logger")).Call(Id("service")).
+				Qual(filepath.Join(t.Info.SourcePackageImport, "middleware"), "ServiceErrorLogging").Call(Id("logger")).Call(Id("service")).
 				Comment(`Setup error logging.`)
 		}
 		if t.recovering {
 			main.Id("service").Op("=").
-				Qual(filepath.Join(t.Info.ServiceImportPath, "middleware"), "ServiceRecovering").Call(Id("errorLogger")).Call(Id("service")).
+				Qual(filepath.Join(t.Info.SourcePackageImport, "middleware"), "ServiceRecovering").Call(Id("errorLogger")).Call(Id("service")).
 				Comment(`Setup service recovering.`)
 		}
-		main.Line().Id("endpoints").Op(":=").Qual(t.Info.ServiceImportPath, "AllEndpoints").Call(t.endpointsParams())
+		main.Line().Id("endpoints").Op(":=").Qual(t.Info.SourcePackageImport, "AllEndpoints").Call(t.endpointsParams())
 		if t.grpcServer {
 			main.Line()
 			main.Id("grpcAddr").Op(":=").Lit(":8081")
@@ -222,7 +222,7 @@ func (t *mainTemplate) serveGrpc() *Statement {
 	}
 	return Comment(nameServeGRPC+` starts new GRPC server on address and sends first error to channel.`).Line().
 		Func().Id(nameServeGRPC).Params(
-		Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints"),
+		Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints"),
 		Id("ch").Id("chan<- error"),
 		Id("addr").Id("string"),
 		Id("logger").Qual(PackagePathGoKitLog, "Logger"),
@@ -233,9 +233,9 @@ func (t *mainTemplate) serveGrpc() *Statement {
 			Return(),
 		)
 		body.Comment(`Here you can add middlewares for grpc server.`)
-		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.ServiceImportPath, "transport/grpc"), "NewGRPCServer").Call(t.newServerParams())
+		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.SourcePackageImport, "transport/grpc"), "NewGRPCServer").Call(t.newServerParams())
 		body.Id("grpcServer").Op(":=").Qual(PackagePathGoogleGRPC, "NewServer").Call()
-		body.Qual(t.Info.ProtobufPackage, "Register"+util.ToUpperFirst(t.Info.Iface.Name)+"Server").Call(Id("grpcServer"), Id("server"))
+		body.Qual(t.Info.ProtobufPackageImport, "Register"+util.ToUpperFirst(t.Info.Iface.Name)+"Server").Call(Id("grpcServer"), Id("server"))
 		body.Id("logger").Dot("Log").Call(Lit("listen on"), Id("addr"))
 		body.Id("ch").Op("<-").Id("grpcServer").Dot("Serve").Call(Id("listener"))
 	})
@@ -247,12 +247,12 @@ func (t *mainTemplate) serveHTTP() *Statement {
 	}
 	return Comment(nameServeHTTP+` starts new HTTP server on address and sends first error to channel.`).Line().
 		Func().Id(nameServeHTTP).Params(
-		Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints"),
+		Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints"),
 		Id("ch").Id("chan<- error"),
 		Id("addr").Id("string"),
 		Id("logger").Qual(PackagePathGoKitLog, "Logger"),
 	).BlockFunc(func(body *Group) {
-		body.Id("handler").Op(":=").Qual(t.Info.ServiceImportPath+"/transport/http", "NewHTTPHandler").Call(t.newServerParams())
+		body.Id("handler").Op(":=").Qual(t.Info.SourcePackageImport+"/transport/http", "NewHTTPHandler").Call(t.newServerParams())
 		body.Id("httpServer").Op(":=").Op("&").Qual(PackagePathHttp, "Server").Values(DictFunc(func(d Dict) {
 			d[Id("Addr")] = Id("addr")
 			d[Id("Handler")] = Id("handler")

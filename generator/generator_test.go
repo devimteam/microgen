@@ -9,8 +9,8 @@ import (
 
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/stretchr/testify/assert"
-	"github.com/vetcher/godecl"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra"
+	"github.com/vetcher/go-astra/types"
 )
 
 func findInterface(file *types.File, ifaceName string) *types.Interface {
@@ -23,7 +23,7 @@ func findInterface(file *types.File, ifaceName string) *types.Interface {
 }
 
 func loadInterface(sourceFile, ifaceName string) (*types.Interface, error) {
-	info, err := godecl.ParseFile(sourceFile)
+	info, err := astra.ParseFile(sourceFile)
 	if err != nil {
 		return nil, err
 	}
@@ -46,15 +46,15 @@ func TestTemplates(t *testing.T) {
 
 	genInfo := &template.GenerationInfo{
 		ServiceImportPackageName: "stringsvc",
-		ServiceImportPath:        importPackagePath,
+		SourcePackageImport:      importPackagePath,
 		Force:                    true,
 		Iface:                    iface,
-		AbsOutPath:               outPath,
+		AbsOutputFilePath:        outPath,
 		SourceFilePath:           absSourcePath,
-		ProtobufPackage:          fetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
+		ProtobufPackageImport:    fetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
 		GRPCRegAddr:              fetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
 	}
-	t.Log("protobuf pkg", genInfo.ProtobufPackage)
+	t.Log("protobuf pkg", genInfo.ProtobufPackageImport)
 
 	allTemplateTests := []struct {
 		TestName    string
@@ -64,12 +64,12 @@ func TestTemplates(t *testing.T) {
 		{
 			TestName:    "Endpoints",
 			Template:    template.NewEndpointsTemplate(genInfo),
-			OutFilePath: "endpoints.go.txt",
+			OutFilePath: "endpoints_endpoints.go.txt",
 		},
 		{
 			TestName:    "Exchange",
 			Template:    template.NewExchangeTemplate(genInfo),
-			OutFilePath: "exchanges.go.txt",
+			OutFilePath: "endpoints_exchanges.go.txt",
 		},
 		{
 			TestName:    "Middleware",

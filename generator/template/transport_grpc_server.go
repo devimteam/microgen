@@ -6,7 +6,7 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 type gRPCServerTemplate struct {
@@ -69,8 +69,8 @@ func pathToConverter(servicePath string) string {
 //
 func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transportgrpc")
-	f.ImportAlias(t.Info.ProtobufPackage, "pb")
-	f.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	f.ImportAlias(t.Info.ProtobufPackageImport, "pb")
+	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`DO NOT EDIT.`)
 
@@ -82,7 +82,7 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 
 	f.Func().Id("NewGRPCServer").
 		ParamsFunc(func(p *Group) {
-			p.Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints")
+			p.Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints")
 			if t.tracing {
 				p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 			}
@@ -91,7 +91,7 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 			}
 			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ServerOption")
 		}).Params(
-		Qual(t.Info.ProtobufPackage, serverStructName(t.Info.Iface)),
+		Qual(t.Info.ProtobufPackageImport, serverStructName(t.Info.Iface)),
 	).
 		Block(
 			Return().Op("&").Id(privateServerStructName(t.Info.Iface)).Values(DictFunc(func(g Dict) {
@@ -99,8 +99,8 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
-							Line().Qual(pathToConverter(t.Info.ServiceImportPath), decodeRequestName(m)),
-							Line().Qual(pathToConverter(t.Info.ServiceImportPath), encodeResponseName(m)),
+							Line().Qual(pathToConverter(t.Info.SourcePackageImport), decodeRequestName(m)),
+							Line().Qual(pathToConverter(t.Info.SourcePackageImport), encodeResponseName(m)),
 							Line().Add(t.serverOpts(m)).Op("...").Line(),
 						)
 				}
@@ -118,19 +118,15 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 }
 
 func (gRPCServerTemplate) DefaultPath() string {
-	return "./transport/grpc/server.go"
+	return filenameBuilder(PathTransport, "grpc", "server")
 }
 
 func (t *gRPCServerTemplate) Prepare() error {
-	if t.Info.ProtobufPackage == "" {
-		return ProtobufEmptyError
+	if t.Info.ProtobufPackageImport == "" {
+		return ErrProtobufEmpty
 	}
 
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
-	if util.IsInStringSlice("grpc", tags) || util.IsInStringSlice("grpc-server", tags) {
-		t.Info.Force = true
-	}
-	tags = util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
 	for _, tag := range tags {
 		switch tag {
 		case TracingTag:
@@ -141,10 +137,7 @@ func (t *gRPCServerTemplate) Prepare() error {
 }
 
 func (t *gRPCServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); !t.Info.Force && err == nil {
-		return nil, nil
-	}
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Render service interface method for grpc server.
@@ -182,7 +175,7 @@ func (t *gRPCServerTemplate) grpcServerReqStruct(fn *types.Function) *Statement 
 			return sp
 		}
 	}
-	return Op("*").Qual(t.Info.ProtobufPackage, requestStructName(fn))
+	return Op("*").Qual(t.Info.ProtobufPackageImport, requestStructName(fn))
 }
 
 // Special case for empty response
@@ -201,7 +194,7 @@ func (t *gRPCServerTemplate) grpcServerRespStruct(fn *types.Function) *Statement
 			return sp
 		}
 	}
-	return Op("*").Qual(t.Info.ProtobufPackage, responseStructName(fn))
+	return Op("*").Qual(t.Info.ProtobufPackageImport, responseStructName(fn))
 }
 
 // Render service method body for grpc server.

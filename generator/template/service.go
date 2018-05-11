@@ -8,7 +8,7 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 type stubInterfaceTemplate struct {

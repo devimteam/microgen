@@ -5,7 +5,7 @@ import (
 
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 func ValidateInterface(iface *types.Interface) error {

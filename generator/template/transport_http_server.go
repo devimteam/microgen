@@ -9,7 +9,7 @@ import (
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 const (
@@ -33,14 +33,11 @@ func NewHttpServerTemplate(info *GenerationInfo) Template {
 }
 
 func (t *httpServerTemplate) DefaultPath() string {
-	return "./transport/http/server.go"
+	return filenameBuilder(PathTransport, "http", "server")
 }
 
 func (t *httpServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); !t.Info.Force && err == nil {
-		return nil, nil
-	}
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *httpServerTemplate) Prepare() error {
@@ -142,12 +139,12 @@ func MakeHTTPHandler(s EchoService, logger log.Logger) http.Handler {
 
 func (t *httpServerTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transporthttp")
-	f.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`DO NOT EDIT.`)
 
 	f.Func().Id("NewHTTPHandler").ParamsFunc(func(p *Group) {
-		p.Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints")
+		p.Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints")
 		if t.tracing {
 			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 		}
@@ -164,8 +161,8 @@ func (t *httpServerTemplate) Render() write_strategy.Renderer {
 				Call(Lit("/" + t.paths[fn.Name])).Dot("Handler").Call(
 				Line().Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
-					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), decodeRequestName(fn)),
-					Line().Qual(pathToHttpConverter(t.Info.ServiceImportPath), encodeResponseName(fn)),
+					Line().Qual(pathToHttpConverter(t.Info.SourcePackageImport), decodeRequestName(fn)),
+					Line().Qual(pathToHttpConverter(t.Info.SourcePackageImport), encodeResponseName(fn)),
 					Line().Add(t.serverOpts(fn)).Op("...")),
 			)
 		}

@@ -6,7 +6,8 @@ import (
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
+	"path/filepath"
 )
 
 const (
@@ -66,6 +67,14 @@ const (
 	JSONRPCClientTag          = "json-rpc-client"
 )
 
+const (
+	MicrogenExt = "_microgen.go"
+	PathEndpoints = "endpoints"
+	PathService = "service"
+	PathTransport = "transport"
+	PathExecutable = "cmd"
+)
+
 type WriteStrategyState int
 
 const (
@@ -74,30 +83,26 @@ const (
 )
 
 type GenerationInfo struct {
-	ServiceImportPackageName string
-	Iface                    *types.Interface
-	ServiceImportPath        string
-	Force                    bool
-	AbsOutPath               string
-	SourceFilePath           string
-	FileHeader               string
+	Iface               *types.Interface
+	SourcePackageImport string
+	SourceFilePath      string
+	AbsOutputFilePath   string
+	FileHeader          string
 
-	ProtobufPackage string
-	GRPCRegAddr     string
+	ProtobufPackageImport string
+	GRPCRegAddr           string
 }
 
 func (info GenerationInfo) Copy() *GenerationInfo {
 	return &GenerationInfo{
-		Iface: info.Iface,
-		Force: info.Force,
-		ServiceImportPackageName: info.ServiceImportPackageName,
-		ServiceImportPath:        info.ServiceImportPath,
-		AbsOutPath:               info.AbsOutPath,
-		SourceFilePath:           info.SourceFilePath,
+		Iface:               info.Iface,
+		SourcePackageImport: info.SourcePackageImport,
+		AbsOutputFilePath:   info.AbsOutputFilePath,
+		SourceFilePath:      info.SourceFilePath,
 
-		GRPCRegAddr:     info.GRPCRegAddr,
-		ProtobufPackage: info.ProtobufPackage,
-		FileHeader:      info.FileHeader,
+		GRPCRegAddr:           info.GRPCRegAddr,
+		ProtobufPackageImport: info.ProtobufPackageImport,
+		FileHeader:            info.FileHeader,
 	}
 }
 
@@ -362,6 +367,11 @@ func (r *Rendered) Contain(s string) bool {
 
 func (r *Rendered) NotContain(s string) bool {
 	return !r.Contain(s)
+}
+
+func filenameBuilder(ss ...string) string {
+	ss[len(ss)-1] = ss[len(ss)-1]+MicrogenExt
+	return filepath.Join(ss...)
 }
 
 // Hard

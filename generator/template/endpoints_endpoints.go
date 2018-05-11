@@ -4,7 +4,7 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 type endpointsTemplate struct {
@@ -62,9 +62,8 @@ func endpointStructName(str string) string {
 //		}
 //
 func (t *endpointsTemplate) Render() write_strategy.Renderer {
-	f := NewFile(t.Info.ServiceImportPackageName)
+	f := NewFile("endpoints")
 	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`DO NOT EDIT.`)
 
 	f.Add(t.allEndpoints()).Line()
 	f.Type().Id("Endpoints").StructFunc(func(g *Group) {
@@ -84,7 +83,7 @@ func (t *endpointsTemplate) Render() write_strategy.Renderer {
 }
 
 func (endpointsTemplate) DefaultPath() string {
-	return "./endpoints.go"
+	return filenameBuilder(PathEndpoints, "endpoints")
 }
 
 func (t *endpointsTemplate) Prepare() error {
@@ -101,7 +100,7 @@ func (t *endpointsTemplate) Prepare() error {
 }
 
 func (t *endpointsTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Render full endpoints method.

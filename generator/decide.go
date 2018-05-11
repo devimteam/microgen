@@ -10,7 +10,7 @@ import (
 	"github.com/devimteam/microgen/generator/template"
 	lg "github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 const (
@@ -40,7 +40,7 @@ const (
 	HttpMethodPath = template.HttpMethodPath
 )
 
-func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, absOutPath, sourcePath string) (units []*generationUnit, err error) {
+func ListTemplatesForGen(iface *types.Interface, absOutPath, sourcePath string) (units []*generationUnit, err error) {
 	importPackagePath, err := resolvePackagePath(absOutPath)
 	if err != nil {
 		return nil, err
@@ -50,13 +50,11 @@ func ListTemplatesForGen(iface *types.Interface, force bool, importPackageName, 
 		return nil, err
 	}
 	info := &template.GenerationInfo{
-		ServiceImportPackageName: importPackageName,
-		ServiceImportPath:        importPackagePath,
-		Force:                    force,
+		SourcePackageImport:      importPackagePath,
 		Iface:                    iface,
-		AbsOutPath:               absOutPath,
+		AbsOutputFilePath:        absOutPath,
 		SourceFilePath:           absSourcePath,
-		ProtobufPackage:          mstrings.FetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
+		ProtobufPackageImport:    mstrings.FetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
 		GRPCRegAddr:              mstrings.FetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
 		FileHeader:               defaultFileHeader,
 	}

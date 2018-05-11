@@ -10,7 +10,7 @@ import (
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 const (
@@ -48,7 +48,7 @@ func specialTypeConverter(p types.Type) *Statement {
 		return Id("string")
 	}
 	// *string -> *wrappers.StringValue
-	if name != nil && *name == "string" && imp == nil && p.TypeOf() == types.T_Pointer {
+	if name != nil && *name == "string" && imp == nil && p.TypeOf() == types.KindPointer {
 		return Op("*").Qual(GolangProtobufWrappers, "StringValue")
 	}
 	return nil
@@ -143,8 +143,8 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 	}
 
 	file := NewFile("protobuf")
-	file.ImportAlias(t.Info.ProtobufPackage, "pb")
-	file.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	file.ImportAlias(t.Info.ProtobufPackageImport, "pb")
+	file.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	file.PackageComment(t.Info.FileHeader)
 	file.PackageComment(`It is better for you if you do not change functions names!`)
 	file.PackageComment(`This file will never be overwritten.`)
@@ -154,22 +154,22 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 }
 
 func (stubGRPCTypeConverterTemplate) DefaultPath() string {
-	return "./transport/converter/protobuf/type_converters.go"
+	return filenameBuilder(PathTransport, "grpc", "protobuf_type_converters")
 }
 
 func (t *stubGRPCTypeConverterTemplate) Prepare() error {
-	if t.Info.ProtobufPackage == "" {
+	if t.Info.ProtobufPackageImport == "" {
 		return fmt.Errorf("protobuf package is empty")
 	}
 	return nil
 }
 
 func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); os.IsNotExist(err) {
+	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
+	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
 	if err != nil {
 		logger.Logger.Log(0, "can't parse", t.DefaultPath(), ":", err)
 		return write_strategy.NewNopStrategy("", ""), nil
@@ -180,7 +180,7 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 	}
 
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Render stub method for golang to protobuf converter.
@@ -222,7 +222,7 @@ func (t *stubGRPCTypeConverterTemplate) protoFieldType(field types.Type) *Statem
 		switch f := field.(type) {
 		case types.TImport:
 			if f.Import != nil {
-				c.Qual(t.Info.ProtobufPackage, "")
+				c.Qual(t.Info.ProtobufPackageImport, "")
 			}
 			field = f.Next
 		case types.TName:

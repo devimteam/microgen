@@ -4,7 +4,7 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 const (
@@ -23,9 +23,8 @@ func NewRecoverTemplate(info *GenerationInfo) Template {
 
 func (t *recoverTemplate) Render() write_strategy.Renderer {
 	f := NewFile("middleware")
-	f.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`DO NOT EDIT.`)
 
 	f.Comment(util.ToUpperFirst(serviceRecoverStructName) + " recovers panics from method calls, writes to provided logger and returns the error of panic as method error.").
 		Line().Func().Id(util.ToUpperFirst(serviceRecoverStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
@@ -36,7 +35,7 @@ func (t *recoverTemplate) Render() write_strategy.Renderer {
 	// Render type logger
 	f.Type().Id(serviceRecoverStructName).Struct(
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name),
+		Id(nextVarName).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name),
 	)
 
 	// Render functions
@@ -49,7 +48,7 @@ func (t *recoverTemplate) Render() write_strategy.Renderer {
 }
 
 func (recoverTemplate) DefaultPath() string {
-	return "./middleware/recovering.go"
+	return filenameBuilder(PathService, "recovering")
 }
 
 func (t *recoverTemplate) Prepare() error {
@@ -57,14 +56,14 @@ func (t *recoverTemplate) Prepare() error {
 }
 
 func (t *recoverTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *recoverTemplate) newRecoverBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.Info.ServiceImportPath, i.Name),
+		Id(nextVarName).Qual(t.Info.SourcePackageImport, i.Name),
 	).Params(
-		Qual(t.Info.ServiceImportPath, i.Name),
+		Qual(t.Info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(serviceRecoverStructName).Values(
 			Dict{

@@ -9,7 +9,7 @@ import (
 	"github.com/devimteam/microgen/generator"
 	lg "github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 const (
@@ -20,7 +20,7 @@ var (
 	flagFileName  = flag.String("file", "service.go", "Name of file where described interface definition")
 	flagOutputDir = flag.String("out", ".", "Output directory")
 	flagHelp      = flag.Bool("help", false, "Show help")
-	flagForce     = flag.Bool("force", false, "Overwrite all files, as it generates for the first time")
+	//flagForce     = flag.Bool("force", false, "Overwrite all files, as it generates for the first time")
 	flagVerbose   = flag.Int("v", 1, "Verbose log level")
 )
 
@@ -53,7 +53,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	units, err := generator.ListTemplatesForGen(i, *flagForce, info.Name, *flagOutputDir, *flagFileName)
+	units, err := generator.ListTemplatesForGen(i, *flagOutputDir, *flagFileName)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)

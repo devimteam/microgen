@@ -5,12 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/vetcher/godecl"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra"
+	"github.com/vetcher/go-astra/types"
 )
 
 func ParseFile(filename string) (*types.File, error) {
-	return godecl.ParseFile(filename)
+	return astra.ParseFile(filename)
 }
 
 func StatFile(absPath, relPath string) error {

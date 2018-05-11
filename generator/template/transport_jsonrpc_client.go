@@ -6,7 +6,7 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 type jsonrpcClientTemplate struct {
@@ -27,18 +27,11 @@ func (t *jsonrpcClientTemplate) DefaultPath() string {
 }
 
 func (t *jsonrpcClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); !t.Info.Force && err == nil {
-		return nil, nil
-	}
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *jsonrpcClientTemplate) Prepare() error {
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
-	if util.IsInStringSlice("http", tags) || util.IsInStringSlice("http-client", tags) {
-		t.Info.Force = true
-	}
-	tags = util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
 	for _, tag := range tags {
 		switch tag {
 		case TracingTag:
@@ -60,7 +53,7 @@ func (t *jsonrpcClientTemplate) Prepare() error {
 
 func (t *jsonrpcClientTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transportjsonrpc")
-	f.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`DO NOT EDIT.`)
 
@@ -74,7 +67,7 @@ func (t *jsonrpcClientTemplate) Render() write_strategy.Renderer {
 		}
 		p.Id("opts").Op("...").Qual(PackagePathGoKitTransportJSONRPC, "ClientOption")
 	}).Params(
-		Qual(t.Info.ServiceImportPath, t.Info.Iface.Name),
+		Qual(t.Info.SourcePackageImport, t.Info.Iface.Name),
 		Error(),
 	).Block(
 		t.clientBody(),
@@ -99,7 +92,7 @@ func (t *jsonrpcClientTemplate) clientBody() *Statement {
 			Line().Qual(PackagePathGoKitTracing, "ContextToHTTP").Call(Id("tracer"), Id("logger")).Op(",").Line(),
 		))
 	}
-	g.Line().Return(Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(
+	g.Line().Return(Op("&").Qual(t.Info.SourcePackageImport, "Endpoints").Values(DictFunc(
 		func(d Dict) {
 			for _, fn := range t.Info.Iface.Methods {
 				client := &Statement{}
@@ -117,9 +110,9 @@ func (t *jsonrpcClientTemplate) clientBody() *Statement {
 					Line().Append(
 						Line().Add(t.clientOpts(fn)),
 						Line().Qual(PackagePathGoKitTransportJSONRPC, "ClientRequestEncoder").
-							Call(Qual(pathToJSONRPCConverter(t.Info.ServiceImportPath), encodeRequestName(fn))),
+							Call(Qual(pathToJSONRPCConverter(t.Info.SourcePackageImport), encodeRequestName(fn))),
 						Line().Qual(PackagePathGoKitTransportJSONRPC, "ClientResponseDecoder").
-							Call(Qual(pathToJSONRPCConverter(t.Info.ServiceImportPath), decodeResponseName(fn))).Op(",").Line(),
+							Call(Qual(pathToJSONRPCConverter(t.Info.SourcePackageImport), decodeResponseName(fn))).Op(",").Line(),
 					).Op("...").Line(),
 				).Dot("Endpoint").Call()
 				d[Id(endpointStructName(fn.Name))] = client

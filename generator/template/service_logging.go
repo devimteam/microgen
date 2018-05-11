@@ -4,7 +4,7 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 const (
@@ -70,9 +70,8 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 //
 func (t *loggingTemplate) Render() write_strategy.Renderer {
 	f := NewFile("middleware")
-	f.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`DO NOT EDIT.`)
 
 	f.Comment("ServiceLogging writes params, results and working time of method call to provided logger after its execution.").
 		Line().Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
@@ -83,7 +82,7 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 	// Render type logger
 	f.Type().Id(serviceLoggingStructName).Struct(
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name),
+		Id(nextVarName).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name),
 	)
 
 	// Render functions
@@ -110,7 +109,7 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 }
 
 func (loggingTemplate) DefaultPath() string {
-	return "./middleware/logging.go"
+	return filenameBuilder(PathService, "logging")
 }
 
 func (t *loggingTemplate) Prepare() error {
@@ -124,7 +123,7 @@ func (t *loggingTemplate) Prepare() error {
 }
 
 func (t *loggingTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Render body for new logging middleware.
@@ -138,9 +137,9 @@ func (t *loggingTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 //
 func (t *loggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.Info.ServiceImportPath, i.Name),
+		Id(nextVarName).Qual(t.Info.SourcePackageImport, i.Name),
 	).Params(
-		Qual(t.Info.ServiceImportPath, i.Name),
+		Qual(t.Info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(serviceLoggingStructName).Values(
 			Dict{

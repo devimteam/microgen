@@ -6,12 +6,12 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 var (
-	GRPCAddrEmptyError = errors.New("grpc server address is empty")
-	ProtobufEmptyError = errors.New("protobuf package is empty")
+	ErrGRPCAddrEmpty = errors.New("grpc server address is empty")
+	ErrProtobufEmpty = errors.New("protobuf package is empty")
 )
 
 type gRPCClientTemplate struct {
@@ -26,7 +26,7 @@ func NewGRPCClientTemplate(info *GenerationInfo) Template {
 }
 
 func (t *gRPCClientTemplate) grpcConverterPackagePath() string {
-	return t.Info.ServiceImportPath + "/transport/converter/protobuf"
+	return t.Info.SourcePackageImport + "/transport/converter/protobuf"
 }
 
 // Render whole grpc client file.
@@ -57,8 +57,8 @@ func (t *gRPCClientTemplate) grpcConverterPackagePath() string {
 //
 func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transportgrpc")
-	f.ImportAlias(t.Info.ProtobufPackage, "pb")
-	f.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	f.ImportAlias(t.Info.ProtobufPackageImport, "pb")
+	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`DO NOT EDIT.`)
 
@@ -72,14 +72,14 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 				p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
 			}
 			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption")
-		}).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name).
+		}).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name).
 		BlockFunc(func(g *Group) {
 			if t.tracing {
 				g.Id("opts").Op("=").Append(Id("opts"), Qual(PackagePathGoKitTransportGRPC, "ClientBefore").Call(
 					Line().Qual(PackagePathGoKitTracing, "ContextToGRPC").Call(Id("tracer"), Id("logger")).Op(",").Line(),
 				))
 			}
-			g.Return().Op("&").Qual(t.Info.ServiceImportPath, "Endpoints").Values(DictFunc(func(d Dict) {
+			g.Return().Op("&").Qual(t.Info.SourcePackageImport, "Endpoints").Values(DictFunc(func(d Dict) {
 				for _, m := range t.Info.Iface.Methods {
 					client := &Statement{}
 					if t.tracing {
@@ -94,8 +94,8 @@ func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
 						Line().Id("conn"),
 						Line().Lit(t.Info.GRPCRegAddr),
 						Line().Lit(m.Name),
-						Line().Qual(pathToConverter(t.Info.ServiceImportPath), encodeRequestName(m)),
-						Line().Qual(pathToConverter(t.Info.ServiceImportPath), decodeResponseName(m)),
+						Line().Qual(pathToConverter(t.Info.SourcePackageImport), encodeRequestName(m)),
+						Line().Qual(pathToConverter(t.Info.SourcePackageImport), decodeResponseName(m)),
 						Line().Add(t.replyType(m)),
 						Line().Add(t.clientOpts(m)).Op("...").Line(),
 					).Dot("Endpoint").Call()
@@ -119,36 +119,32 @@ func (t *gRPCClientTemplate) replyType(signature *types.Function) *Statement {
 			return sp
 		}
 	}
-	return Qual(t.Info.ProtobufPackage, responseStructName(signature)).Values()
+	return Qual(t.Info.ProtobufPackageImport, responseStructName(signature)).Values()
 }
 
 func specialReplyType(p types.Type) *Statement {
 	name := types.TypeName(p)
 	imp := types.TypeImport(p)
 	// *string -> *wrappers.StringValue
-	if name != nil && *name == "string" && imp == nil && p.TypeOf() == types.T_Pointer {
+	if name != nil && *name == "string" && imp == nil && p.TypeOf() == types.KindPointer {
 		return (&Statement{}).Qual(GolangProtobufWrappers, "StringValue").Values()
 	}
 	return nil
 }
 
 func (gRPCClientTemplate) DefaultPath() string {
-	return "./transport/grpc/client.go"
+	return filenameBuilder(PathTransport, "grpc", "client")
 }
 
 func (t *gRPCClientTemplate) Prepare() error {
 	if t.Info.GRPCRegAddr == "" {
-		return GRPCAddrEmptyError
+		return ErrGRPCAddrEmpty
 	}
-	if t.Info.ProtobufPackage == "" {
-		return ProtobufEmptyError
+	if t.Info.ProtobufPackageImport == "" {
+		return ErrProtobufEmpty
 	}
 
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+ForceTag)
-	if util.IsInStringSlice("grpc", tags) || util.IsInStringSlice("grpc-client", tags) {
-		t.Info.Force = true
-	}
-	tags = util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
+	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
 	for _, tag := range tags {
 		switch tag {
 		case TracingTag:
@@ -159,10 +155,7 @@ func (t *gRPCClientTemplate) Prepare() error {
 }
 
 func (t *gRPCClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); !t.Info.Force && err == nil {
-		return nil, nil
-	}
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *gRPCClientTemplate) clientOpts(fn *types.Function) *Statement {

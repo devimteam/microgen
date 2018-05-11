@@ -31,16 +31,15 @@ func NewMiddlewareTemplate(info *GenerationInfo) Template {
 //
 func (t *middlewareTemplate) Render() write_strategy.Renderer {
 	f := NewFile("middleware")
-	f.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`DO NOT EDIT.`)
 	f.Comment("Service middleware").
-		Line().Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name)
+		Line().Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.SourcePackageImport, t.Info.Iface.Name)).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name)
 	return f
 }
 
 func (middlewareTemplate) DefaultPath() string {
-	return "./middleware/middleware.go"
+	return filenameBuilder(PathService, "middleware")
 }
 
 func (middlewareTemplate) Prepare() error {
@@ -48,5 +47,5 @@ func (middlewareTemplate) Prepare() error {
 }
 
 func (t *middlewareTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }

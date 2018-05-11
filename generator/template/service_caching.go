@@ -8,7 +8,7 @@ import (
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 const (
@@ -57,7 +57,7 @@ func (t *cacheMiddlewareTemplate) Render() write_strategy.Renderer {
 		f.Type().Id(cacheMiddlewareStructName).Struct(
 			Id("cache").Id(cacheInterfaceName),
 			Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-			Id(nextVarName).Qual(t.Info.ServiceImportPath, t.Info.Iface.Name),
+			Id(nextVarName).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name),
 		)
 	}
 	for _, signature := range t.Info.Iface.Methods {
@@ -76,7 +76,7 @@ func (t *cacheMiddlewareTemplate) Render() write_strategy.Renderer {
 		return f
 	}
 	file := NewFile("middleware")
-	file.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	file.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	file.PackageComment(t.Info.FileHeader)
 	file.PackageComment(`Microgen appends missed functions.`)
 	file.Add(f)
@@ -84,7 +84,7 @@ func (t *cacheMiddlewareTemplate) Render() write_strategy.Renderer {
 }
 
 func (cacheMiddlewareTemplate) DefaultPath() string {
-	return "./middleware/cache.go"
+	return filenameBuilder(PathService, "caching")
 }
 
 func (t *cacheMiddlewareTemplate) Prepare() error {
@@ -104,11 +104,11 @@ func (t *cacheMiddlewareTemplate) Prepare() error {
 }
 
 func (t *cacheMiddlewareTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); os.IsNotExist(err) {
+	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
+	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
 	if err != nil {
 		logger.Logger.Logln(0, "can't parse", t.DefaultPath(), ":", err)
 		return write_strategy.NewNopStrategy("", ""), nil
@@ -126,14 +126,14 @@ func (t *cacheMiddlewareTemplate) ChooseStrategy() (write_strategy.Strategy, err
 		t.rendered.Add(str.Name)
 	}
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *cacheMiddlewareTemplate) newCacheBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.Info.ServiceImportPath, i.Name),
+		Id(nextVarName).Qual(t.Info.SourcePackageImport, i.Name),
 	).Params(
-		Qual(t.Info.ServiceImportPath, i.Name),
+		Qual(t.Info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(cacheMiddlewareStructName).Values(
 			Dict{

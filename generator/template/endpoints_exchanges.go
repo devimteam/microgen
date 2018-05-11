@@ -3,7 +3,7 @@ package template
 import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 type exchangeTemplate struct {
@@ -42,9 +42,8 @@ func responseStructName(signature *types.Function) string {
 //  }
 //
 func (t *exchangeTemplate) Render() write_strategy.Renderer {
-	f := NewFile(t.Info.ServiceImportPackageName)
+	f := NewFile("endpoints")
 	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`DO NOT EDIT.`)
 
 	if len(t.Info.Iface.Methods) > 0 {
 		f.Type().Op("(")
@@ -61,7 +60,7 @@ func (t *exchangeTemplate) Render() write_strategy.Renderer {
 }
 
 func (exchangeTemplate) DefaultPath() string {
-	return "./exchanges.go"
+	return filenameBuilder(PathEndpoints, "exchanges")
 }
 
 func (exchangeTemplate) Prepare() error {
@@ -69,7 +68,7 @@ func (exchangeTemplate) Prepare() error {
 }
 
 func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Renders exchanges that represents requests and responses.

@@ -96,7 +96,7 @@
   revision = "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f"
 
 [[projects]]
-  name = "github.com/vetcher/godecl"
+  name = "github.com/vetcher/go-astra"
   packages = [
     ".",
     "types"

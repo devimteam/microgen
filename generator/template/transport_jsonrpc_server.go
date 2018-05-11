@@ -4,7 +4,7 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 const (
@@ -30,10 +30,7 @@ func (t *jsonrpcServerTemplate) DefaultPath() string {
 }
 
 func (t *jsonrpcServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); !t.Info.Force && err == nil {
-		return nil, nil
-	}
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *jsonrpcServerTemplate) Prepare() error {
@@ -59,7 +56,7 @@ func (t *jsonrpcServerTemplate) Prepare() error {
 
 func (t *jsonrpcServerTemplate) Render() write_strategy.Renderer {
 	f := NewFile("transportjsonrpc")
-	f.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
 	f.PackageComment(`DO NOT EDIT.`)
 
@@ -70,7 +67,7 @@ func (t *jsonrpcServerTemplate) Render() write_strategy.Renderer {
 	}).Line()
 
 	f.Func().Id("NewJSONRPCServer").ParamsFunc(func(p *Group) {
-		p.Id("endpoints").Op("*").Qual(t.Info.ServiceImportPath, "Endpoints")
+		p.Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints")
 		if t.tracing {
 			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 		}
@@ -88,8 +85,8 @@ func (t *jsonrpcServerTemplate) Render() write_strategy.Renderer {
 						Line().Qual(PackagePathGoKitTransportJSONRPC, "EndpointCodecMap").Values(Dict{
 							Line().Lit(t.prefixes[m.Name] + m.Name + t.suffixes[m.Name]): Qual(PackagePathGoKitTransportJSONRPC, "EndpointCodec").Values(Dict{
 								Id("Endpoint"): Id("endpoints").Dot(endpointStructName(m.Name)),
-								Id("Decode"):   Qual(pathToConverter(t.Info.ServiceImportPath), decodeRequestName(m)),
-								Id("Encode"):   Qual(pathToConverter(t.Info.ServiceImportPath), encodeResponseName(m)),
+								Id("Decode"):   Qual(pathToConverter(t.Info.SourcePackageImport), decodeRequestName(m)),
+								Id("Encode"):   Qual(pathToConverter(t.Info.SourcePackageImport), encodeResponseName(m)),
 							}),
 						}),
 						Line().Add(t.serverOpts(m)).Op("...").Line(),

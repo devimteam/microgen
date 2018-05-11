@@ -6,7 +6,7 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 type jsonrpcEndpointConverterTemplate struct {
@@ -45,7 +45,7 @@ func (t *jsonrpcEndpointConverterTemplate) Render() write_strategy.Renderer {
 	}
 
 	file := NewFile("jsonrpcconv")
-	file.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	file.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	file.PackageComment(t.Info.FileHeader)
 	file.PackageComment(`Please, do not change functions names!`)
 	file.Add(f)
@@ -68,11 +68,11 @@ func (t *jsonrpcEndpointConverterTemplate) Prepare() error {
 }
 
 func (t *jsonrpcEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
+	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); err != nil {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
+	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (t *jsonrpcEndpointConverterTemplate) ChooseStrategy() (write_strategy.Stra
 	removeAlreadyExistingFunctions(file.Functions, &t.responseDecoders, decodeResponseName)
 
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *jsonrpcEndpointConverterTemplate) encodeRequest(fn *types.Function) Code {
@@ -113,7 +113,7 @@ func (t *jsonrpcEndpointConverterTemplate) decodeRequest(fn *types.Function) Cod
 			group.If(Id(fullName).Dot("Error").Op("!=").Nil()).Block(
 				Return(Nil(), Id(fullName).Dot("Error")),
 			)
-			group.Var().Id(shortName).Qual(t.Info.ServiceImportPath, requestStructName(fn))
+			group.Var().Id(shortName).Qual(t.Info.SourcePackageImport, requestStructName(fn))
 			group.Err().Op(":=").Qual(PackagePathJson, "Unmarshal").Call(Id(fullName), Op("&").Id(shortName))
 			group.Return(Op("&").Id(shortName), Err())
 		})
@@ -128,7 +128,7 @@ func (t *jsonrpcEndpointConverterTemplate) decodeResponse(fn *types.Function) Co
 			group.If(Id(fullName).Dot("Error").Op("!=").Nil()).Block(
 				Return(Nil(), Id(fullName).Dot("Error")),
 			)
-			group.Var().Id(shortName).Qual(t.Info.ServiceImportPath, responseStructName(fn))
+			group.Var().Id(shortName).Qual(t.Info.SourcePackageImport, responseStructName(fn))
 			group.Err().Op(":=").Qual(PackagePathJson, "Unmarshal").Call(Id(fullName), Op("&").Id(shortName))
 			group.Return(Op("&").Id(shortName), Err())
 		})

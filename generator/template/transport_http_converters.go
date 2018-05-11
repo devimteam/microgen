@@ -6,7 +6,7 @@ import (
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra/types"
 )
 
 const (
@@ -32,15 +32,15 @@ func NewHttpConverterTemplate(info *GenerationInfo) Template {
 }
 
 func (t *httpConverterTemplate) DefaultPath() string {
-	return "./transport/converter/http/exchange_converters.go"
+	return filenameBuilder(PathTransport, "http", "converters")
 }
 
 func (t *httpConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutPath, t.DefaultPath()); t.Info.Force || err != nil {
+	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); err != nil {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutPath, t.DefaultPath()))
+	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (t *httpConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error
 	}
 
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutPath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *httpConverterTemplate) Prepare() error {
@@ -154,7 +154,7 @@ func (t *httpConverterTemplate) Render() write_strategy.Renderer {
 	}
 
 	file := NewFile("httpconv")
-	file.ImportAlias(t.Info.ServiceImportPath, serviceAlias)
+	file.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	file.PackageComment(t.Info.FileHeader)
 	file.PackageComment(`Please, do not change functions names!`)
 	file.Add(f)
@@ -229,7 +229,7 @@ func (t *httpConverterTemplate) decodeHTTPRequest(fn *types.Function) *Statement
 					g.Add(stringToTypeConverter(&arg))
 				}
 			}
-			g.Return(Op("&").Qual(t.Info.ServiceImportPath, requestStructName(fn)).Values(DictFunc(func(d Dict) {
+			g.Return(Op("&").Qual(t.Info.SourcePackageImport, requestStructName(fn)).Values(DictFunc(func(d Dict) {
 				for _, arg := range arguments {
 					typename := types.TypeName(arg.Type)
 					if typename == nil {
@@ -239,7 +239,7 @@ func (t *httpConverterTemplate) decodeHTTPRequest(fn *types.Function) *Statement
 				}
 			})), Nil())
 		} else {
-			g.Var().Id("req").Qual(t.Info.ServiceImportPath, requestStructName(fn))
+			g.Var().Id("req").Qual(t.Info.SourcePackageImport, requestStructName(fn))
 			g.Err().Op(":=").Qual(PackagePathJson, "NewDecoder").Call(Id("r").Dot("Body")).Dot("Decode").Call(Op("&").Id("req"))
 			g.Return(Op("&").Id("req"), Err())
 		}
@@ -293,7 +293,7 @@ func (t *httpConverterTemplate) decodeHTTPResponse(fn *types.Function) *Statemen
 		Error(),
 	).
 		BlockFunc(func(g *Group) {
-			g.Var().Id("resp").Qual(t.Info.ServiceImportPath, responseStructName(fn))
+			g.Var().Id("resp").Qual(t.Info.SourcePackageImport, responseStructName(fn))
 			g.Err().Op(":=").Qual(PackagePathJson, "NewDecoder").Call(Id("r").Dot("Body")).Dot("Decode").Call(Op("&").Id("resp"))
 			g.Return(Op("&").Id("resp"), Err())
 		})
@@ -337,7 +337,7 @@ func (t *httpConverterTemplate) encodeHTTPRequestBody(fn *types.Function) *State
 	s := &Statement{}
 	pathVars := Lit(util.ToURLSnakeCase(fn.Name))
 	if FetchHttpMethodTag(fn.Docs) == "GET" {
-		s.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.ServiceImportPath, requestStructName(fn))).Line()
+		s.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.Info.SourcePackageImport, requestStructName(fn))).Line()
 		pathVars.Add(t.pathConverters(fn))
 	}
 	s.Id("r").Dot("URL").Dot("Path").Op("=").
