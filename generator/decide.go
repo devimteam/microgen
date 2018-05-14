@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"context"
+
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
 	lg "github.com/devimteam/microgen/logger"
@@ -40,7 +42,7 @@ const (
 	HttpMethodPath = template.HttpMethodPath
 )
 
-func ListTemplatesForGen(iface *types.Interface, absOutPath, sourcePath string) (units []*generationUnit, err error) {
+func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath, sourcePath string) (units []*generationUnit, err error) {
 	importPackagePath, err := resolvePackagePath(absOutPath)
 	if err != nil {
 		return nil, err
@@ -50,27 +52,34 @@ func ListTemplatesForGen(iface *types.Interface, absOutPath, sourcePath string) 
 		return nil, err
 	}
 	info := &template.GenerationInfo{
-		SourcePackageImport:      importPackagePath,
-		Iface:                    iface,
-		AbsOutputFilePath:        absOutPath,
-		SourceFilePath:           absSourcePath,
-		ProtobufPackageImport:    mstrings.FetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
-		GRPCRegAddr:              mstrings.FetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
-		FileHeader:               defaultFileHeader,
+		SourcePackageImport:   importPackagePath,
+		Iface:                 iface,
+		AbsOutputFilePath:     absOutPath,
+		SourceFilePath:        absSourcePath,
+		ProtobufPackageImport: mstrings.FetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
+		FileHeader:            defaultFileHeader,
 	}
-	stubSvc, err := NewGenUnit(template.NewStubInterfaceTemplate(info), absOutPath)
+	stubSvc, err := NewGenUnit(ctx, template.NewStubInterfaceTemplate(info), absOutPath)
 	if err != nil {
 		return nil, err
 	}
-	exch, err := NewGenUnit(template.NewExchangeTemplate(info), absOutPath)
+	exch, err := NewGenUnit(ctx, template.NewExchangeTemplate(info), absOutPath)
 	if err != nil {
 		return nil, err
 	}
-	endp, err := NewGenUnit(template.NewEndpointsTemplate(info), absOutPath)
+	endp, err := NewGenUnit(ctx, template.NewEndpointsTemplate(info), absOutPath)
 	if err != nil {
 		return nil, err
 	}
-	units = append(units, stubSvc, exch, endp)
+	endpc, err := NewGenUnit(ctx, template.NewEndpointsClientTemplate(info), absOutPath)
+	if err != nil {
+		return nil, err
+	}
+	endps, err := NewGenUnit(ctx, template.NewEndpointsServerTemplate(info), absOutPath)
+	if err != nil {
+		return nil, err
+	}
+	units = append(units, stubSvc, exch, endp, endpc, endps)
 
 	genTags := util.FetchTags(iface.Docs, TagMark+MicrogenMainTag)
 	lg.Logger.Logln(2, "Tags:", strings.Join(genTags, ", "))
@@ -81,7 +90,7 @@ func ListTemplatesForGen(iface *types.Interface, absOutPath, sourcePath string) 
 			continue
 		}
 		for _, t := range templates {
-			unit, err := NewGenUnit(t, absOutPath)
+			unit, err := NewGenUnit(ctx, t, absOutPath)
 			if err != nil {
 				return nil, err
 			}
@@ -142,23 +151,23 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 		return append(tmpls, template.NewCacheMiddlewareTemplate(info))
 	case TracingTag:
 		return append(tmpls, template.EmptyTemplate{})
-	// JSON-RPC commented for now, and, I think, will be deleted in feature.
-	/*case JSONRPCTag:
-		return append(tmpls,
-			template.NewJSONRPCEndpointConverterTemplate(info),
-			template.NewJSONRPCClientTemplate(info),
-			template.NewJSONRPCServerTemplate(info),
-		)
-	case JSONRPCClientTag:
-		return append(tmpls,
-			template.NewJSONRPCEndpointConverterTemplate(info),
-			template.NewJSONRPCClientTemplate(info),
-		)
-	case JSONRPCServerTag:
-		return append(tmpls,
-			template.NewJSONRPCEndpointConverterTemplate(info),
-			template.NewJSONRPCServerTemplate(info),
-		)*/
+		// JSON-RPC commented for now, and, I think, will be deleted in feature.
+		/*case JSONRPCTag:
+			return append(tmpls,
+				template.NewJSONRPCEndpointConverterTemplate(info),
+				template.NewJSONRPCClientTemplate(info),
+				template.NewJSONRPCServerTemplate(info),
+			)
+		case JSONRPCClientTag:
+			return append(tmpls,
+				template.NewJSONRPCEndpointConverterTemplate(info),
+				template.NewJSONRPCClientTemplate(info),
+			)
+		case JSONRPCServerTag:
+			return append(tmpls,
+				template.NewJSONRPCEndpointConverterTemplate(info),
+				template.NewJSONRPCServerTemplate(info),
+			)*/
 	}
 	return nil
 }

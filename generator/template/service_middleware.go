@@ -1,12 +1,14 @@
 package template
 
 import (
+	"context"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 )
 
 const (
-	MiddlewareTypeName     = "Middleware"
+	MiddlewareTypeName = "Middleware"
 )
 
 type middlewareTemplate struct {
@@ -29,8 +31,8 @@ func NewMiddlewareTemplate(info *GenerationInfo) Template {
 //
 //		type Middleware func(svc.StringService) svc.StringService
 //
-func (t *middlewareTemplate) Render() write_strategy.Renderer {
-	f := NewFile("middleware")
+func (t *middlewareTemplate) Render(ctx context.Context) write_strategy.Renderer {
+	f := NewFile("service")
 	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
 	f.Comment("Service middleware").
@@ -42,10 +44,10 @@ func (middlewareTemplate) DefaultPath() string {
 	return filenameBuilder(PathService, "middleware")
 }
 
-func (middlewareTemplate) Prepare() error {
+func (middlewareTemplate) Prepare(ctx context.Context) error {
 	return nil
 }
 
-func (t *middlewareTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *middlewareTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }

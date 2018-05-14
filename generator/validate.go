@@ -27,14 +27,18 @@ func validateFunction(fn *types.Function) (errs []error) {
 	if !template.IsErrorLast(fn.Results) {
 		errs = append(errs, fmt.Errorf("%s: last result should be of type error", fn.Name))
 	}
-	for _, param := range fn.Args {
+	for _, param := range append(fn.Args, fn.Results...) {
 		if param.Name == "" {
-			errs = append(errs, fmt.Errorf("%s: unnamed argument of type %s", fn.Name, param.Type.String()))
+			errs = append(errs, fmt.Errorf("%s: unnamed parameter of type %s", fn.Name, param.Type.String()))
 		}
-	}
-	for _, param := range fn.Results {
-		if param.Name == "" {
-			errs = append(errs, fmt.Errorf("%s: unnamed result of type %s", fn.Name, param.Type.String()))
+		if iface := types.TypeInterface(param.Type); iface != nil && !iface.(types.TInterface).Interface.IsEmpty() {
+			errs = append(errs, fmt.Errorf("%s: non empty interface %s is not allowed, delcare it outside", fn.Name, param.String()))
+		}
+		if strct := types.TypeStruct(param.Type); strct != nil {
+			errs = append(errs, fmt.Errorf("%s: raw struct %s is not allowed, declare it outside", fn.Name, param.Name))
+		}
+		if f := types.TypeFunction(param.Type); f != nil {
+			errs = append(errs, fmt.Errorf("%s: raw function %s is not allowed, declare it outside", fn.Name, param.Name))
 		}
 	}
 	if template.FetchHttpMethodTag(fn.Docs) == "GET" && !isArgumentsAllowSmartPath(fn) {

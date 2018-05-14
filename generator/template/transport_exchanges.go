@@ -1,6 +1,8 @@
 package template
 
 import (
+	"context"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/vetcher/go-astra/types"
@@ -41,16 +43,16 @@ func responseStructName(signature *types.Function) string {
 //  	Err error         `json:"err"`
 //  }
 //
-func (t *exchangeTemplate) Render() write_strategy.Renderer {
-	f := NewFile("endpoints")
+func (t *exchangeTemplate) Render(ctx context.Context) write_strategy.Renderer {
+	f := NewFile("transport")
 	f.PackageComment(t.Info.FileHeader)
 
 	if len(t.Info.Iface.Methods) > 0 {
 		f.Type().Op("(")
 	}
 	for _, signature := range t.Info.Iface.Methods {
-		f.Add(exchange(requestStructName(signature), RemoveContextIfFirst(signature.Args))) //.Line()
-		f.Add(exchange(responseStructName(signature), removeErrorIfLast(signature.Results))).Line()
+		f.Add(exchange(ctx, requestStructName(signature), RemoveContextIfFirst(signature.Args))) //.Line()
+		f.Add(exchange(ctx, responseStructName(signature), removeErrorIfLast(signature.Results))).Line()
 	}
 	if len(t.Info.Iface.Methods) > 0 {
 		f.Op(")")
@@ -60,14 +62,14 @@ func (t *exchangeTemplate) Render() write_strategy.Renderer {
 }
 
 func (exchangeTemplate) DefaultPath() string {
-	return filenameBuilder(PathEndpoints, "exchanges")
+	return filenameBuilder(PathTransport, "exchanges")
 }
 
-func (exchangeTemplate) Prepare() error {
+func (exchangeTemplate) Prepare(ctx context.Context) error {
 	return nil
 }
 
-func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *exchangeTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
@@ -77,7 +79,7 @@ func (t *exchangeTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
 //  	Visit *entity.Visit `json:"visit"`
 //  }
 //
-func exchange(name string, params []types.Variable) Code {
+func exchange(ctx context.Context, name string, params []types.Variable) Code {
 	if len(params) == 0 {
 		return Comment("Formal exchange type, please do not delete.").Line().
 			Id(name).Struct()
@@ -85,7 +87,7 @@ func exchange(name string, params []types.Variable) Code {
 	}
 	return Id(name).StructFunc(func(g *Group) {
 		for _, param := range params {
-			g.Add(structField(&param))
+			g.Add(structField(ctx, &param))
 		}
 	}) //.Line()
 }

@@ -1,6 +1,8 @@
 package template
 
 import (
+	"context"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
@@ -21,7 +23,7 @@ type jsonrpcServerTemplate struct {
 
 func NewJSONRPCServerTemplate(info *GenerationInfo) Template {
 	return &jsonrpcServerTemplate{
-		Info: info.Copy(),
+		Info: info,
 	}
 }
 
@@ -29,11 +31,11 @@ func (t *jsonrpcServerTemplate) DefaultPath() string {
 	return "./transport/jsonrpc/server.go"
 }
 
-func (t *jsonrpcServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *jsonrpcServerTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
-func (t *jsonrpcServerTemplate) Prepare() error {
+func (t *jsonrpcServerTemplate) Prepare(ctx context.Context) error {
 	t.prefixes = make(map[string]string)
 	t.suffixes = make(map[string]string)
 	for _, fn := range t.Info.Iface.Methods {
@@ -54,7 +56,7 @@ func (t *jsonrpcServerTemplate) Prepare() error {
 	return nil
 }
 
-func (t *jsonrpcServerTemplate) Render() write_strategy.Renderer {
+func (t *jsonrpcServerTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transportjsonrpc")
 	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)

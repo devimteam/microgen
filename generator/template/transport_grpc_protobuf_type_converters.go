@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,8 +49,11 @@ func specialTypeConverter(p types.Type) *Statement {
 		return Id("string")
 	}
 	// *string -> *wrappers.StringValue
-	if name != nil && *name == "string" && imp == nil && p.TypeOf() == types.KindPointer {
-		return Op("*").Qual(GolangProtobufWrappers, "StringValue")
+	if name != nil && *name == "string" && imp == nil {
+		_, ok := p.(types.TPointer)
+		if ok {
+			return Op("*").Qual(GolangProtobufWrappers, "StringValue")
+		}
 	}
 	return nil
 }
@@ -121,18 +125,18 @@ func converterProtoToBody(field *types.Variable) Code {
 //			panic("method not provided")
 //		}
 //
-func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
+func (t *stubGRPCTypeConverterTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := &Statement{}
 
 	for _, signature := range t.Info.Iface.Methods {
 		args := append(RemoveContextIfFirst(signature.Args), removeErrorIfLast(signature.Results)...)
 		for _, field := range args {
-			if _, ok := golangTypeToProto("", &field); !ok && !util.IsInStringSlice(typeToProto(field.Type, 0), t.alreadyRenderedConverters) {
-				f.Line().Add(t.stubConverterToProto(&field)).Line()
+			if _, ok := golangTypeToProto(ctx, "", &field); !ok && !util.IsInStringSlice(typeToProto(field.Type, 0), t.alreadyRenderedConverters) {
+				f.Line().Add(t.stubConverterToProto(ctx, &field)).Line()
 				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, typeToProto(field.Type, 0))
 			}
-			if _, ok := protoTypeToGolang("", &field); !ok && !util.IsInStringSlice(protoToType(field.Type, 0), t.alreadyRenderedConverters) {
-				f.Line().Add(t.stubConverterProtoTo(&field)).Line()
+			if _, ok := protoTypeToGolang(ctx, "", &field); !ok && !util.IsInStringSlice(protoToType(field.Type, 0), t.alreadyRenderedConverters) {
+				f.Line().Add(t.stubConverterProtoTo(ctx, &field)).Line()
 				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, protoToType(field.Type, 0))
 			}
 		}
@@ -142,7 +146,7 @@ func (t *stubGRPCTypeConverterTemplate) Render() write_strategy.Renderer {
 		return f
 	}
 
-	file := NewFile("protobuf")
+	file := NewFile("transportgrpc")
 	file.ImportAlias(t.Info.ProtobufPackageImport, "pb")
 	file.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	file.PackageComment(t.Info.FileHeader)
@@ -157,14 +161,14 @@ func (stubGRPCTypeConverterTemplate) DefaultPath() string {
 	return filenameBuilder(PathTransport, "grpc", "protobuf_type_converters")
 }
 
-func (t *stubGRPCTypeConverterTemplate) Prepare() error {
+func (t *stubGRPCTypeConverterTemplate) Prepare(ctx context.Context) error {
 	if t.Info.ProtobufPackageImport == "" {
 		return fmt.Errorf("protobuf package is empty")
 	}
 	return nil
 }
 
-func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *stubGRPCTypeConverterTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
@@ -189,10 +193,10 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy() (write_strategy.Strateg
 //			return
 //		}
 //
-func (t *stubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variable) *Statement {
+func (t *stubGRPCTypeConverterTemplate) stubConverterToProto(ctx context.Context, field *types.Variable) *Statement {
 	return Func().Id(typeToProto(field.Type, 0)).
-		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(field.Type, false))).
-		Params(Add(t.protoFieldType(field.Type)), Error()).
+		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(ctx, field.Type, false))).
+		Params(Add(t.protoFieldType(ctx, field.Type)), Error()).
 		Block(converterToProtoBody(field))
 }
 
@@ -202,10 +206,10 @@ func (t *stubGRPCTypeConverterTemplate) stubConverterToProto(field *types.Variab
 //			return
 //		}
 //
-func (t *stubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variable) *Statement {
+func (t *stubGRPCTypeConverterTemplate) stubConverterProtoTo(ctx context.Context, field *types.Variable) *Statement {
 	return Func().Id(protoToType(field.Type, 0)).
-		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(field.Type))).
-		Params(Add(fieldType(field.Type, false)), Error()).
+		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(ctx, field.Type))).
+		Params(Add(fieldType(ctx, field.Type, false)), Error()).
 		Block(converterProtoToBody(field))
 }
 
@@ -213,7 +217,7 @@ func (t *stubGRPCTypeConverterTemplate) stubConverterProtoTo(field *types.Variab
 //
 //  	*repository.Visit
 //
-func (t *stubGRPCTypeConverterTemplate) protoFieldType(field types.Type) *Statement {
+func (t *stubGRPCTypeConverterTemplate) protoFieldType(ctx context.Context, field types.Type) *Statement {
 	c := &Statement{}
 	if code := specialTypeConverter(field); code != nil {
 		return c.Add(code)
@@ -240,12 +244,12 @@ func (t *stubGRPCTypeConverterTemplate) protoFieldType(field types.Type) *Statem
 			}
 			field = f.Next
 		case types.TMap:
-			return c.Map(t.protoFieldType(f.Key)).Add(t.protoFieldType(f.Value))
+			return c.Map(t.protoFieldType(ctx, f.Key)).Add(t.protoFieldType(ctx, f.Value))
 		case types.TPointer:
 			c.Op(strings.Repeat("*", f.NumberOfPointers))
 			field = f.Next
 		case types.TInterface:
-			mhds := interfaceType(f.Interface)
+			mhds := interfaceType(ctx, f.Interface)
 			return c.Interface(mhds...)
 		case types.TEllipsis:
 			c.Index()

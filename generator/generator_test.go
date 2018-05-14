@@ -64,12 +64,12 @@ func TestTemplates(t *testing.T) {
 		{
 			TestName:    "Endpoints",
 			Template:    template.NewEndpointsTemplate(genInfo),
-			OutFilePath: "endpoints_endpoints.go.txt",
+			OutFilePath: "transport_endpoints.go.txt",
 		},
 		{
 			TestName:    "Exchange",
 			Template:    template.NewExchangeTemplate(genInfo),
-			OutFilePath: "endpoints_exchanges.go.txt",
+			OutFilePath: "transport_exchanges.go.txt",
 		},
 		{
 			TestName:    "Middleware",

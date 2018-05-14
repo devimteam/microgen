@@ -6,9 +6,13 @@ import (
 	"strings"
 	"sync"
 
+	"context"
+
 	"github.com/devimteam/microgen/generator"
+	"github.com/devimteam/microgen/generator/template"
 	lg "github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
+	"github.com/vetcher/go-astra"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -20,7 +24,6 @@ var (
 	flagFileName  = flag.String("file", "service.go", "Name of file where described interface definition")
 	flagOutputDir = flag.String("out", ".", "Output directory")
 	flagHelp      = flag.Bool("help", false, "Show help")
-	//flagForce     = flag.Bool("force", false, "Overwrite all files, as it generates for the first time")
 	flagVerbose   = flag.Int("v", 1, "Verbose log level")
 )
 
@@ -53,7 +56,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	units, err := generator.ListTemplatesForGen(i, *flagOutputDir, *flagFileName)
+	ctx, err := prepareContext(*flagFileName, i)
+	if err != nil {
+		lg.Logger.Logln(0, "fatal:", err)
+		os.Exit(1)
+	}
+
+	units, err := generator.ListTemplatesForGen(ctx, i, *flagOutputDir, *flagFileName)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
@@ -64,7 +73,7 @@ func main() {
 		unit := x
 		go func() {
 			defer wg.Done()
-			err := unit.Generate()
+			err := unit.Generate(ctx)
 			if err != nil && err != generator.EmptyStrategyError {
 				lg.Logger.Logln(0, "fatal:", err)
 				os.Exit(1)
@@ -73,6 +82,23 @@ func main() {
 	}
 	wg.Wait()
 	lg.Logger.Logln(1, "all files successfully generated")
+}
+
+func prepareContext(filename string, iface *types.Interface) (context.Context, error) {
+	ctx := context.Background()
+	p, err := astra.ResolvePackagePath(filename)
+	if err != nil {
+		return nil, err
+	}
+	ctx = template.WithSourcePackageImport(ctx, p)
+
+	set := template.TagsSet{}
+	genTags := util.FetchTags(iface.Docs, generator.TagMark+generator.MicrogenMainTag)
+	for _, tag := range genTags {
+		set.Add(tag)
+	}
+	ctx = template.WithTags(ctx, set)
+	return ctx, nil
 }
 
 func findInterface(file *types.File) *types.Interface {

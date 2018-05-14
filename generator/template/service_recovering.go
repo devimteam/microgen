@@ -1,6 +1,8 @@
 package template
 
 import (
+	"context"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
@@ -8,7 +10,7 @@ import (
 )
 
 const (
-	serviceRecoverStructName = "serviceRecovering"
+	serviceRecoverStructName = "recoveringMiddleware"
 )
 
 type recoverTemplate struct {
@@ -21,8 +23,8 @@ func NewRecoverTemplate(info *GenerationInfo) Template {
 	}
 }
 
-func (t *recoverTemplate) Render() write_strategy.Renderer {
-	f := NewFile("middleware")
+func (t *recoverTemplate) Render(ctx context.Context) write_strategy.Renderer {
+	f := NewFile("service")
 	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
 
@@ -41,7 +43,7 @@ func (t *recoverTemplate) Render() write_strategy.Renderer {
 	// Render functions
 	for _, signature := range t.Info.Iface.Methods {
 		f.Line()
-		f.Add(t.recoverFunc(signature)).Line()
+		f.Add(t.recoverFunc(ctx, signature)).Line()
 	}
 
 	return f
@@ -51,11 +53,11 @@ func (recoverTemplate) DefaultPath() string {
 	return filenameBuilder(PathService, "recovering")
 }
 
-func (t *recoverTemplate) Prepare() error {
+func (t *recoverTemplate) Prepare(ctx context.Context) error {
 	return nil
 }
 
-func (t *recoverTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *recoverTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
@@ -74,8 +76,8 @@ func (t *recoverTemplate) newRecoverBody(i *types.Interface) *Statement {
 	}))
 }
 
-func (t *recoverTemplate) recoverFunc(signature *types.Function) *Statement {
-	return methodDefinition(serviceRecoverStructName, signature).
+func (t *recoverTemplate) recoverFunc(ctx context.Context, signature *types.Function) *Statement {
+	return methodDefinition(ctx, serviceRecoverStructName, signature).
 		BlockFunc(t.recoverFuncBody(signature))
 }
 

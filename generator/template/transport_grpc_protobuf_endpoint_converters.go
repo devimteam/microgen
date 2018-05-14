@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
@@ -102,27 +103,27 @@ func encodeResponseName(f *types.Function) string {
 //			}, nil
 //		}
 //
-func (t *gRPCEndpointConverterTemplate) Render() write_strategy.Renderer {
+func (t *gRPCEndpointConverterTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := &Statement{}
 
 	for _, signature := range t.requestEncoders {
-		f.Line().Add(t.encodeRequest(signature))
+		f.Line().Add(t.encodeRequest(ctx, signature))
 	}
 	for _, signature := range t.responseEncoders {
-		f.Line().Add(t.encodeResponse(signature))
+		f.Line().Add(t.encodeResponse(ctx, signature))
 	}
 	for _, signature := range t.requestDecoders {
-		f.Line().Add(t.decodeRequest(signature))
+		f.Line().Add(t.decodeRequest(ctx, signature))
 	}
 	for _, signature := range t.responseDecoders {
-		f.Line().Add(t.decodeResponse(signature))
+		f.Line().Add(t.decodeResponse(ctx, signature))
 	}
 
 	if t.state == AppendStrat {
 		return f
 	}
 
-	file := NewFile("protobuf")
+	file := NewFile("transportgrpc")
 	file.PackageComment(t.Info.FileHeader)
 	file.PackageComment(`Please, do not change functions names!`)
 	file.Add(f)
@@ -239,7 +240,7 @@ func (gRPCEndpointConverterTemplate) DefaultPath() string {
 	return filenameBuilder(PathTransport, "grpc", "protobuf_endpoint_converters")
 }
 
-func (t *gRPCEndpointConverterTemplate) Prepare() error {
+func (t *gRPCEndpointConverterTemplate) Prepare(ctx context.Context) error {
 	if t.Info.ProtobufPackageImport == "" {
 		return ErrProtobufEmpty
 	}
@@ -252,7 +253,7 @@ func (t *gRPCEndpointConverterTemplate) Prepare() error {
 	return nil
 }
 
-func (t *gRPCEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *gRPCEndpointConverterTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); err != nil {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
@@ -284,7 +285,7 @@ func isPointer(p types.Type) bool {
 //		structNamePositions
 // based on field type
 // Second result means can field converts to default protobuf type.
-func golangTypeToProto(structName string, field *types.Variable) (*Statement, bool) {
+func golangTypeToProto(ctx context.Context, structName string, field *types.Variable) (*Statement, bool) {
 	if types.IsArray(field.Type) || isPointer(field.Type) {
 		return Id(structName + util.ToUpperFirst(field.Name)), false
 	} else if isDefaultProtoField(field) {
@@ -305,7 +306,7 @@ func golangTypeToProto(structName string, field *types.Variable) (*Statement, bo
 				Import: imp,
 			}
 		}
-		return fieldType(newField, false).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
+		return fieldType(ctx, newField, false).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
 	}
 	return Id(structName + util.ToUpperFirst(field.Name)), false
 }
@@ -316,11 +317,11 @@ func golangTypeToProto(structName string, field *types.Variable) (*Statement, bo
 // 		structNamePositions
 // based on field type
 // Second result means can field converts to golang type.
-func protoTypeToGolang(structName string, field *types.Variable) (*Statement, bool) {
+func protoTypeToGolang(ctx context.Context, structName string, field *types.Variable) (*Statement, bool) {
 	if types.IsArray(field.Type) || isPointer(field.Type) {
 		return Id(structName + util.ToUpperFirst(field.Name)), false
 	} else if isDefaultGolangField(field) {
-		return fieldType(field.Type, false).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
+		return fieldType(ctx, field.Type, false).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
 	}
 	return Id(structName + util.ToUpperFirst(field.Name)), false
 }
@@ -365,7 +366,7 @@ func convertCustomType(structName, converterName string, field *types.Variable) 
 //			}, nil
 //		}
 //
-func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function) *Statement {
+func (t *gRPCEndpointConverterTemplate) encodeRequest(ctx context.Context, signature *types.Function) *Statement {
 	methodParams := RemoveContextIfFirst(signature.Args)
 	fullName := "request"
 	shortName := "req"
@@ -385,22 +386,24 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(signature *types.Function)
 				)
 				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.SourcePackageImport, requestStructName(signature)))
 				for _, field := range methodParams {
-					if _, ok := golangTypeToProto("", &field); !ok {
+					if _, ok := golangTypeToProto(ctx, "", &field); !ok {
 						group.Add(convertCustomType(shortName, typeToProto(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams, requestStructName, shortName, golangTypeToProto, t.Info.ProtobufPackageImport), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodParams, requestStructName, shortName, golangTypeToProto, t.Info.ProtobufPackageImport), Nil())
 		},
 	).Line()
 }
 
 //PackagePathEmptyProtobuf
-func (t *gRPCEndpointConverterTemplate) grpcEndpointConvReturn(fn *types.Function,
+func (t *gRPCEndpointConverterTemplate) grpcEndpointConvReturn(
+	ctx context.Context,
+	fn *types.Function,
 	methodParams []types.Variable,
 	strNameFn func(*types.Function) string,
 	rec string,
-	typeToProtoFn func(string, *types.Variable) (*Statement, bool),
+	typeToProtoFn func(context.Context, string, *types.Variable) (*Statement, bool),
 	pkg string,
 ) *Statement {
 	if len(methodParams) == 0 {
@@ -408,7 +411,7 @@ func (t *gRPCEndpointConverterTemplate) grpcEndpointConvReturn(fn *types.Functio
 	}
 	return Op("&").Qual(pkg, strNameFn(fn)).Values(DictFunc(func(dict Dict) {
 		for _, field := range methodParams {
-			req, _ := typeToProtoFn(rec, &field)
+			req, _ := typeToProtoFn(ctx, rec, &field)
 			dict[structFieldName(&field)] = Line().Add(req)
 		}
 	}))
@@ -428,7 +431,7 @@ func (t *gRPCEndpointConverterTemplate) grpcEndpointConvReturn(fn *types.Functio
 //			}, nil
 //		}
 //
-func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function) *Statement {
+func (t *gRPCEndpointConverterTemplate) encodeResponse(ctx context.Context, signature *types.Function) *Statement {
 	methodResults := removeErrorIfLast(signature.Results)
 	fullName := "response"
 	shortName := "resp"
@@ -447,12 +450,12 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 				)
 				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.SourcePackageImport, responseStructName(signature)))
 				for _, field := range methodResults {
-					if _, ok := golangTypeToProto("", &field); !ok {
+					if _, ok := golangTypeToProto(ctx, "", &field); !ok {
 						group.Add(convertCustomType(shortName, typeToProto(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodResults, responseStructName, shortName, golangTypeToProto, t.Info.ProtobufPackageImport), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodResults, responseStructName, shortName, golangTypeToProto, t.Info.ProtobufPackageImport), Nil())
 		},
 	).Line()
 }
@@ -467,7 +470,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(signature *types.Function
 //			}, nil
 //		}
 //
-func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function) *Statement {
+func (t *gRPCEndpointConverterTemplate) decodeRequest(ctx context.Context, signature *types.Function) *Statement {
 	methodParams := RemoveContextIfFirst(signature.Args)
 	fullName := "request"
 	shortName := "req"
@@ -486,12 +489,12 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 				)
 				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackageImport, requestStructName(signature)))
 				for _, field := range methodParams {
-					if _, ok := protoTypeToGolang("", &field); !ok {
+					if _, ok := protoTypeToGolang(ctx, "", &field); !ok {
 						group.Add(convertCustomType(shortName, protoToType(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodParams, requestStructName, shortName, protoTypeToGolang, t.Info.SourcePackageImport), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodParams, requestStructName, shortName, protoTypeToGolang, t.Info.SourcePackageImport), Nil())
 		},
 	).Line()
 }
@@ -510,7 +513,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(signature *types.Function)
 //			}, nil
 //		}
 //
-func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function) *Statement {
+func (t *gRPCEndpointConverterTemplate) decodeResponse(ctx context.Context, signature *types.Function) *Statement {
 	methodResults := removeErrorIfLast(signature.Results)
 	fullName := "response"
 	shortName := "resp"
@@ -529,12 +532,12 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(signature *types.Function
 				)
 				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackageImport, responseStructName(signature)))
 				for _, field := range methodResults {
-					if _, ok := protoTypeToGolang("", &field); !ok {
+					if _, ok := protoTypeToGolang(ctx, "", &field); !ok {
 						group.Add(convertCustomType(shortName, protoToType(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(signature, methodResults, responseStructName, shortName, protoTypeToGolang, t.Info.SourcePackageImport), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodResults, responseStructName, shortName, protoTypeToGolang, t.Info.SourcePackageImport), Nil())
 		},
 	).Line()
 }
@@ -545,19 +548,21 @@ func specialEndpointConverterToProto(v types.Variable,
 	pkg string,
 	fullName string,
 	shortName string,
-	//typeToProtoFn func(string, *types.Variable) (*Statement, bool),
 ) *Statement {
 	name := types.TypeName(v.Type)
 	imp := types.TypeImport(v.Type)
 	// *string -> *wrappers.StringValue
-	if name != nil && *name == "string" && imp == nil && v.Type.TypeOf() == types.KindPointer {
-		s := If(Id(fullName).Op("==").Nil()).Block(
-			Return(Nil(), Nil()),
-		)
-		sp := Op("*").Qual(pkg, strNameFn(fn))
-		s.Line().Id(shortName).Op(":=").Id(fullName).Assert(sp)
-		s.Line().Return(Op("&").Qual(GolangProtobufWrappers, "StringValue").Values(Dict{Id("Value"): Op("*").Id(shortName).Op(".").Add(structFieldName(&v))}), Nil())
-		return s
+	if name != nil && *name == "string" && imp == nil {
+		_, ok := v.Type.(types.TPointer)
+		if ok {
+			s := If(Id(fullName).Op("==").Nil()).Block(
+				Return(Nil(), Nil()),
+			)
+			sp := Op("*").Qual(pkg, strNameFn(fn))
+			s.Line().Id(shortName).Op(":=").Id(fullName).Assert(sp)
+			s.Line().Return(Op("&").Qual(GolangProtobufWrappers, "StringValue").Values(Dict{Id("Value"): Op("*").Id(shortName).Op(".").Add(structFieldName(&v))}), Nil())
+			return s
+		}
 	}
 	return nil
 }
@@ -568,19 +573,21 @@ func specialEndpointConverterFromProto(v types.Variable,
 	pkg string,
 	fullName string,
 	shortName string,
-	//typeToProtoFn func(string, *types.Variable) (*Statement, bool),
 ) *Statement {
 	name := types.TypeName(v.Type)
 	imp := types.TypeImport(v.Type)
 	// *string <- *wrappers.StringValue
-	if name != nil && *name == "string" && imp == nil && v.Type.TypeOf() == types.KindPointer {
-		s := If(Id(fullName).Op("==").Nil()).Block(
-			Return(Nil(), Nil()),
-		)
-		sp := Op("*").Qual(GolangProtobufWrappers, "StringValue")
-		s.Line().Id(shortName).Op(":=").Id(fullName).Assert(sp)
-		s.Line().Return(Op("&").Qual(pkg, strNameFn(fn)).Values(Dict{structFieldName(&v): Op("&").Id(shortName).Dot("Value")}), Nil())
-		return s
+	if name != nil && *name == "string" && imp == nil {
+		_, ok := v.Type.(types.TPointer)
+		if ok {
+			s := If(Id(fullName).Op("==").Nil()).Block(
+				Return(Nil(), Nil()),
+			)
+			sp := Op("*").Qual(GolangProtobufWrappers, "StringValue")
+			s.Line().Id(shortName).Op(":=").Id(fullName).Assert(sp)
+			s.Line().Return(Op("&").Qual(pkg, strNameFn(fn)).Values(Dict{structFieldName(&v): Op("&").Id(shortName).Dot("Value")}), Nil())
+			return s
+		}
 	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
@@ -24,7 +25,7 @@ func NewJSONRPCEndpointConverterTemplate(info *GenerationInfo) Template {
 	}
 }
 
-func (t *jsonrpcEndpointConverterTemplate) Render() write_strategy.Renderer {
+func (t *jsonrpcEndpointConverterTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := &Statement{}
 
 	for _, signature := range t.requestEncoders {
@@ -57,7 +58,7 @@ func (jsonrpcEndpointConverterTemplate) DefaultPath() string {
 	return "./transport/converter/jsonrpc/exchange_converters.go"
 }
 
-func (t *jsonrpcEndpointConverterTemplate) Prepare() error {
+func (t *jsonrpcEndpointConverterTemplate) Prepare(ctx context.Context) error {
 	for _, fn := range t.Info.Iface.Methods {
 		t.requestDecoders = append(t.requestDecoders, fn)
 		t.requestEncoders = append(t.requestEncoders, fn)
@@ -67,7 +68,7 @@ func (t *jsonrpcEndpointConverterTemplate) Prepare() error {
 	return nil
 }
 
-func (t *jsonrpcEndpointConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *jsonrpcEndpointConverterTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); err != nil {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil

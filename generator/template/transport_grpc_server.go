@@ -3,6 +3,8 @@ package template
 import (
 	"path/filepath"
 
+	"context"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
@@ -10,13 +12,12 @@ import (
 )
 
 type gRPCServerTemplate struct {
-	Info    *GenerationInfo
-	tracing bool
+	Info *GenerationInfo
 }
 
 func NewGRPCServerTemplate(info *GenerationInfo) Template {
 	return &gRPCServerTemplate{
-		Info: info.Copy(),
+		Info: info,
 	}
 }
 
@@ -67,7 +68,7 @@ func pathToConverter(servicePath string) string {
 //			return resp.(*stringsvc.CountResponse), nil
 //		}
 //
-func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
+func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transportgrpc")
 	f.ImportAlias(t.Info.ProtobufPackageImport, "pb")
 	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
@@ -83,10 +84,10 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 	f.Func().Id("NewGRPCServer").
 		ParamsFunc(func(p *Group) {
 			p.Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints")
-			if t.tracing {
+			if Tags(ctx).Has(TracingTag) {
 				p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 			}
-			if t.tracing {
+			if Tags(ctx).Has(TracingTag) {
 				p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
 			}
 			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ServerOption")
@@ -101,7 +102,7 @@ func (t *gRPCServerTemplate) Render() write_strategy.Renderer {
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
 							Line().Qual(pathToConverter(t.Info.SourcePackageImport), decodeRequestName(m)),
 							Line().Qual(pathToConverter(t.Info.SourcePackageImport), encodeResponseName(m)),
-							Line().Add(t.serverOpts(m)).Op("...").Line(),
+							Line().Add(t.serverOpts(ctx, m)).Op("...").Line(),
 						)
 				}
 			}),
@@ -121,22 +122,14 @@ func (gRPCServerTemplate) DefaultPath() string {
 	return filenameBuilder(PathTransport, "grpc", "server")
 }
 
-func (t *gRPCServerTemplate) Prepare() error {
+func (t *gRPCServerTemplate) Prepare(ctx context.Context) error {
 	if t.Info.ProtobufPackageImport == "" {
 		return ErrProtobufEmpty
-	}
-
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
-	for _, tag := range tags {
-		switch tag {
-		case TracingTag:
-			t.tracing = true
-		}
 	}
 	return nil
 }
 
-func (t *gRPCServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *gRPCServerTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
@@ -219,14 +212,14 @@ func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 	}
 }
 
-func (t *gRPCServerTemplate) serverOpts(fn *types.Function) *Statement {
+func (t *gRPCServerTemplate) serverOpts(ctx context.Context, fn *types.Function) *Statement {
 	s := &Statement{}
-	if t.tracing {
+	if Tags(ctx).Has(TracingTag) {
 		s.Op("append(")
 		defer s.Op(")")
 	}
 	s.Id("opts")
-	if t.tracing {
+	if Tags(ctx).Has(TracingTag) {
 		s.Op(",").Qual(PackagePathGoKitTransportGRPC, "ServerBefore").Call(
 			Line().Qual(PackagePathGoKitTracing, "GRPCToContext").Call(Id("tracer"), Lit(fn.Name), Id("logger")),
 		)

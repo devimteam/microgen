@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,7 +41,7 @@ func NewStubInterfaceTemplate(info *GenerationInfo) Template {
 //			panic("method not provided")
 //		}
 //
-func (t *stubInterfaceTemplate) Render() write_strategy.Renderer {
+func (t *stubInterfaceTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := &Statement{}
 
 	if !t.isStructExist {
@@ -57,7 +58,7 @@ func (t *stubInterfaceTemplate) Render() write_strategy.Renderer {
 
 	for _, signature := range t.Info.Iface.Methods {
 		if !util.IsInStringSlice(signature.Name, t.alreadyRenderedMethods) {
-			f.Line().Add(methodDefinition(util.ToLower(t.Info.Iface.Name), signature)).Block(
+			f.Line().Add(methodDefinition(ctx, util.ToLower(t.Info.Iface.Name), signature)).Block(
 				Panic(Lit("method not provided")).Comment("// TODO: provide method"),
 			).Line()
 		}
@@ -69,7 +70,7 @@ func (stubInterfaceTemplate) DefaultPath() string {
 	return "."
 }
 
-func (t *stubInterfaceTemplate) Prepare() error {
+func (t *stubInterfaceTemplate) Prepare(ctx context.Context) error {
 	if err := util.StatFile(t.Info.SourceFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		fmt.Println("warning:", err)
 		return nil
@@ -106,7 +107,7 @@ func (t *stubInterfaceTemplate) Prepare() error {
 	return nil
 }
 
-func (t *stubInterfaceTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *stubInterfaceTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewAppendToFileStrategy(t.Info.SourceFilePath, t.DefaultPath()), nil
 }
 

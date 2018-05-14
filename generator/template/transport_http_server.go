@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"path"
 	"path/filepath"
 	"strings"
@@ -28,7 +29,7 @@ type httpServerTemplate struct {
 
 func NewHttpServerTemplate(info *GenerationInfo) Template {
 	return &httpServerTemplate{
-		Info: info.Copy(),
+		Info: info,
 	}
 }
 
@@ -36,11 +37,11 @@ func (t *httpServerTemplate) DefaultPath() string {
 	return filenameBuilder(PathTransport, "http", "server")
 }
 
-func (t *httpServerTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *httpServerTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
-func (t *httpServerTemplate) Prepare() error {
+func (t *httpServerTemplate) Prepare(ctx context.Context) error {
 	t.methods = make(map[string]string)
 	t.paths = make(map[string]string)
 	for _, fn := range t.Info.Iface.Methods {
@@ -137,7 +138,7 @@ func MakeHTTPHandler(s EchoService, logger log.Logger) http.Handler {
 }
 */
 
-func (t *httpServerTemplate) Render() write_strategy.Renderer {
+func (t *httpServerTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transporthttp")
 	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)

@@ -4,10 +4,14 @@ import (
 	"strconv"
 	"strings"
 
+	"path/filepath"
+
+	"context"
+
 	. "github.com/dave/jennifer/jen"
+	strings2 "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
-	"path/filepath"
 )
 
 const (
@@ -68,10 +72,9 @@ const (
 )
 
 const (
-	MicrogenExt = "_microgen.go"
-	PathEndpoints = "endpoints"
-	PathService = "service"
-	PathTransport = "transport"
+	MicrogenExt    = "_microgen.go"
+	PathService    = "service"
+	PathTransport  = "transport"
 	PathExecutable = "cmd"
 )
 
@@ -90,20 +93,6 @@ type GenerationInfo struct {
 	FileHeader          string
 
 	ProtobufPackageImport string
-	GRPCRegAddr           string
-}
-
-func (info GenerationInfo) Copy() *GenerationInfo {
-	return &GenerationInfo{
-		Iface:               info.Iface,
-		SourcePackageImport: info.SourcePackageImport,
-		AbsOutputFilePath:   info.AbsOutputFilePath,
-		SourceFilePath:      info.SourceFilePath,
-
-		GRPCRegAddr:           info.GRPCRegAddr,
-		ProtobufPackageImport: info.ProtobufPackageImport,
-		FileHeader:            info.FileHeader,
-	}
 }
 
 func structFieldName(field *types.Variable) *Statement {
@@ -159,9 +148,9 @@ func nameOfLastResultError(fn *types.Function) string {
 //
 //  	Visit *entity.Visit `json:"visit"`
 //
-func structField(field *types.Variable) *Statement {
+func structField(ctx context.Context, field *types.Variable) *Statement {
 	s := structFieldName(field)
-	s.Add(fieldType(field.Type, false))
+	s.Add(fieldType(ctx, field.Type, false))
 	s.Tag(map[string]string{"json": util.ToSnakeCase(field.Name)})
 	if types.IsEllipsis(field.Type) {
 		s.Comment("This field was defined with ellipsis (...).")
@@ -173,11 +162,11 @@ func structField(field *types.Variable) *Statement {
 //
 //  	visit *entity.Visit, err error
 //
-func funcDefinitionParams(fields []types.Variable) *Statement {
+func funcDefinitionParams(ctx context.Context, fields []types.Variable) *Statement {
 	c := &Statement{}
 	c.ListFunc(func(g *Group) {
 		for _, field := range fields {
-			g.Id(util.ToLowerFirst(field.Name)).Add(fieldType(field.Type, true))
+			g.Id(util.ToLowerFirst(field.Name)).Add(fieldType(ctx, field.Type, true))
 		}
 	})
 	return c
@@ -187,17 +176,23 @@ func funcDefinitionParams(fields []types.Variable) *Statement {
 //
 //  	*repository.Visit
 //
-func fieldType(field types.Type, useEllipsis bool) *Statement {
+func fieldType(ctx context.Context, field types.Type, allowEllipsis bool) *Statement {
 	c := &Statement{}
+	imported := false
 	for field != nil {
 		switch f := field.(type) {
 		case types.TImport:
 			if f.Import != nil {
 				c.Qual(f.Import.Package, "")
+				imported = true
 			}
 			field = f.Next
 		case types.TName:
-			c.Id(f.TypeName)
+			if !imported && !types.IsBuiltin(f) {
+				c.Qual(SourcePackageImport(ctx), f.TypeName)
+			} else {
+				c.Id(f.TypeName)
+			}
 			field = nil
 		case types.TArray:
 			if f.IsSlice {
@@ -207,15 +202,15 @@ func fieldType(field types.Type, useEllipsis bool) *Statement {
 			}
 			field = f.Next
 		case types.TMap:
-			return c.Map(fieldType(f.Key, false)).Add(fieldType(f.Value, false))
+			return c.Map(fieldType(ctx, f.Key, false)).Add(fieldType(ctx, f.Value, false))
 		case types.TPointer:
 			c.Op(strings.Repeat("*", f.NumberOfPointers))
 			field = f.Next
 		case types.TInterface:
-			mhds := interfaceType(f.Interface)
+			mhds := interfaceType(ctx, f.Interface)
 			return c.Interface(mhds...)
 		case types.TEllipsis:
-			if useEllipsis {
+			if allowEllipsis {
 				c.Op("...")
 			} else {
 				c.Index()
@@ -228,9 +223,9 @@ func fieldType(field types.Type, useEllipsis bool) *Statement {
 	return c
 }
 
-func interfaceType(p *types.Interface) (code []Code) {
+func interfaceType(ctx context.Context, p *types.Interface) (code []Code) {
 	for _, x := range p.Methods {
-		code = append(code, functionDefinition(x))
+		code = append(code, functionDefinition(ctx, x))
 	}
 	return
 }
@@ -268,24 +263,26 @@ func paramNames(fields []types.Variable) *Statement {
 //
 //		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int)
 //
-func methodDefinition(obj string, signature *types.Function) *Statement {
+func methodDefinition(ctx context.Context, obj string, signature *types.Function) *Statement {
 	return Func().
-		Params(Id(util.LastUpperOrFirst(obj)).Op("*").Id(obj)).
-		Add(functionDefinition(signature))
+		Params(Id(util.LastUpperOrFirst(obj)). /*.Op("*")*/ Id(obj)).
+		Add(functionDefinition(ctx, signature))
+}
+
+func methodDefinitionFull(ctx context.Context, obj string, signature *types.Function) *Statement {
+	return Func().
+		Params(Id(strings2.LastWordFromName(obj)).Id(obj)).
+		Add(functionDefinition(ctx, signature))
 }
 
 // Render full method definition with receiver, method name, args and results.
 //
 //		func Count(ctx context.Context, text string, symbol string) (count int)
 //
-func functionDefinition(signature *types.Function) *Statement {
+func functionDefinition(ctx context.Context, signature *types.Function) *Statement {
 	return Id(signature.Name).
-		Params(funcDefinitionParams(signature.Args)).
-		Params(funcDefinitionParams(signature.Results))
-}
-
-func defaultNameFormer(f *types.Function) string {
-	return f.Name
+		Params(funcDefinitionParams(ctx, signature.Args)).
+		Params(funcDefinitionParams(ctx, signature.Results))
 }
 
 // Remove from generating functions that already in existing.
@@ -370,7 +367,7 @@ func (r *Rendered) NotContain(s string) bool {
 }
 
 func filenameBuilder(ss ...string) string {
-	ss[len(ss)-1] = ss[len(ss)-1]+MicrogenExt
+	ss[len(ss)-1] = ss[len(ss)-1] + MicrogenExt
 	return filepath.Join(ss...)
 }
 

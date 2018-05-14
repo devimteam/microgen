@@ -1,6 +1,8 @@
 package template
 
 import (
+	"context"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
@@ -14,7 +16,7 @@ type httpClientTemplate struct {
 
 func NewHttpClientTemplate(info *GenerationInfo) Template {
 	return &httpClientTemplate{
-		Info: info.Copy(),
+		Info: info,
 	}
 }
 
@@ -22,11 +24,11 @@ func (t *httpClientTemplate) DefaultPath() string {
 	return filenameBuilder(PathTransport, "http", "client")
 }
 
-func (t *httpClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *httpClientTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
-func (t *httpClientTemplate) Prepare() error {
+func (t *httpClientTemplate) Prepare(ctx context.Context) error {
 	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
 	for _, tag := range tags {
 		switch tag {
@@ -83,7 +85,7 @@ func (t *httpClientTemplate) Prepare() error {
 //			}, nil
 //		}
 //
-func (t *httpClientTemplate) Render() write_strategy.Renderer {
+func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transporthttp")
 	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)

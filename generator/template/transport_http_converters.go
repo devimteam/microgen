@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
@@ -35,7 +36,7 @@ func (t *httpConverterTemplate) DefaultPath() string {
 	return filenameBuilder(PathTransport, "http", "converters")
 }
 
-func (t *httpConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *httpConverterTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); err != nil {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
@@ -68,7 +69,7 @@ func (t *httpConverterTemplate) ChooseStrategy() (write_strategy.Strategy, error
 	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
-func (t *httpConverterTemplate) Prepare() error {
+func (t *httpConverterTemplate) Prepare(ctx context.Context) error {
 	for _, fn := range t.Info.Iface.Methods {
 		t.decodersRequest = append(t.decodersRequest, fn)
 		t.encodersRequest = append(t.encodersRequest, fn)
@@ -126,7 +127,7 @@ func (t *httpConverterTemplate) Prepare() error {
 //			return DefaultResponseEncoder(ctx, w, response)
 //		}
 //
-func (t *httpConverterTemplate) Render() write_strategy.Renderer {
+func (t *httpConverterTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := &Statement{}
 
 	if !t.isCommonEncoderRequestExist {
@@ -153,7 +154,7 @@ func (t *httpConverterTemplate) Render() write_strategy.Renderer {
 		return f
 	}
 
-	file := NewFile("httpconv")
+	file := NewFile("transporthttp")
 	file.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	file.PackageComment(t.Info.FileHeader)
 	file.PackageComment(`Please, do not change functions names!`)

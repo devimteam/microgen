@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
@@ -18,7 +19,7 @@ type jsonrpcClientTemplate struct {
 
 func NewJSONRPCClientTemplate(info *GenerationInfo) Template {
 	return &jsonrpcClientTemplate{
-		Info: info.Copy(),
+		Info: info,
 	}
 }
 
@@ -26,11 +27,11 @@ func (t *jsonrpcClientTemplate) DefaultPath() string {
 	return "./transport/jsonrpc/client.go"
 }
 
-func (t *jsonrpcClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *jsonrpcClientTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
-func (t *jsonrpcClientTemplate) Prepare() error {
+func (t *jsonrpcClientTemplate) Prepare(ctx context.Context) error {
 	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
 	for _, tag := range tags {
 		switch tag {
@@ -51,7 +52,7 @@ func (t *jsonrpcClientTemplate) Prepare() error {
 	return nil
 }
 
-func (t *jsonrpcClientTemplate) Render() write_strategy.Renderer {
+func (t *jsonrpcClientTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transportjsonrpc")
 	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)

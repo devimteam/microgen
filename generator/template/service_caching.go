@@ -1,12 +1,10 @@
 package template
 
 import (
-	"os"
-	"path/filepath"
+	"context"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/logger"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
@@ -15,16 +13,13 @@ const (
 	cacheKeyTag = "cache-key"
 
 	cacheInterfaceName        = "Cache"
-	cacheMiddlewareStructName = "serviceCache"
+	cacheMiddlewareStructName = "cachingMiddleware"
 )
 
 type cacheMiddlewareTemplate struct {
 	Info      *GenerationInfo
 	cacheKeys map[string]string
 	caching   map[string]bool
-
-	rendered Rendered
-	state    WriteStrategyState
 }
 
 func NewCacheMiddlewareTemplate(info *GenerationInfo) Template {
@@ -33,52 +28,38 @@ func NewCacheMiddlewareTemplate(info *GenerationInfo) Template {
 	}
 }
 
-func (t *cacheMiddlewareTemplate) Render() write_strategy.Renderer {
+func (t *cacheMiddlewareTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := &Statement{}
-	if t.rendered.NotContain(cacheInterfaceName) {
-		// Render type Cache
-		f.Comment("Cache interface uses for middleware as key-value storage for requests.")
-		f.Line().Type().Id(cacheInterfaceName).Interface(
-			Id("Set").Call(Op("key, value interface{}")).Call(Op("err error")),
-			Id("Get").Call(Op("key interface{}")).Call(Op("value interface{}, err error")),
-		)
+	// Render type Cache
+	f.Comment("Cache interface uses for middleware as key-value storage for requests.")
+	f.Line().Type().Id(cacheInterfaceName).Interface(
+		Id("Set").Call(Op("key, value interface{}")).Call(Op("err error")),
+		Id("Get").Call(Op("key interface{}")).Call(Op("value interface{}, err error")),
+	)
+	f.Line()
+
+	f.Line().Func().Id(util.ToUpperFirst(cacheMiddlewareStructName)).Params(Id("cache").Id(cacheInterfaceName)).Params(Id(MiddlewareTypeName)).
+		Block(t.newCacheBody(t.Info.Iface))
+
+	f.Line()
+
+	// Render middleware struct
+	f.Type().Id(cacheMiddlewareStructName).Struct(
+		Id("cache").Id(cacheInterfaceName),
+		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
+		Id(nextVarName).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name),
+	)
+	for _, signature := range t.Info.Iface.Methods {
 		f.Line()
-	}
-
-	if t.rendered.NotContain(util.ToUpperFirst(cacheMiddlewareStructName)) {
-		f.Line().Func().Id(util.ToUpperFirst(cacheMiddlewareStructName)).Params(Id("cache").Id(cacheInterfaceName)).Params(Id(MiddlewareTypeName)).
-			Block(t.newCacheBody(t.Info.Iface))
-
-		f.Line()
-	}
-
-	if t.rendered.NotContain(cacheMiddlewareStructName) {
-		// Render middleware struct
-		f.Type().Id(cacheMiddlewareStructName).Struct(
-			Id("cache").Id(cacheInterfaceName),
-			Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-			Id(nextVarName).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name),
-		)
+		f.Add(t.cacheFunc(ctx, signature)).Line()
 	}
 	for _, signature := range t.Info.Iface.Methods {
-		if t.rendered.NotContain("*" + cacheMiddlewareStructName + signature.Name) {
-			f.Line()
-			f.Add(t.cacheFunc(signature)).Line()
-		}
-	}
-	for _, signature := range t.Info.Iface.Methods {
-		if t.caching[signature.Name] && t.rendered.NotContain(cacheEntityStructName(signature)) {
-			f.Add(t.cacheEntity(signature)).Line()
-		}
+		f.Add(cacheEntity(ctx, signature)).Line()
 	}
 
-	if t.state == AppendStrat {
-		return f
-	}
-	file := NewFile("middleware")
+	file := NewFile("service")
 	file.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	file.PackageComment(t.Info.FileHeader)
-	file.PackageComment(`Microgen appends missed functions.`)
 	file.Add(f)
 	return file
 }
@@ -87,7 +68,7 @@ func (cacheMiddlewareTemplate) DefaultPath() string {
 	return filenameBuilder(PathService, "caching")
 }
 
-func (t *cacheMiddlewareTemplate) Prepare() error {
+func (t *cacheMiddlewareTemplate) Prepare(ctx context.Context) error {
 	t.cacheKeys = make(map[string]string)
 	t.caching = make(map[string]bool)
 	for _, method := range t.Info.Iface.Methods {
@@ -103,30 +84,8 @@ func (t *cacheMiddlewareTemplate) Prepare() error {
 	return nil
 }
 
-func (t *cacheMiddlewareTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
-		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
-	}
-	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
-	if err != nil {
-		logger.Logger.Logln(0, "can't parse", t.DefaultPath(), ":", err)
-		return write_strategy.NewNopStrategy("", ""), nil
-	}
-	for _, method := range file.Methods {
-		t.rendered.Add(method.Receiver.Type.String() + method.Name)
-	}
-	for _, iface := range file.Interfaces {
-		t.rendered.Add(iface.Name)
-	}
-	for _, fn := range file.Functions {
-		t.rendered.Add(fn.Name)
-	}
-	for _, str := range file.Structures {
-		t.rendered.Add(str.Name)
-	}
-	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+func (t *cacheMiddlewareTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
+	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *cacheMiddlewareTemplate) newCacheBody(i *types.Interface) *Statement {
@@ -144,9 +103,9 @@ func (t *cacheMiddlewareTemplate) newCacheBody(i *types.Interface) *Statement {
 	}))
 }
 
-func (t *cacheMiddlewareTemplate) cacheFunc(signature *types.Function) *Statement {
+func (t *cacheMiddlewareTemplate) cacheFunc(ctx context.Context, signature *types.Function) *Statement {
 	normalized := normalizeFunctionResults(signature)
-	return methodDefinition(cacheMiddlewareStructName, &normalized.Function).
+	return methodDefinition(ctx, cacheMiddlewareStructName, &normalized.Function).
 		BlockFunc(t.cacheFuncBody(signature, &normalized.Function))
 }
 
@@ -180,11 +139,11 @@ func cacheEntityStructName(signature *types.Function) string {
 	return util.ToLowerFirst(responseStructName(signature) + "CacheEntity")
 }
 
-func (t *cacheMiddlewareTemplate) cacheEntity(signature *types.Function) *Statement {
+func cacheEntity(ctx context.Context, signature *types.Function) *Statement {
 	s := &Statement{}
 	s.Type().Id(cacheEntityStructName(signature)).StructFunc(func(l *Group) {
 		for _, field := range removeErrorIfLast(signature.Results) {
-			l.Add(structFieldName(&field)).Add(fieldType(field.Type, false))
+			l.Add(structFieldName(&field)).Add(fieldType(ctx, field.Type, false))
 		}
 	})
 	return s

@@ -1,27 +1,25 @@
 package template
 
 import (
+	"context"
 	"errors"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
 var (
-	ErrGRPCAddrEmpty = errors.New("grpc server address is empty")
 	ErrProtobufEmpty = errors.New("protobuf package is empty")
 )
 
 type gRPCClientTemplate struct {
-	Info    *GenerationInfo
-	tracing bool
+	Info *GenerationInfo
 }
 
 func NewGRPCClientTemplate(info *GenerationInfo) Template {
 	return &gRPCClientTemplate{
-		Info: info.Copy(),
+		Info: info,
 	}
 }
 
@@ -55,44 +53,33 @@ func (t *gRPCClientTemplate) grpcConverterPackagePath() string {
 //			).Endpoint()}
 //		}
 //
-func (t *gRPCClientTemplate) Render() write_strategy.Renderer {
+func (t *gRPCClientTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transportgrpc")
 	f.ImportAlias(t.Info.ProtobufPackageImport, "pb")
 	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`DO NOT EDIT.`)
 
 	f.Func().Id("NewGRPCClient").
 		ParamsFunc(func(p *Group) {
 			p.Id("conn").Op("*").Qual(PackagePathGoogleGRPC, "ClientConn")
-			if t.tracing {
+			p.Id("addr").Id("string")
+			if Tags(ctx).Has(TracingTag) {
 				p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 			}
-			if t.tracing {
-				p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
-			}
 			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption")
-		}).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name).
+		}).Qual(t.Info.SourcePackageImport, EndpointsSetName).
 		BlockFunc(func(g *Group) {
-			if t.tracing {
+			if Tags(ctx).Has(TracingTag) {
 				g.Id("opts").Op("=").Append(Id("opts"), Qual(PackagePathGoKitTransportGRPC, "ClientBefore").Call(
 					Line().Qual(PackagePathGoKitTracing, "ContextToGRPC").Call(Id("tracer"), Id("logger")).Op(",").Line(),
 				))
 			}
-			g.Return().Op("&").Qual(t.Info.SourcePackageImport, "Endpoints").Values(DictFunc(func(d Dict) {
+			g.Return().Qual(t.Info.SourcePackageImport, EndpointsSetName).Values(DictFunc(func(d Dict) {
 				for _, m := range t.Info.Iface.Methods {
 					client := &Statement{}
-					if t.tracing {
-						client.Qual(PackagePathGoKitTracing, "TraceClient").Call(
-							Line().Id("tracer"),
-							Line().Lit(m.Name),
-							Line(),
-						).Op("(").Line()
-						defer func() { client.Op(",").Line().Op(")") }() // defer in for loop is OK
-					}
 					client.Qual(PackagePathGoKitTransportGRPC, "NewClient").Call(
 						Line().Id("conn"),
-						Line().Lit(t.Info.GRPCRegAddr),
+						Line().Id("addr"),
 						Line().Lit(m.Name),
 						Line().Qual(pathToConverter(t.Info.SourcePackageImport), encodeRequestName(m)),
 						Line().Qual(pathToConverter(t.Info.SourcePackageImport), decodeResponseName(m)),
@@ -126,8 +113,11 @@ func specialReplyType(p types.Type) *Statement {
 	name := types.TypeName(p)
 	imp := types.TypeImport(p)
 	// *string -> *wrappers.StringValue
-	if name != nil && *name == "string" && imp == nil && p.TypeOf() == types.KindPointer {
-		return (&Statement{}).Qual(GolangProtobufWrappers, "StringValue").Values()
+	if name != nil && *name == "string" && imp == nil {
+		ptr, ok := p.(types.TPointer)
+		if ok && ptr.NumberOfPointers == 1 {
+			return (&Statement{}).Qual(GolangProtobufWrappers, "StringValue").Values()
+		}
 	}
 	return nil
 }
@@ -136,25 +126,14 @@ func (gRPCClientTemplate) DefaultPath() string {
 	return filenameBuilder(PathTransport, "grpc", "client")
 }
 
-func (t *gRPCClientTemplate) Prepare() error {
-	if t.Info.GRPCRegAddr == "" {
-		return ErrGRPCAddrEmpty
-	}
+func (t *gRPCClientTemplate) Prepare(ctx context.Context) error {
 	if t.Info.ProtobufPackageImport == "" {
 		return ErrProtobufEmpty
-	}
-
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
-	for _, tag := range tags {
-		switch tag {
-		case TracingTag:
-			t.tracing = true
-		}
 	}
 	return nil
 }
 
-func (t *gRPCClientTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *gRPCClientTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 

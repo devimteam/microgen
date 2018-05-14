@@ -1,6 +1,8 @@
 package template
 
 import (
+	"context"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/util"
@@ -10,7 +12,7 @@ import (
 const (
 	loggerVarName            = "logger"
 	nextVarName              = "next"
-	serviceLoggingStructName = "serviceLogging"
+	serviceLoggingStructName = "loggingMiddleware"
 
 	logIgnoreTag = "logs-ignore"
 	lenTag       = "logs-len"
@@ -68,12 +70,12 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func (t *loggingTemplate) Render() write_strategy.Renderer {
-	f := NewFile("middleware")
+func (t *loggingTemplate) Render(ctx context.Context) write_strategy.Renderer {
+	f := NewFile("service")
 	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
 	f.PackageComment(t.Info.FileHeader)
 
-	f.Comment("ServiceLogging writes params, results and working time of method call to provided logger after its execution.").
+	f.Comment("LoggingMiddleware writes params, results and working time of method call to provided logger after its execution.").
 		Line().Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newLoggingBody(t.Info.Iface))
 
@@ -88,17 +90,17 @@ func (t *loggingTemplate) Render() write_strategy.Renderer {
 	// Render functions
 	for _, signature := range t.Info.Iface.Methods {
 		f.Line()
-		f.Add(t.loggingFunc(signature)).Line()
+		f.Add(t.loggingFunc(ctx, signature)).Line()
 	}
 	if len(t.Info.Iface.Methods) > 0 {
 		f.Type().Op("(")
 	}
 	for _, signature := range t.Info.Iface.Methods {
 		if params := RemoveContextIfFirst(signature.Args); t.calcParamAmount(signature.Name, params) > 0 {
-			f.Add(t.loggingEntity("log"+requestStructName(signature), signature, params))
+			f.Add(t.loggingEntity(ctx, "log"+requestStructName(signature), signature, params))
 		}
 		if params := removeErrorIfLast(signature.Results); t.calcParamAmount(signature.Name, params) > 0 {
-			f.Add(t.loggingEntity("log"+responseStructName(signature), signature, params))
+			f.Add(t.loggingEntity(ctx, "log"+responseStructName(signature), signature, params))
 		}
 	}
 	if len(t.Info.Iface.Methods) > 0 {
@@ -112,7 +114,7 @@ func (loggingTemplate) DefaultPath() string {
 	return filenameBuilder(PathService, "logging")
 }
 
-func (t *loggingTemplate) Prepare() error {
+func (t *loggingTemplate) Prepare(ctx context.Context) error {
 	t.ignoreParams = make(map[string][]string)
 	t.lenParams = make(map[string][]string)
 	for _, fn := range t.Info.Iface.Methods {
@@ -122,7 +124,7 @@ func (t *loggingTemplate) Prepare() error {
 	return nil
 }
 
-func (t *loggingTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *loggingTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
@@ -150,7 +152,7 @@ func (t *loggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 	}))
 }
 
-func (t *loggingTemplate) loggingEntity(name string, fn *types.Function, params []types.Variable) Code {
+func (t *loggingTemplate) loggingEntity(ctx context.Context, name string, fn *types.Function, params []types.Variable) Code {
 	if len(params) == 0 {
 		return nil
 	}
@@ -159,7 +161,7 @@ func (t *loggingTemplate) loggingEntity(name string, fn *types.Function, params 
 		lenParams := t.lenParams[fn.Name]
 		for _, field := range params {
 			if !util.IsInStringSlice(field.Name, ignore) {
-				g.Id(util.ToUpperFirst(field.Name)).Add(fieldType(field.Type, false))
+				g.Id(util.ToUpperFirst(field.Name)).Add(fieldType(ctx, field.Type, false))
 			}
 			if util.IsInStringSlice(field.Name, lenParams) {
 				g.Id("Len" + util.ToUpperFirst(field.Name)).Int().Tag(map[string]string{"json": "len(" + util.ToUpperFirst(field.Name) + ")"})
@@ -181,9 +183,9 @@ func (t *loggingTemplate) loggingEntity(name string, fn *types.Function, params 
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func (t *loggingTemplate) loggingFunc(signature *types.Function) *Statement {
+func (t *loggingTemplate) loggingFunc(ctx context.Context, signature *types.Function) *Statement {
 	normal := normalizeFunction(signature)
-	return methodDefinition(serviceLoggingStructName, &normal.Function).
+	return methodDefinition(ctx, serviceLoggingStructName, &normal.Function).
 		BlockFunc(t.loggingFuncBody(signature))
 }
 

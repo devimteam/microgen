@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"context"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/logger"
@@ -38,7 +40,7 @@ func NewMainTemplate(info *GenerationInfo) Template {
 	}
 }
 
-func (t *mainTemplate) Render() write_strategy.Renderer {
+func (t *mainTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := &Statement{}
 	f.Line().Add(t.mainFunc())
 	f.Line().Add(t.initLogger())
@@ -62,7 +64,7 @@ func (t *mainTemplate) DefaultPath() string {
 	return "./cmd/" + util.ToSnakeCase(t.Info.Iface.Name) + "/main.go"
 }
 
-func (t *mainTemplate) Prepare() error {
+func (t *mainTemplate) Prepare(ctx context.Context) error {
 	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
 	for _, tag := range tags {
 		switch tag {
@@ -83,7 +85,7 @@ func (t *mainTemplate) Prepare() error {
 	return nil
 }
 
-func (t *mainTemplate) ChooseStrategy() (write_strategy.Strategy, error) {
+func (t *mainTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil

@@ -1,6 +1,9 @@
 package strings
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+)
 
 // Fetch information from slice of comments (docs).
 // Returns appendix of first comment which has tag as prefix.
@@ -20,4 +23,12 @@ func ContainTag(strs []string, prefix string) bool {
 		}
 	}
 	return false
+}
+
+func LastWordFromName(name string) string {
+	lastUpper := strings.LastIndexFunc(name, unicode.IsUpper)
+	if lastUpper == -1 {
+		lastUpper = 0
+	}
+	return strings.ToLower(name[lastUpper:])
 }
