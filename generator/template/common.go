@@ -45,6 +45,7 @@ const (
 	PackagePathOpenTracingGo         = "github.com/opentracing/opentracing-go"
 	PackagePathGoKitTracing          = "github.com/go-kit/kit/tracing/opentracing"
 	PackagePathGoKitTransportJSONRPC = "github.com/go-kit/kit/transport/http/jsonrpc"
+	PackagePathSyncErrgroup          = "golang.org/x/sync/errgroup"
 
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"

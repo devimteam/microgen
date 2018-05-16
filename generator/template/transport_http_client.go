@@ -79,23 +79,32 @@ func (t *httpClientTemplate) Prepare(ctx context.Context) error {
 func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transporthttp")
 	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	f.ImportAlias(PackagePathGoKitTransportHTTP, "httpkit")
 	f.HeaderComment(t.info.FileHeader)
 
 	f.Func().Id("NewHTTPClient").ParamsFunc(func(p *Group) {
 		p.Id("u").Op("*").Qual(PackagePathUrl, "URL")
-		if Tags(ctx).Has(TracingMiddlewareTag) {
-			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
-		}
-		if Tags(ctx).Has(TracingMiddlewareTag) {
-			p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
-		}
 		p.Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption")
 	}).Params(
 		Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName),
-		//Qual(t.info.SourcePackageImport, t.info.Iface.Name),
 	).Block(
 		t.clientBody(ctx),
 	)
+
+	if Tags(ctx).Has(TracingMiddlewareTag) {
+		f.Line().Func().Id("TracingHTTPClientOptions").Params(
+			Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer"),
+			Id("logger").Qual(PackagePathGoKitLog, "Logger"),
+		).Params(
+			Func().Params(Op("[]").Qual(PackagePathGoKitTransportHTTP, "ClientOption")).Params(Op("[]").Qual(PackagePathGoKitTransportHTTP, "ClientOption")),
+		).Block(
+			Return().Func().Params(Id("opts").Op("[]").Qual(PackagePathGoKitTransportHTTP, "ClientOption")).Params(Op("[]").Qual(PackagePathGoKitTransportHTTP, "ClientOption")).Block(
+				Return().Append(Id("opts"), Qual(PackagePathGoKitTransportHTTP, "ClientBefore").Call(
+					Line().Qual(PackagePathGoKitTracing, "ContextToHTTP").Call(Id("tracer"), Id("logger")).Op(",").Line(),
+				)),
+			),
+		)
+	}
 
 	return f
 }
@@ -127,24 +136,11 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 //
 func (t *httpClientTemplate) clientBody(ctx context.Context) *Statement {
 	g := &Statement{}
-	if Tags(ctx).Has(TracingMiddlewareTag) {
-		g.Id("opts").Op("=").Append(Id("opts"), Qual(PackagePathGoKitTransportHTTP, "ClientBefore").Call(
-			Line().Qual(PackagePathGoKitTracing, "ContextToHTTP").Call(Id("tracer"), Id("logger")).Op(",").Line(),
-		))
-	}
-	g.Line().Return(Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName).Values(DictFunc(
+	g.Return(Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName).Values(DictFunc(
 		func(d Dict) {
 			for _, fn := range t.info.Iface.Methods {
 				method := FetchHttpMethodTag(fn.Docs)
 				client := &Statement{}
-				if Tags(ctx).Has(TracingMiddlewareTag) {
-					client.Qual(PackagePathGoKitTracing, "TraceClient").Call(
-						Line().Id("tracer"),
-						Line().Lit(fn.Name),
-						Line(),
-					).Op("(").Line()
-					defer func() { client.Op(",").Line().Op(")") }() // defer in for loop is OK
-				}
 				client.Qual(PackagePathGoKitTransportHTTP, "NewClient").Call(
 					Line().Lit(method), Id("u"),
 					Line().Id(encodeRequestName(fn)),

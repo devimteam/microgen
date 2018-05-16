@@ -3,6 +3,8 @@ package generator
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
@@ -13,7 +15,7 @@ func ValidateInterface(iface *types.Interface) error {
 	for _, m := range iface.Methods {
 		errs = append(errs, validateFunction(m)...)
 	}
-	return util.ComposeErrors(errs...)
+	return composeErrors(errs...)
 }
 
 // Rules:
@@ -62,4 +64,22 @@ var insertableToUrlTypes = []string{"string", "int", "int32", "int64", "uint", "
 func canInsertToPath(p *types.Variable) bool {
 	name := types.TypeName(p.Type)
 	return name != nil && util.IsInStringSlice(*name, insertableToUrlTypes)
+}
+
+func composeErrors(errs ...error) error {
+	if len(errs) > 0 {
+		var strs []string
+		for _, err := range errs {
+			if err != nil {
+				strs = append(strs, err.Error())
+			}
+		}
+		if len(strs) == 1 {
+			return fmt.Errorf(strs[0])
+		}
+		if len(strs) > 0 {
+			return fmt.Errorf("many errors:\n%v", strings.Join(strs, "\n"))
+		}
+	}
+	return nil
 }

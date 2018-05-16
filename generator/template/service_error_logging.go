@@ -13,6 +13,8 @@ const (
 	serviceErrorLoggingStructName = "errorLoggingMiddleware"
 )
 
+var ServiceErrorLoggingMiddlewareName = util.ToUpperFirst(serviceErrorLoggingStructName)
+
 type errorLoggingTemplate struct {
 	info *GenerationInfo
 }
@@ -29,7 +31,7 @@ func (t *errorLoggingTemplate) Render(ctx context.Context) write_strategy.Render
 	f.HeaderComment(t.info.FileHeader)
 
 	f.Comment("ErrorLoggingMiddleware writes to logger any error, if it is not nil.").
-		Line().Func().Id(util.ToUpperFirst(serviceErrorLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
+		Line().Func().Id(ServiceErrorLoggingMiddlewareName).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newRecoverBody(t.info.Iface))
 
 	f.Line()

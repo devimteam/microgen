@@ -35,7 +35,7 @@ func (t *middlewareTemplate) Render(ctx context.Context) write_strategy.Renderer
 	f := NewFile("service")
 	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
 	f.HeaderComment(t.info.FileHeader)
-	f.Comment("Service middleware").
+	f.Comment("Service middleware (closure).").
 		Line().Type().Id(MiddlewareTypeName).Func().Call(Qual(t.info.SourcePackageImport, t.info.Iface.Name)).Qual(t.info.SourcePackageImport, t.info.Iface.Name)
 	return f
 }

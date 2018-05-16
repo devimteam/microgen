@@ -12,9 +12,11 @@ import (
 const (
 	cacheKeyTag = "cache-key"
 
-	cacheInterfaceName        = "Cache"
-	cacheMiddlewareStructName = "cachingMiddleware"
+	cacheInterfaceName          = "Cache"
+	cachingMiddlewareStructName = "cachingMiddleware"
 )
+
+var CachingMiddlewareName = util.ToUpperFirst(cachingMiddlewareStructName)
 
 type cacheMiddlewareTemplate struct {
 	info      *GenerationInfo
@@ -38,13 +40,13 @@ func (t *cacheMiddlewareTemplate) Render(ctx context.Context) write_strategy.Ren
 	)
 	f.Line()
 
-	f.Line().Func().Id(util.ToUpperFirst(cacheMiddlewareStructName)).Params(Id("cache").Id(cacheInterfaceName)).Params(Id(MiddlewareTypeName)).
+	f.Line().Func().Id(CachingMiddlewareName).Params(Id("cache").Id(cacheInterfaceName)).Params(Id(MiddlewareTypeName)).
 		Block(t.newCacheBody(t.info.Iface))
 
 	f.Line()
 
 	// Render middleware struct
-	f.Type().Id(cacheMiddlewareStructName).Struct(
+	f.Type().Id(cachingMiddlewareStructName).Struct(
 		Id("cache").Id(cacheInterfaceName),
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
 		Id(nextVarName).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
@@ -94,7 +96,7 @@ func (t *cacheMiddlewareTemplate) newCacheBody(i *types.Interface) *Statement {
 	).Params(
 		Qual(t.info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
-		g.Return(Op("&").Id(cacheMiddlewareStructName).Values(
+		g.Return(Op("&").Id(cachingMiddlewareStructName).Values(
 			Dict{
 				Id("cache"):     Id("cache"),
 				Id(nextVarName): Id(nextVarName),
@@ -105,14 +107,14 @@ func (t *cacheMiddlewareTemplate) newCacheBody(i *types.Interface) *Statement {
 
 func (t *cacheMiddlewareTemplate) cacheFunc(ctx context.Context, signature *types.Function) *Statement {
 	normalized := normalizeFunctionResults(signature)
-	return methodDefinition(ctx, cacheMiddlewareStructName, &normalized.Function).
+	return methodDefinition(ctx, cachingMiddlewareStructName, &normalized.Function).
 		BlockFunc(t.cacheFuncBody(signature, &normalized.Function))
 }
 
 func (t *cacheMiddlewareTemplate) cacheFuncBody(signature *types.Function, normalized *types.Function) func(g *Group) {
 	return func(g *Group) {
 		if t.caching[signature.Name] {
-			g.List(Id("value"), Id("e")).Op(":=").Id(util.LastUpperOrFirst(cacheMiddlewareStructName)).Dot("cache").Dot("Get").Call(Id(t.cacheKeys[signature.Name]))
+			g.List(Id("value"), Id("e")).Op(":=").Id(CachingMiddlewareName).Dot("cache").Dot("Get").Call(Id(t.cacheKeys[signature.Name]))
 			g.If(Id("e").Op("==").Nil()).Block(
 				ReturnFunc(func(group *Group) {
 					for _, field := range removeErrorIfLast(signature.Results) {
@@ -122,7 +124,7 @@ func (t *cacheMiddlewareTemplate) cacheFuncBody(signature *types.Function, norma
 				}),
 			)
 			g.Defer().Func().Params().Block(
-				Id(util.LastUpperOrFirst(cacheMiddlewareStructName)).Dot("cache").Dot("Set").Call(
+				Id(CachingMiddlewareName).Dot("cache").Dot("Set").Call(
 					Id(t.cacheKeys[signature.Name]),
 					Op("&").Id(cacheEntityStructName(normalized)).Values(dictByNormalVariables(
 						removeErrorIfLast(signature.Results),
@@ -131,7 +133,7 @@ func (t *cacheMiddlewareTemplate) cacheFuncBody(signature *types.Function, norma
 				),
 			).Call()
 		}
-		g.Return().Id(util.LastUpperOrFirst(cacheMiddlewareStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(normalized.Args))
+		g.Return().Id(CachingMiddlewareName).Dot(nextVarName).Dot(signature.Name).Call(paramNames(normalized.Args))
 	}
 }
 

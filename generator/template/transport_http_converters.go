@@ -230,7 +230,7 @@ func (t *httpConverterTemplate) decodeHTTPRequest(fn *types.Function) *Statement
 					g.Add(stringToTypeConverter(&arg))
 				}
 			}
-			g.Return(Op("&").Qual(t.info.SourcePackageImport, requestStructName(fn)).Values(DictFunc(func(d Dict) {
+			g.Return(Op("&").Qual(t.info.SourcePackageImport+"/transport", requestStructName(fn)).Values(DictFunc(func(d Dict) {
 				for _, arg := range arguments {
 					typename := types.TypeName(arg.Type)
 					if typename == nil {
@@ -240,7 +240,7 @@ func (t *httpConverterTemplate) decodeHTTPRequest(fn *types.Function) *Statement
 				}
 			})), Nil())
 		} else {
-			g.Var().Id("req").Qual(t.info.SourcePackageImport, requestStructName(fn))
+			g.Var().Id("req").Qual(t.info.SourcePackageImport+"/transport", requestStructName(fn))
 			g.Err().Op(":=").Qual(PackagePathJson, "NewDecoder").Call(Id("r").Dot("Body")).Dot("Decode").Call(Op("&").Id("req"))
 			g.Return(Op("&").Id("req"), Err())
 		}

@@ -18,6 +18,8 @@ const (
 	lenTag       = "logs-len"
 )
 
+var ServiceLoggingMiddlewareName = util.ToUpperFirst(serviceLoggingStructName)
+
 type loggingTemplate struct {
 	info         *GenerationInfo
 	ignoreParams map[string][]string
@@ -75,8 +77,8 @@ func (t *loggingTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
 	f.HeaderComment(t.info.FileHeader)
 
-	f.Comment("LoggingMiddleware writes params, results and working time of method call to provided logger after its execution.").
-		Line().Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
+	f.Comment(ServiceLoggingMiddlewareName + " writes params, results and working time of method call to provided logger after its execution.").
+		Line().Func().Id(ServiceLoggingMiddlewareName).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newLoggingBody(t.info.Iface))
 
 	f.Line()

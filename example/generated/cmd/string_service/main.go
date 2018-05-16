@@ -4,14 +4,17 @@
 package main
 
 import (
+	"context"
 	"errors"
-	generated "github.com/devimteam/microgen/example/generated"
-	middleware "github.com/devimteam/microgen/example/generated/middleware"
+	"fmt"
+	service "github.com/devimteam/microgen/example/generated/service"
+	transport "github.com/devimteam/microgen/example/generated/transport"
 	grpc "github.com/devimteam/microgen/example/generated/transport/grpc"
 	http "github.com/devimteam/microgen/example/generated/transport/http"
 	protobuf "github.com/devimteam/microgen/example/protobuf"
 	log "github.com/go-kit/kit/log"
 	opentracinggo "github.com/opentracing/opentracing-go"
+	errgroup "golang.org/x/sync/errgroup"
 	grpc1 "google.golang.org/grpc"
 	"io"
 	"net"
@@ -27,27 +30,34 @@ func main() {
 	logger.Log("message", "Hello, I am alive")
 	defer logger.Log("message", "goodbye, good luck")
 
-	errorChan := make(chan error)
-	go InterruptHandler(errorChan)
+	g, ctx := errgroup.WithContext(context.Background())
+	g.Go(func() error {
+		return InterruptHandler(ctx)
+	})
 
-	service := generated.NewStringService()                      // Create new service.
-	service = middleware.ServiceLogging(logger)(service)         // Setup service logging.
-	service = middleware.ServiceErrorLogging(logger)(service)    // Setup error logging.
-	service = middleware.ServiceRecovering(errorLogger)(service) // Setup service recovering.
+	svc := service.NewStringService()                    // Create new service.
+	svc = service.LoggingMiddleware(logger)(svc)         // Setup service logging.
+	svc = service.ErrorLoggingMiddleware(logger)(svc)    // Setup error logging.
+	svc = service.RecoveringMiddleware(errorLogger)(svc) // Setup service recovering.
 
-	endpoints := generated.AllEndpoints(service,
-		opentracinggo.NoopTracer{}, // TODO: Add tracer
-	)
+	endpoints := transport.Endpoints(svc)
+	endpoints = transport.TraceServerEndpoints(endpoints, opentracinggo.NoopTracer{}) // TODO: Add tracer
 
-	grpcAddr := ":8081"
+	grpcAddr := ":8081" // TODO: use your own address
 	// Start grpc server.
-	go ServeGRPC(endpoints, errorChan, grpcAddr, log.With(logger, "transport", "GRPC"))
+	g.Go(func() error {
+		return ServeGRPC(endpoints, grpcAddr, log.With(logger, "transport", "GRPC"))
+	})
 
-	httpAddr := ":8080"
+	httpAddr := ":8080" // TODO: use your own address
 	// Start http server.
-	go ServeHTTP(endpoints, errorChan, httpAddr, log.With(logger, "transport", "HTTP"))
+	g.Go(func() error {
+		return ServeHTTP(endpoints, httpAddr, log.With(logger, "transport", "HTTP"))
+	})
 
-	logger.Log("error", <-errorChan)
+	if err := g.Wait(); err != nil {
+		logger.Log("error", err)
+	}
 }
 
 // InitLogger initialize go-kit JSON logger with timestamp and caller.
@@ -58,19 +68,23 @@ func InitLogger(writer io.Writer) log.Logger {
 	return logger
 }
 
-// InterruptHandler handles first SIGINT and SIGTERM and sends messages to error channel.
-func InterruptHandler(ch chan<- error) {
+// InterruptHandler handles first SIGINT and SIGTERM and returns it as error.
+func InterruptHandler(ctx context.Context) error {
 	interruptHandler := make(chan os.Signal, 1)
 	signal.Notify(interruptHandler, syscall.SIGINT, syscall.SIGTERM)
-	ch <- errors.New((<-interruptHandler).String())
+	select {
+	case sig := <-interruptHandler:
+		return fmt.Errorf("signal received: %d (%s)", int(sig), sig.String())
+	case <-ctx.Done():
+		return errors.New("signal listener: context canceled")
+	}
 }
 
 // ServeGRPC starts new GRPC server on address and sends first error to channel.
-func ServeGRPC(endpoints *generated.Endpoints, ch chan<- error, addr string, logger log.Logger) {
+func ServeGRPC(ctx context.Context, endpoints *transport.EndpointsSet, addr string, logger log.Logger) error {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		ch <- err
-		return
+		return err
 	}
 	// Here you can add middlewares for grpc server.
 	server := grpc.NewGRPCServer(endpoints,
@@ -80,11 +94,21 @@ func ServeGRPC(endpoints *generated.Endpoints, ch chan<- error, addr string, log
 	grpcServer := grpc1.NewServer()
 	protobuf.RegisterStringServiceServer(grpcServer, server)
 	logger.Log("listen on", addr)
-	ch <- grpcServer.Serve(listener)
+	ch := make(chan error)
+	go func() {
+		ch <- grpcServer.Serve(listener)
+	}()
+	select {
+	case err := <-ch:
+		return fmt.Errorf("grpc server: serve: %v", err)
+	case <-ctx.Done():
+		grpcServer.GracefulStop()
+		return errors.New("grpc server: context canceled")
+	}
 }
 
 // ServeHTTP starts new HTTP server on address and sends first error to channel.
-func ServeHTTP(endpoints *generated.Endpoints, ch chan<- error, addr string, logger log.Logger) {
+func ServeHTTP(ctx context.Context, endpoints *transport.EndpointsSet, addr string, logger log.Logger) error {
 	handler := http.NewHTTPHandler(endpoints,
 		logger,
 		opentracinggo.NoopTracer{}, // TODO: Add tracer
@@ -94,5 +118,17 @@ func ServeHTTP(endpoints *generated.Endpoints, ch chan<- error, addr string, log
 		Handler: handler,
 	}
 	logger.Log("listen on", addr)
-	ch <- httpServer.ListenAndServe()
+	ch := make(chan error)
+	go func() {
+		ch <- httpServer.ListenAndServe()
+	}()
+	select {
+	case err := <-ch:
+		if err == http1.ErrServerClosed {
+			return nil
+		}
+		return fmt.Errorf("http server: serve: %v", err)
+	case <-ctx.Done():
+		return httpServer.Shutdown(context.Background())
+	}
 }

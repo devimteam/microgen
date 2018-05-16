@@ -10,8 +10,10 @@ import (
 )
 
 const (
-	serviceRecoverStructName = "recoveringMiddleware"
+	serviceRecoveringStructName = "recoveringMiddleware"
 )
+
+var ServiceRecoveringMiddlewareName = util.ToUpperFirst(serviceRecoveringStructName)
 
 type recoverTemplate struct {
 	info *GenerationInfo
@@ -28,14 +30,14 @@ func (t *recoverTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
 	f.HeaderComment(t.info.FileHeader)
 
-	f.Comment(util.ToUpperFirst(serviceRecoverStructName) + " recovers panics from method calls, writes to provided logger and returns the error of panic as method error.").
-		Line().Func().Id(util.ToUpperFirst(serviceRecoverStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
+	f.Comment(ServiceRecoveringMiddlewareName + " recovers panics from method calls, writes to provided logger and returns the error of panic as method error.").
+		Line().Func().Id(ServiceRecoveringMiddlewareName).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newRecoverBody(t.info.Iface))
 
 	f.Line()
 
 	// Render type logger
-	f.Type().Id(serviceRecoverStructName).Struct(
+	f.Type().Id(serviceRecoveringStructName).Struct(
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
 		Id(nextVarName).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
 	)
@@ -67,7 +69,7 @@ func (t *recoverTemplate) newRecoverBody(i *types.Interface) *Statement {
 	).Params(
 		Qual(t.info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
-		g.Return(Op("&").Id(serviceRecoverStructName).Values(
+		g.Return(Op("&").Id(serviceRecoveringStructName).Values(
 			Dict{
 				Id(loggerVarName): Id(loggerVarName),
 				Id(nextVarName):   Id(nextVarName),
@@ -77,7 +79,7 @@ func (t *recoverTemplate) newRecoverBody(i *types.Interface) *Statement {
 }
 
 func (t *recoverTemplate) recoverFunc(ctx context.Context, signature *types.Function) *Statement {
-	return methodDefinition(ctx, serviceRecoverStructName, signature).
+	return methodDefinition(ctx, serviceRecoveringStructName, signature).
 		BlockFunc(t.recoverFuncBody(signature))
 }
 
@@ -85,7 +87,7 @@ func (t *recoverTemplate) recoverFuncBody(signature *types.Function) func(g *Gro
 	return func(g *Group) {
 		g.Defer().Func().Params().Block(
 			If(Id("r").Op(":=").Recover(), Id("r").Op("!=").Nil()).Block(
-				Id(util.LastUpperOrFirst(serviceRecoverStructName)).Dot(loggerVarName).Dot("Log").Call(
+				Id(util.LastUpperOrFirst(serviceRecoveringStructName)).Dot(loggerVarName).Dot("Log").Call(
 					Lit("method"), Lit(signature.Name),
 					Lit("message"), Id("r"),
 				),
@@ -93,6 +95,6 @@ func (t *recoverTemplate) recoverFuncBody(signature *types.Function) func(g *Gro
 			),
 		).Call()
 
-		g.Return().Id(util.LastUpperOrFirst(serviceRecoverStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
+		g.Return().Id(util.LastUpperOrFirst(serviceRecoveringStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
 	}
 }

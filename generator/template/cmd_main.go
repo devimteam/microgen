@@ -20,6 +20,12 @@ const (
 	nameServeHTTP        = "ServeHTTP"
 )
 
+const (
+	_service_ = "svc"
+	_logger_  = "logger"
+	_ctx_     = "ctx"
+)
+
 type mainTemplate struct {
 	Info     *GenerationInfo
 	rendered []string
@@ -82,15 +88,20 @@ func (t *mainTemplate) interruptHandler() *Statement {
 		return nil
 	}
 	s := &Statement{}
-	s.Comment(nameInterruptHandler + ` handles first SIGINT and SIGTERM and sends messages to error channel.`).Line()
-	s.Func().Id(nameInterruptHandler).Params(Id("ch").Id("chan<- error")).Block(
+	s.Comment(nameInterruptHandler + ` handles first SIGINT and SIGTERM and returns it as error.`).Line()
+	s.Func().Id(nameInterruptHandler).Params(Id(_ctx_).Qual(PackagePathContext, "Context")).Params(Error()).Block(
 		Id("interruptHandler").Op(":=").Id("make").Call(Id("chan").Qual(PackagePathOs, "Signal"), Lit(1)),
 		Qual(PackagePathOsSignal, "Notify").Call(
 			Id("interruptHandler"),
 			Qual(PackagePathSyscall, "SIGINT"),
 			Qual(PackagePathSyscall, "SIGTERM"),
 		),
-		Id("ch").Op("<-").Qual(PackagePathErrors, "New").Call(Parens(Op("<-").Id("interruptHandler")).Dot("String").Call()),
+		Select().Block(
+			Case(Id("sig").Op(":= <-").Id("interruptHandler")),
+			Return().Qual(PackagePathFmt, "Errorf").Call(Lit("signal received: %d (%s)"), Int().Parens(Id("sig")), Id("sig").Dot("String").Call()),
+			Case(Op("<-").Id(_ctx_).Dot("Done").Call()),
+			Return().Qual(PackagePathErrors, "New").Call(Lit("signal listener: context canceled")),
+		),
 	)
 	return s
 }
@@ -100,60 +111,83 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 		return nil
 	}
 	return Func().Id(nameMain).Call().BlockFunc(func(main *Group) {
-		main.Id("logger").Op(":=").
+		main.Id(_logger_).Op(":=").
 			Qual(PackagePathGoKitLog, "With").Call(Id(nameInitLogger).Call(Qual(PackagePathOs, "Stdout")), Lit("level"), Lit("info"))
 		if Tags(ctx).Has(RecoveringMiddlewareTag) {
 			main.Id("errorLogger").Op(":=").
 				Qual(PackagePathGoKitLog, "With").Call(Id(nameInitLogger).Call(Qual(PackagePathOs, "Stderr")), Lit("level"), Lit("error"))
 		}
-		main.Id("logger").Dot("Log").Call(Lit("message"), Lit("Hello, I am alive"))
-		main.Defer().Id("logger").Dot("Log").Call(Lit("message"), Lit("goodbye, good luck"))
+		main.Id(_logger_).Dot("Log").Call(Lit("message"), Lit("Hello, I am alive"))
+		main.Defer().Id(_logger_).Dot("Log").Call(Lit("message"), Lit("goodbye, good luck"))
 		main.Line()
-		main.Id("errorChan").Op(":=").Make(Id("chan error"))
-		main.Go().Id(nameInterruptHandler).Call(Id("errorChan"))
+		main.List(Id("g"), Id(_ctx_)).Op(":=").Qual(PackagePathSyncErrgroup, "WithContext").Call(Qual(PackagePathContext, "Background").Call())
+		main.Id("g").Dot("Go").Call(
+			Func().Params().Params(Error()).Block(
+				Return().Id(nameInterruptHandler).Call(Id(_ctx_)),
+			),
+		)
 		main.Line()
-		main.Id("service").Op(":=").Qual(t.Info.SourcePackageImport, constructorName(t.Info.Iface)).Call().
+		main.Id(_service_).Op(":=").Qual(t.Info.SourcePackageImport+"/service", constructorName(t.Info.Iface)).Call().
 			Comment(`Create new service.`)
+		//if Tags(ctx).Has(CachingMiddlewareTag) {
+		//	main.Id(_service_).Op("=").
+		//		Qual(filepath.Join(t.Info.SourcePackageImport, PathService), CachingMiddlewareName).Call(Id("errorLogger")).Call(Id(_service_)).
+		//		Comment(`Setup service caching.`)
+		//}
 		if Tags(ctx).Has(LoggingMiddlewareTag) {
-			main.Id("service").Op("=").
-				Qual(filepath.Join(t.Info.SourcePackageImport, "middleware"), "ServiceLogging").Call(Id("logger")).Call(Id("service")).
+			main.Id(_service_).Op("=").
+				Qual(filepath.Join(t.Info.SourcePackageImport, PathService), ServiceLoggingMiddlewareName).Call(Id(_logger_)).Call(Id(_service_)).
 				Comment(`Setup service logging.`)
 		}
 		if Tags(ctx).Has(ErrorLoggingMiddlewareTag) {
-			main.Id("service").Op("=").
-				Qual(filepath.Join(t.Info.SourcePackageImport, "middleware"), "ServiceErrorLogging").Call(Id("logger")).Call(Id("service")).
+			main.Id(_service_).Op("=").
+				Qual(filepath.Join(t.Info.SourcePackageImport, PathService), ServiceErrorLoggingMiddlewareName).Call(Id(_logger_)).Call(Id(_service_)).
 				Comment(`Setup error logging.`)
 		}
 		if Tags(ctx).Has(RecoveringMiddlewareTag) {
-			main.Id("service").Op("=").
-				Qual(filepath.Join(t.Info.SourcePackageImport, "middleware"), "ServiceRecovering").Call(Id("errorLogger")).Call(Id("service")).
+			main.Id(_service_).Op("=").
+				Qual(filepath.Join(t.Info.SourcePackageImport, PathService), ServiceRecoveringMiddlewareName).Call(Id("errorLogger")).Call(Id(_service_)).
 				Comment(`Setup service recovering.`)
 		}
-		main.Line().Id("endpoints").Op(":=").Qual(t.Info.SourcePackageImport, "AllEndpoints").Call(t.endpointsParams(ctx))
+		main.Line().Id("endpoints").Op(":=").Qual(t.Info.SourcePackageImport+"/transport", "Endpoints").Call(t.endpointsParams(ctx))
+		if Tags(ctx).HasAny(TracingMiddlewareTag) {
+			main.Id("endpoints").Op("=").Qual(t.Info.SourcePackageImport+"/transport", "TraceServerEndpoints").Call(
+				Id("endpoints"),
+				Qual(PackagePathOpenTracingGo, "NoopTracer{}"),
+			).Comment("TODO: Add tracer")
+		}
 		if Tags(ctx).HasAny(GrpcTag, GrpcServerTag) {
 			main.Line()
-			main.Id("grpcAddr").Op(":=").Lit(":8081")
+			main.Id("grpcAddr").Op(":=").Lit(":8081").Comment("TODO: use your own address")
 			main.Comment(`Start grpc server.`)
-			main.Go().Id(nameServeGRPC).Call(
-				Id("endpoints"),
-				Id("errorChan"),
-				Id("grpcAddr"),
-				Qual(PackagePathGoKitLog, "With").Call(Id("logger"), Lit("transport"), Lit("GRPC")),
+			main.Id("g").Dot("Go").Call(
+				Func().Params().Params(Error()).Block(
+					Return().Id(nameServeGRPC).Call(
+						Id("endpoints"),
+						Id("grpcAddr"),
+						Qual(PackagePathGoKitLog, "With").Call(Id(_logger_), Lit("transport"), Lit("GRPC")),
+					),
+				),
 			)
 		}
 		if Tags(ctx).HasAny(HttpTag, HttpServerTag) {
 			main.Line()
-			main.Id("httpAddr").Op(":=").Lit(":8080")
+			main.Id("httpAddr").Op(":=").Lit(":8080").Comment("TODO: use your own address")
 			main.Comment(`Start http server.`)
-			main.Go().Id(nameServeHTTP).Call(
-				Id("endpoints"),
-				Id("errorChan"),
-				Id("httpAddr"),
-				Qual(PackagePathGoKitLog, "With").Call(Id("logger"), Lit("transport"), Lit("HTTP")),
+			main.Id("g").Dot("Go").Call(
+				Func().Params().Params(Error()).Block(
+					Return().Id(nameServeHTTP).Call(
+						Id("endpoints"),
+						Id("httpAddr"),
+						Qual(PackagePathGoKitLog, "With").Call(Id(_logger_), Lit("transport"), Lit("HTTP")),
+					),
+				),
 			)
 		}
 		main.Line()
-		main.Id("logger").Dot("Log").Call(Lit("error"), Op("<-").Id("errorChan"))
+		main.If(Err().Op(":=").Id("g").Dot("Wait").Call(), Err().Op("!=").Nil()).Block(
+			Id(_logger_).Dot("Log").Call(Lit("error"), Err()),
+		)
 	})
 }
 
@@ -170,10 +204,10 @@ func (t *mainTemplate) initLogger() *Statement {
 	}
 	return Comment(nameInitLogger + ` initialize go-kit JSON logger with timestamp and caller.`).Line().
 		Func().Id(nameInitLogger).Params(Id("writer").Qual(PackagePathIO, "Writer")).Params(Qual(PackagePathGoKitLog, "Logger")).BlockFunc(func(body *Group) {
-		body.Id("logger").Op(":=").Qual(PackagePathGoKitLog, "NewJSONLogger").Call(Id("writer"))
-		body.Id("logger").Op("=").Qual(PackagePathGoKitLog, "With").Call(Id("logger"), Lit("@timestamp"), Qual(PackagePathGoKitLog, "DefaultTimestampUTC"))
-		body.Id("logger").Op("=").Qual(PackagePathGoKitLog, "With").Call(Id("logger"), Lit("caller"), Qual(PackagePathGoKitLog, "DefaultCaller"))
-		body.Return(Id("logger"))
+		body.Id(_logger_).Op(":=").Qual(PackagePathGoKitLog, "NewJSONLogger").Call(Id("writer"))
+		body.Id(_logger_).Op("=").Qual(PackagePathGoKitLog, "With").Call(Id(_logger_), Lit("@timestamp"), Qual(PackagePathGoKitLog, "DefaultTimestampUTC"))
+		body.Id(_logger_).Op("=").Qual(PackagePathGoKitLog, "With").Call(Id(_logger_), Lit("caller"), Qual(PackagePathGoKitLog, "DefaultCaller"))
+		body.Return(Id(_logger_))
 	})
 }
 
@@ -199,22 +233,33 @@ func (t *mainTemplate) serveGrpc(ctx context.Context) *Statement {
 	}
 	return Comment(nameServeGRPC+` starts new GRPC server on address and sends first error to channel.`).Line().
 		Func().Id(nameServeGRPC).Params(
-		Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints"),
-		Id("ch").Id("chan<- error"),
+		Id(_ctx_).Qual(PackagePathContext, "Context"),
+		Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport+"/transport", EndpointsSetName),
 		Id("addr").Id("string"),
-		Id("logger").Qual(PackagePathGoKitLog, "Logger"),
+		Id(_logger_).Qual(PackagePathGoKitLog, "Logger"),
+	).Params(
+		Error(),
 	).BlockFunc(func(body *Group) {
 		body.List(Id("listener"), Err()).Op(":=").Qual(PackagePathNet, "Listen").Call(Lit("tcp"), Id("addr"))
 		body.If(Err().Op("!=").Nil()).Block(
-			Id("ch").Op("<-").Err(),
-			Return(),
+			Return().Err(),
 		)
 		body.Comment(`Here you can add middlewares for grpc server.`)
 		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.SourcePackageImport, "transport/grpc"), "NewGRPCServer").Call(t.newServerParams(ctx))
 		body.Id("grpcServer").Op(":=").Qual(PackagePathGoogleGRPC, "NewServer").Call()
 		body.Qual(t.Info.ProtobufPackageImport, "Register"+util.ToUpperFirst(t.Info.Iface.Name)+"Server").Call(Id("grpcServer"), Id("server"))
-		body.Id("logger").Dot("Log").Call(Lit("listen on"), Id("addr"))
-		body.Id("ch").Op("<-").Id("grpcServer").Dot("Serve").Call(Id("listener"))
+		body.Id(_logger_).Dot("Log").Call(Lit("listen on"), Id("addr"))
+		body.Id("ch").Op(":=").Make(Id("chan error"))
+		body.Go().Func().Call().Block(
+			Id("ch").Op("<-").Id("grpcServer").Dot("Serve").Call(Id("listener")),
+		).Call()
+		body.Select().Block(
+			Case(Err().Op(":= <-").Id("ch")),
+			Return().Qual(PackagePathFmt, "Errorf").Call(Lit("grpc server: serve: %v"), Err()),
+			Case(Op("<-").Id(_ctx_).Dot("Done").Call()),
+			Id("grpcServer").Dot("GracefulStop").Call(),
+			Return().Qual(PackagePathErrors, "New").Call(Lit("grpc server: context canceled")),
+		)
 	})
 }
 
@@ -224,27 +269,41 @@ func (t *mainTemplate) serveHTTP(ctx context.Context) *Statement {
 	}
 	return Comment(nameServeHTTP+` starts new HTTP server on address and sends first error to channel.`).Line().
 		Func().Id(nameServeHTTP).Params(
-		Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints"),
-		Id("ch").Id("chan<- error"),
+		Id(_ctx_).Qual(PackagePathContext, "Context"),
+		Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport+"/transport", EndpointsSetName),
 		Id("addr").Id("string"),
-		Id("logger").Qual(PackagePathGoKitLog, "Logger"),
+		Id(_logger_).Qual(PackagePathGoKitLog, "Logger"),
+	).Params(
+		Error(),
 	).BlockFunc(func(body *Group) {
 		body.Id("handler").Op(":=").Qual(t.Info.SourcePackageImport+"/transport/http", "NewHTTPHandler").Call(t.newServerParams(ctx))
 		body.Id("httpServer").Op(":=").Op("&").Qual(PackagePathHttp, "Server").Values(DictFunc(func(d Dict) {
 			d[Id("Addr")] = Id("addr")
 			d[Id("Handler")] = Id("handler")
 		}))
-		body.Id("logger").Dot("Log").Call(Lit("listen on"), Id("addr"))
-		body.Id("ch").Op("<-").Id("httpServer").Dot("ListenAndServe").Call()
+		body.Id(_logger_).Dot("Log").Call(Lit("listen on"), Id("addr"))
+		body.Id("ch").Op(":=").Make(Id("chan error"))
+		body.Go().Func().Call().Block(
+			Id("ch").Op("<-").Id("httpServer").Dot("ListenAndServe").Call(),
+		).Call()
+		body.Select().Block(
+			Case(Err().Op(":= <-").Id("ch")),
+			If(Err().Op("==").Qual(PackagePathHttp, "ErrServerClosed")).Block(
+				Return().Nil(),
+			),
+			Return().Qual(PackagePathFmt, "Errorf").Call(Lit("http server: serve: %v"), Err()),
+			Case(Op("<-").Id(_ctx_).Dot("Done").Call()),
+			Return().Id("httpServer").Dot("Shutdown").Call(Qual(PackagePathContext, "Background").Call()),
+		)
 	})
 }
 
 func (t *mainTemplate) endpointsParams(ctx context.Context) *Statement {
 	s := &Statement{}
-	s.Id("service")
-	if Tags(ctx).HasAny(TracingMiddlewareTag) {
+	s.Id(_service_)
+	/*if Tags(ctx).HasAny(TracingMiddlewareTag) {
 		s.Op(",").Line().Qual(PackagePathOpenTracingGo, "NoopTracer{}").Op(",").Comment("TODO: Add tracer").Line()
-	}
+	}*/
 	return s
 }
 
@@ -252,7 +311,7 @@ func (t *mainTemplate) newServerParams(ctx context.Context) *Statement {
 	s := &Statement{}
 	s.Id("endpoints")
 	if Tags(ctx).HasAny(TracingMiddlewareTag) {
-		s.Op(",").Line().Id("logger")
+		s.Op(",").Line().Id(_logger_)
 	}
 	if Tags(ctx).HasAny(TracingMiddlewareTag) {
 		s.Op(",").Line().Qual(PackagePathOpenTracingGo, "NoopTracer{}").Op(",").Comment("TODO: Add tracer").Line()
