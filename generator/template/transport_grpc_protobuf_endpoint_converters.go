@@ -371,7 +371,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(ctx context.Context, signa
 	methodParams := RemoveContextIfFirst(signature.Args)
 	fullName := "request"
 	shortName := "req"
-	return Line().Func().Id(encodeRequestName(signature)).Params(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).
+	return Line().Func().Id(encodeRequestName(signature)).Params(ctx_contextContext, Id(fullName).Interface()).
 		Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) == 1 {
@@ -436,7 +436,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(ctx context.Context, sign
 	methodResults := removeErrorIfLast(signature.Results)
 	fullName := "response"
 	shortName := "resp"
-	return Line().Func().Id(encodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(encodeResponseName(signature)).Call(ctx_contextContext, Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) == 1 {
 				sp := specialEndpointConverterToProto(methodResults[0], signature, responseStructName, t.info.SourcePackageImport, fullName, shortName)
@@ -475,7 +475,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(ctx context.Context, signa
 	methodParams := RemoveContextIfFirst(signature.Args)
 	fullName := "request"
 	shortName := "req"
-	return Line().Func().Id(decodeRequestName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(decodeRequestName(signature)).Call(ctx_contextContext, Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) == 1 {
 				sp := specialEndpointConverterFromProto(methodParams[0], signature, requestStructName, t.info.SourcePackageImport, fullName, shortName)
@@ -518,7 +518,7 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(ctx context.Context, sign
 	methodResults := removeErrorIfLast(signature.Results)
 	fullName := "response"
 	shortName := "resp"
-	return Line().Func().Id(decodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
+	return Line().Func().Id(decodeResponseName(signature)).Call(ctx_contextContext, Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) == 1 {
 				sp := specialEndpointConverterFromProto(methodResults[0], signature, responseStructName, t.info.SourcePackageImport, fullName, shortName)

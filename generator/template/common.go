@@ -45,6 +45,7 @@ const (
 	PackagePathOpenTracingGo         = "github.com/opentracing/opentracing-go"
 	PackagePathGoKitTracing          = "github.com/go-kit/kit/tracing/opentracing"
 	PackagePathGoKitTransportJSONRPC = "github.com/go-kit/kit/transport/http/jsonrpc"
+	PackagePathGoKitMetrics          = "github.com/go-kit/kit/metrics"
 	PackagePathSyncErrgroup          = "golang.org/x/sync/errgroup"
 
 	TagMark         = "// @"
@@ -72,6 +73,7 @@ const (
 	Transport                 = "transport"
 	TransportClient           = "transport-client"
 	TransportServer           = "transport-server"
+	MetricsMiddlewareTag      = "metrics"
 )
 
 const (
@@ -307,6 +309,8 @@ func findFunctionByName(fns []types.Function, name string) *types.Function {
 	}
 	return nil
 }
+
+var ctx_contextContext = Id(_ctx_).Qual(PackagePathContext, "Context")
 
 type normalizedFunction struct {
 	types.Function

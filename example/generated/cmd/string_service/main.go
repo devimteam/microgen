@@ -43,13 +43,13 @@ func main() {
 	endpoints := transport.Endpoints(svc)
 	endpoints = transport.TraceServerEndpoints(endpoints, opentracinggo.NoopTracer{}) // TODO: Add tracer
 
-	grpcAddr := ":8081" // TODO: use your own address
+	grpcAddr := ":8081" // TODO: use normal address
 	// Start grpc server.
 	g.Go(func() error {
 		return ServeGRPC(endpoints, grpcAddr, log.With(logger, "transport", "GRPC"))
 	})
 
-	httpAddr := ":8080" // TODO: use your own address
+	httpAddr := ":8080" // TODO: use normal address
 	// Start http server.
 	g.Go(func() error {
 		return ServeHTTP(endpoints, httpAddr, log.With(logger, "transport", "HTTP"))

@@ -89,7 +89,7 @@ func (t *mainTemplate) interruptHandler() *Statement {
 	}
 	s := &Statement{}
 	s.Comment(nameInterruptHandler + ` handles first SIGINT and SIGTERM and returns it as error.`).Line()
-	s.Func().Id(nameInterruptHandler).Params(Id(_ctx_).Qual(PackagePathContext, "Context")).Params(Error()).Block(
+	s.Func().Id(nameInterruptHandler).Params(ctx_contextContext).Params(Error()).Block(
 		Id("interruptHandler").Op(":=").Id("make").Call(Id("chan").Qual(PackagePathOs, "Signal"), Lit(1)),
 		Qual(PackagePathOsSignal, "Notify").Call(
 			Id("interruptHandler"),
@@ -158,7 +158,7 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 		}
 		if Tags(ctx).HasAny(GrpcTag, GrpcServerTag) {
 			main.Line()
-			main.Id("grpcAddr").Op(":=").Lit(":8081").Comment("TODO: use your own address")
+			main.Id("grpcAddr").Op(":=").Lit(":8081").Comment("TODO: use normal address")
 			main.Comment(`Start grpc server.`)
 			main.Id("g").Dot("Go").Call(
 				Func().Params().Params(Error()).Block(
@@ -172,7 +172,7 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 		}
 		if Tags(ctx).HasAny(HttpTag, HttpServerTag) {
 			main.Line()
-			main.Id("httpAddr").Op(":=").Lit(":8080").Comment("TODO: use your own address")
+			main.Id("httpAddr").Op(":=").Lit(":8080").Comment("TODO: use normal address")
 			main.Comment(`Start http server.`)
 			main.Id("g").Dot("Go").Call(
 				Func().Params().Params(Error()).Block(
@@ -233,7 +233,7 @@ func (t *mainTemplate) serveGrpc(ctx context.Context) *Statement {
 	}
 	return Comment(nameServeGRPC+` starts new GRPC server on address and sends first error to channel.`).Line().
 		Func().Id(nameServeGRPC).Params(
-		Id(_ctx_).Qual(PackagePathContext, "Context"),
+		ctx_contextContext,
 		Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport+"/transport", EndpointsSetName),
 		Id("addr").Id("string"),
 		Id(_logger_).Qual(PackagePathGoKitLog, "Logger"),
@@ -269,7 +269,7 @@ func (t *mainTemplate) serveHTTP(ctx context.Context) *Statement {
 	}
 	return Comment(nameServeHTTP+` starts new HTTP server on address and sends first error to channel.`).Line().
 		Func().Id(nameServeHTTP).Params(
-		Id(_ctx_).Qual(PackagePathContext, "Context"),
+		ctx_contextContext,
 		Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport+"/transport", EndpointsSetName),
 		Id("addr").Id("string"),
 		Id(_logger_).Qual(PackagePathGoKitLog, "Logger"),

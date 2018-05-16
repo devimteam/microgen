@@ -52,7 +52,7 @@ func (t *endpointsTemplate) Render(ctx context.Context) write_strategy.Renderer 
 			g.Id(endpointStructName(signature.Name)).Qual(PackagePathGoKitEndpoint, "Endpoint")
 		}
 	}).Line()
-
+	f.Add(t.serverMetrics(ctx)).Line()
 	return f
 }
 
@@ -66,4 +66,45 @@ func (t *endpointsTemplate) Prepare(ctx context.Context) error {
 
 func (t *endpointsTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
 	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+}
+
+func (t *endpointsTemplate) serverMetrics(ctx context.Context) *Statement {
+	s := &Statement{}
+	if !Tags(ctx).Has(MetricsMiddlewareTag) {
+		return s
+	}
+	const _name_ = "methodName"
+	s.Func().Id("InstrumentingEndpoints").Call(Id("endpoints").Id(EndpointsSetName), Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")).Id(EndpointsSetName).BlockFunc(func(g *Group) {
+		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
+			for _, signature := range t.info.Iface.Methods {
+				d[Id(endpointStructName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceServer").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointStructName(signature.Name)))
+			}
+		})))
+	})
+	s.Line()
+	s.Line().Func().Id("LatencyMiddleware").Params(Id("dur").Qual(PackagePathGoKitMetrics, "Histogram"), Id(_name_).String()).Qual(PackagePathGoKitEndpoint, "Middleware").Block(
+		Return().Func().Params(Id("next").Qual(PackagePathGoKitEndpoint, "Endpoint")).Qual(PackagePathGoKitEndpoint, "Endpoint").Block(
+			Id("dur").Op(":=").Id("dur").Dot("With").Call(Lit("method"), Id(_name_)),
+			Return().Func().Params(ctx_contextContext, Id("request").Interface()).Params(Id("response").Interface(), Err().Error()).Block(
+				Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
+					Id("dur").Dot("With").Call(Lit("success"), Qual(PackagePathFmt, "Sprint").Call(Err().Op("==").Nil())).
+						Dot("Observe").Call(Qual(PackagePathTime, "Since").Call(Id("begin")).Dot("Seconds").Call()),
+				).Call(Qual(PackagePathTime, "Now").Call()),
+				Return().Id("next").Call(Id(_ctx_), Id("request")),
+			),
+		),
+	)
+	s.Line()
+	s.Line().Func().Id("RequestFrequencyMiddleware").Params(Id("freq").Qual(PackagePathGoKitMetrics, "Gauge"), Id(_name_).String()).Qual(PackagePathGoKitEndpoint, "Middleware").Block(
+		Return().Func().Params(Id("next").Qual(PackagePathGoKitEndpoint, "Endpoint")).Qual(PackagePathGoKitEndpoint, "Endpoint").Block(
+			Id("freq").Op(":=").Id("freq").Dot("With").Call(Lit("method"), Id(_name_)),
+			Return().Func().Params(ctx_contextContext, Id("request").Interface()).Params(Interface(), Error()).Block(
+				Id("freq").Dot("Add").Call(Lit(1)),
+				List(Id("response"), Err()).Op(":=").Id("next").Call(Id(_ctx_), Id("request")),
+				Id("freq").Dot("Add").Call(Lit(-1)),
+				Return(Id("response"), Err()),
+			),
+		),
+	)
+	return s
 }
