@@ -12,12 +12,12 @@ const (
 )
 
 type middlewareTemplate struct {
-	Info *GenerationInfo
+	info *GenerationInfo
 }
 
 func NewMiddlewareTemplate(info *GenerationInfo) Template {
 	return &middlewareTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -33,10 +33,10 @@ func NewMiddlewareTemplate(info *GenerationInfo) Template {
 //
 func (t *middlewareTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("service")
-	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
-	f.PackageComment(t.Info.FileHeader)
+	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	f.HeaderComment(t.info.FileHeader)
 	f.Comment("Service middleware").
-		Line().Type().Id(MiddlewareTypeName).Func().Call(Qual(t.Info.SourcePackageImport, t.Info.Iface.Name)).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name)
+		Line().Type().Id(MiddlewareTypeName).Func().Call(Qual(t.info.SourcePackageImport, t.info.Iface.Name)).Qual(t.info.SourcePackageImport, t.info.Iface.Name)
 	return f
 }
 
@@ -49,5 +49,5 @@ func (middlewareTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *middlewareTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }

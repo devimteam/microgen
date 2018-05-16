@@ -21,15 +21,7 @@ const (
 )
 
 type mainTemplate struct {
-	Info *GenerationInfo
-
-	logging      bool
-	recovering   bool
-	errorLogging bool
-	grpcServer   bool
-	httpServer   bool
-	tracing      bool
-
+	Info     *GenerationInfo
 	rendered []string
 	state    WriteStrategyState
 }
@@ -42,18 +34,18 @@ func NewMainTemplate(info *GenerationInfo) Template {
 
 func (t *mainTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := &Statement{}
-	f.Line().Add(t.mainFunc())
+	f.Line().Add(t.mainFunc(ctx))
 	f.Line().Add(t.initLogger())
 	f.Line().Add(t.interruptHandler())
-	f.Line().Add(t.serveGrpc())
-	f.Line().Add(t.serveHTTP())
+	f.Line().Add(t.serveGrpc(ctx))
+	f.Line().Add(t.serveHTTP(ctx))
 
 	if t.state == AppendStrat {
 		return f
 	}
 
 	file := NewFile("main")
-	file.PackageComment(t.Info.FileHeader)
+	file.HeaderComment(t.Info.FileHeader)
 	file.PackageComment(`Microgen appends missed functions.`)
 	file.Add(f)
 
@@ -65,32 +57,15 @@ func (t *mainTemplate) DefaultPath() string {
 }
 
 func (t *mainTemplate) Prepare(ctx context.Context) error {
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
-	for _, tag := range tags {
-		switch tag {
-		case RecoverMiddlewareTag:
-			t.recovering = true
-		case LoggingMiddlewareTag:
-			t.logging = true
-		case HttpServerTag, HttpTag:
-			t.httpServer = true
-		case GrpcTag, GrpcServerTag:
-			t.grpcServer = true
-		case ErrorLoggingMiddlewareTag:
-			t.errorLogging = true
-		case TracingTag:
-			t.tracing = true
-		}
-	}
 	return nil
 }
 
 func (t *mainTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
+	if err := statFile(t.Info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
+	file, err := parsePackage(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
 	if err != nil {
 		logger.Logger.Logln(0, "can't parse", t.DefaultPath(), ":", err)
 		return write_strategy.NewNopStrategy("", ""), nil
@@ -120,14 +95,14 @@ func (t *mainTemplate) interruptHandler() *Statement {
 	return s
 }
 
-func (t *mainTemplate) mainFunc() *Statement {
+func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 	if util.IsInStringSlice(nameMain, t.rendered) {
 		return nil
 	}
 	return Func().Id(nameMain).Call().BlockFunc(func(main *Group) {
 		main.Id("logger").Op(":=").
 			Qual(PackagePathGoKitLog, "With").Call(Id(nameInitLogger).Call(Qual(PackagePathOs, "Stdout")), Lit("level"), Lit("info"))
-		if t.recovering {
+		if Tags(ctx).Has(RecoveringMiddlewareTag) {
 			main.Id("errorLogger").Op(":=").
 				Qual(PackagePathGoKitLog, "With").Call(Id(nameInitLogger).Call(Qual(PackagePathOs, "Stderr")), Lit("level"), Lit("error"))
 		}
@@ -139,23 +114,23 @@ func (t *mainTemplate) mainFunc() *Statement {
 		main.Line()
 		main.Id("service").Op(":=").Qual(t.Info.SourcePackageImport, constructorName(t.Info.Iface)).Call().
 			Comment(`Create new service.`)
-		if t.logging {
+		if Tags(ctx).Has(LoggingMiddlewareTag) {
 			main.Id("service").Op("=").
 				Qual(filepath.Join(t.Info.SourcePackageImport, "middleware"), "ServiceLogging").Call(Id("logger")).Call(Id("service")).
 				Comment(`Setup service logging.`)
 		}
-		if t.errorLogging {
+		if Tags(ctx).Has(ErrorLoggingMiddlewareTag) {
 			main.Id("service").Op("=").
 				Qual(filepath.Join(t.Info.SourcePackageImport, "middleware"), "ServiceErrorLogging").Call(Id("logger")).Call(Id("service")).
 				Comment(`Setup error logging.`)
 		}
-		if t.recovering {
+		if Tags(ctx).Has(RecoveringMiddlewareTag) {
 			main.Id("service").Op("=").
 				Qual(filepath.Join(t.Info.SourcePackageImport, "middleware"), "ServiceRecovering").Call(Id("errorLogger")).Call(Id("service")).
 				Comment(`Setup service recovering.`)
 		}
-		main.Line().Id("endpoints").Op(":=").Qual(t.Info.SourcePackageImport, "AllEndpoints").Call(t.endpointsParams())
-		if t.grpcServer {
+		main.Line().Id("endpoints").Op(":=").Qual(t.Info.SourcePackageImport, "AllEndpoints").Call(t.endpointsParams(ctx))
+		if Tags(ctx).HasAny(GrpcTag, GrpcServerTag) {
 			main.Line()
 			main.Id("grpcAddr").Op(":=").Lit(":8081")
 			main.Comment(`Start grpc server.`)
@@ -166,7 +141,7 @@ func (t *mainTemplate) mainFunc() *Statement {
 				Qual(PackagePathGoKitLog, "With").Call(Id("logger"), Lit("transport"), Lit("GRPC")),
 			)
 		}
-		if t.httpServer {
+		if Tags(ctx).HasAny(HttpTag, HttpServerTag) {
 			main.Line()
 			main.Id("httpAddr").Op(":=").Lit(":8080")
 			main.Comment(`Start http server.`)
@@ -218,8 +193,8 @@ func (t *mainTemplate) initLogger() *Statement {
 // 			logger.Log("addr", *bindAddr)
 // 			errCh <- grpcs.Serve(listener)
 // 		}
-func (t *mainTemplate) serveGrpc() *Statement {
-	if !t.grpcServer || util.IsInStringSlice(nameServeGRPC, t.rendered) {
+func (t *mainTemplate) serveGrpc(ctx context.Context) *Statement {
+	if !Tags(ctx).HasAny(GrpcTag, GrpcServerTag) || util.IsInStringSlice(nameServeGRPC, t.rendered) {
 		return nil
 	}
 	return Comment(nameServeGRPC+` starts new GRPC server on address and sends first error to channel.`).Line().
@@ -235,7 +210,7 @@ func (t *mainTemplate) serveGrpc() *Statement {
 			Return(),
 		)
 		body.Comment(`Here you can add middlewares for grpc server.`)
-		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.SourcePackageImport, "transport/grpc"), "NewGRPCServer").Call(t.newServerParams())
+		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.SourcePackageImport, "transport/grpc"), "NewGRPCServer").Call(t.newServerParams(ctx))
 		body.Id("grpcServer").Op(":=").Qual(PackagePathGoogleGRPC, "NewServer").Call()
 		body.Qual(t.Info.ProtobufPackageImport, "Register"+util.ToUpperFirst(t.Info.Iface.Name)+"Server").Call(Id("grpcServer"), Id("server"))
 		body.Id("logger").Dot("Log").Call(Lit("listen on"), Id("addr"))
@@ -243,8 +218,8 @@ func (t *mainTemplate) serveGrpc() *Statement {
 	})
 }
 
-func (t *mainTemplate) serveHTTP() *Statement {
-	if !t.httpServer || util.IsInStringSlice(nameServeHTTP, t.rendered) {
+func (t *mainTemplate) serveHTTP(ctx context.Context) *Statement {
+	if !Tags(ctx).HasAny(HttpTag, HttpServerTag) || util.IsInStringSlice(nameServeHTTP, t.rendered) {
 		return nil
 	}
 	return Comment(nameServeHTTP+` starts new HTTP server on address and sends first error to channel.`).Line().
@@ -254,7 +229,7 @@ func (t *mainTemplate) serveHTTP() *Statement {
 		Id("addr").Id("string"),
 		Id("logger").Qual(PackagePathGoKitLog, "Logger"),
 	).BlockFunc(func(body *Group) {
-		body.Id("handler").Op(":=").Qual(t.Info.SourcePackageImport+"/transport/http", "NewHTTPHandler").Call(t.newServerParams())
+		body.Id("handler").Op(":=").Qual(t.Info.SourcePackageImport+"/transport/http", "NewHTTPHandler").Call(t.newServerParams(ctx))
 		body.Id("httpServer").Op(":=").Op("&").Qual(PackagePathHttp, "Server").Values(DictFunc(func(d Dict) {
 			d[Id("Addr")] = Id("addr")
 			d[Id("Handler")] = Id("handler")
@@ -264,22 +239,22 @@ func (t *mainTemplate) serveHTTP() *Statement {
 	})
 }
 
-func (t *mainTemplate) endpointsParams() *Statement {
+func (t *mainTemplate) endpointsParams(ctx context.Context) *Statement {
 	s := &Statement{}
 	s.Id("service")
-	if t.tracing {
+	if Tags(ctx).HasAny(TracingMiddlewareTag) {
 		s.Op(",").Line().Qual(PackagePathOpenTracingGo, "NoopTracer{}").Op(",").Comment("TODO: Add tracer").Line()
 	}
 	return s
 }
 
-func (t *mainTemplate) newServerParams() *Statement {
+func (t *mainTemplate) newServerParams(ctx context.Context) *Statement {
 	s := &Statement{}
 	s.Id("endpoints")
-	if t.tracing {
+	if Tags(ctx).HasAny(TracingMiddlewareTag) {
 		s.Op(",").Line().Id("logger")
 	}
-	if t.tracing {
+	if Tags(ctx).HasAny(TracingMiddlewareTag) {
 		s.Op(",").Line().Qual(PackagePathOpenTracingGo, "NoopTracer{}").Op(",").Comment("TODO: Add tracer").Line()
 	}
 	return s

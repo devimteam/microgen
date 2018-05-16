@@ -11,12 +11,12 @@ import (
 )
 
 type endpointsClientTemplate struct {
-	Info *GenerationInfo
+	info *GenerationInfo
 }
 
 func NewEndpointsClientTemplate(info *GenerationInfo) Template {
 	return &endpointsClientTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -60,11 +60,12 @@ func NewEndpointsClientTemplate(info *GenerationInfo) Template {
 //
 func (t *endpointsClientTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transport")
-	f.PackageComment(t.Info.FileHeader)
-	if Tags(ctx).HasAny(TracingTag) {
+	f.HeaderComment(t.info.FileHeader)
+	if Tags(ctx).HasAny(TracingMiddlewareTag) {
+		f.Comment("TraceClientEndpoints is used for tracing endpoints on client side.")
 		f.Add(t.clientTracingMiddleware()).Line()
 	}
-	for _, signature := range t.Info.Iface.Methods {
+	for _, signature := range t.info.Iface.Methods {
 		f.Add(serviceEndpointMethod(ctx, signature)).Line().Line()
 	}
 	return f
@@ -79,7 +80,7 @@ func (t *endpointsClientTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *endpointsClientTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Render full endpoints method.
@@ -162,9 +163,9 @@ func firstArgName(signature *types.Function) string {
 
 func (t *endpointsClientTemplate) clientTracingMiddleware() *Statement {
 	s := &Statement{}
-	s.Func().Id("TraceServerEndpoints").Call(Id("endpoints").Id(EndpointsSetName), Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")).Id(EndpointsSetName).BlockFunc(func(g *Group) {
+	s.Func().Id("TraceClientEndpoints").Call(Id("endpoints").Id(EndpointsSetName), Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")).Id(EndpointsSetName).BlockFunc(func(g *Group) {
 		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
-			for _, signature := range t.Info.Iface.Methods {
+			for _, signature := range t.info.Iface.Methods {
 				d[Id(endpointStructName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceClient").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointStructName(signature.Name)))
 			}
 		})))

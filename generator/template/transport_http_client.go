@@ -5,18 +5,16 @@ import (
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
 type httpClientTemplate struct {
-	Info    *GenerationInfo
-	tracing bool
+	info *GenerationInfo
 }
 
 func NewHttpClientTemplate(info *GenerationInfo) Template {
 	return &httpClientTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -25,17 +23,10 @@ func (t *httpClientTemplate) DefaultPath() string {
 }
 
 func (t *httpClientTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *httpClientTemplate) Prepare(ctx context.Context) error {
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
-	for _, tag := range tags {
-		switch tag {
-		case TracingTag:
-			t.tracing = true
-		}
-	}
 	return nil
 }
 
@@ -87,37 +78,29 @@ func (t *httpClientTemplate) Prepare(ctx context.Context) error {
 //
 func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transporthttp")
-	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
-	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`DO NOT EDIT.`)
+	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	f.HeaderComment(t.info.FileHeader)
 
 	f.Func().Id("NewHTTPClient").ParamsFunc(func(p *Group) {
-		p.Id("addr").Id("string")
-		if t.tracing {
+		p.Id("u").Op("*").Qual(PackagePathUrl, "URL")
+		if Tags(ctx).Has(TracingMiddlewareTag) {
 			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 		}
-		if t.tracing {
+		if Tags(ctx).Has(TracingMiddlewareTag) {
 			p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
 		}
 		p.Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption")
 	}).Params(
-		Qual(t.Info.SourcePackageImport, t.Info.Iface.Name),
-		Error(),
+		Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName),
+		//Qual(t.info.SourcePackageImport, t.info.Iface.Name),
 	).Block(
-		t.clientBody(),
+		t.clientBody(ctx),
 	)
 
 	return f
 }
 
 // Render client body.
-//		if !strings.HasPrefix(addr, "http") {
-//			addr = "http://" + addr
-//		}
-//		u, err := url.Parse(addr)
-//		if err != nil {
-//			return nil, err
-//		}
 //		return &svc.Endpoints{
 //			EmptyReqEndpoint: http.NewClient(
 //				"POST",
@@ -142,28 +125,19 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 //			).Endpoint(),
 //		}, nil
 //
-func (t *httpClientTemplate) clientBody() *Statement {
+func (t *httpClientTemplate) clientBody(ctx context.Context) *Statement {
 	g := &Statement{}
-	g.If(
-		Op("!").Qual(PackagePathStrings, "HasPrefix").Call(Id("addr"), Lit("http")),
-	).Block(
-		Id("addr").Op("=").Lit("http://").Op("+").Id("addr"),
-	)
-	g.Line().List(Id("u"), Err()).Op(":=").Qual(PackagePathUrl, "Parse").Call(Id("addr"))
-	g.Line().If(Err().Op("!=").Nil()).Block(
-		Return(Nil(), Err()),
-	)
-	if t.tracing {
-		g.Line().Id("opts").Op("=").Append(Id("opts"), Qual(PackagePathGoKitTransportHTTP, "ClientBefore").Call(
+	if Tags(ctx).Has(TracingMiddlewareTag) {
+		g.Id("opts").Op("=").Append(Id("opts"), Qual(PackagePathGoKitTransportHTTP, "ClientBefore").Call(
 			Line().Qual(PackagePathGoKitTracing, "ContextToHTTP").Call(Id("tracer"), Id("logger")).Op(",").Line(),
 		))
 	}
-	g.Line().Return(Op("&").Qual(t.Info.SourcePackageImport, "Endpoints").Values(DictFunc(
+	g.Line().Return(Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName).Values(DictFunc(
 		func(d Dict) {
-			for _, fn := range t.Info.Iface.Methods {
+			for _, fn := range t.info.Iface.Methods {
 				method := FetchHttpMethodTag(fn.Docs)
 				client := &Statement{}
-				if t.tracing {
+				if Tags(ctx).Has(TracingMiddlewareTag) {
 					client.Qual(PackagePathGoKitTracing, "TraceClient").Call(
 						Line().Id("tracer"),
 						Line().Lit(fn.Name),
@@ -172,16 +146,15 @@ func (t *httpClientTemplate) clientBody() *Statement {
 					defer func() { client.Op(",").Line().Op(")") }() // defer in for loop is OK
 				}
 				client.Qual(PackagePathGoKitTransportHTTP, "NewClient").Call(
-					Line().Lit(method),
-					Line().Id("u"),
-					Line().Qual(pathToHttpConverter(t.Info.SourcePackageImport), encodeRequestName(fn)),
-					Line().Qual(pathToHttpConverter(t.Info.SourcePackageImport), decodeResponseName(fn)),
+					Line().Lit(method), Id("u"),
+					Line().Id(encodeRequestName(fn)),
+					Line().Id(decodeResponseName(fn)),
 					Line().Add(t.clientOpts(fn)).Op("...").Line(),
 				).Dot("Endpoint").Call()
 				d[Id(endpointStructName(fn.Name))] = client
 			}
 		},
-	)), Nil())
+	)))
 	return g
 }
 

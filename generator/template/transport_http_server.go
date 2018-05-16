@@ -21,15 +21,14 @@ const (
 )
 
 type httpServerTemplate struct {
-	Info    *GenerationInfo
+	info    *GenerationInfo
 	methods map[string]string
 	paths   map[string]string
-	tracing bool
 }
 
 func NewHttpServerTemplate(info *GenerationInfo) Template {
 	return &httpServerTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -38,22 +37,15 @@ func (t *httpServerTemplate) DefaultPath() string {
 }
 
 func (t *httpServerTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *httpServerTemplate) Prepare(ctx context.Context) error {
 	t.methods = make(map[string]string)
 	t.paths = make(map[string]string)
-	for _, fn := range t.Info.Iface.Methods {
+	for _, fn := range t.info.Iface.Methods {
 		t.methods[fn.Name] = FetchHttpMethodTag(fn.Docs)
 		t.paths[fn.Name] = buildMethodPath(fn)
-	}
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
-	for _, tag := range tags {
-		switch tag {
-		case TracingTag:
-			t.tracing = true
-		}
 	}
 	return nil
 }
@@ -122,34 +114,17 @@ func gorillaMuxUrlTemplateVarList(vars []types.Variable) []string {
 //			return handler
 //		}
 //
-
-/*
-
-func MakeHTTPHandler(s EchoService, logger log.Logger) http.Handler {
-	r := mux.NewRouter()
-
-	r.Methods("POST").Path("/echo").Handler(httptransport.NewServer(
-		makeEchoEndpoint(s),
-		decodeEchoRequest,
-		encodeResponse,
-		httptransport.ServerErrorLogger(logger),
-	))
-	return r
-}
-*/
-
 func (t *httpServerTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transporthttp")
-	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
-	f.PackageComment(t.Info.FileHeader)
-	f.PackageComment(`DO NOT EDIT.`)
+	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	f.HeaderComment(t.info.FileHeader)
 
 	f.Func().Id("NewHTTPHandler").ParamsFunc(func(p *Group) {
-		p.Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints")
-		if t.tracing {
+		p.Id("endpoints").Op("*").Qual(t.info.SourcePackageImport, "Endpoints")
+		if Tags(ctx).Has(TracingMiddlewareTag) {
 			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 		}
-		if t.tracing {
+		if Tags(ctx).Has(TracingMiddlewareTag) {
 			p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
 		}
 		p.Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ServerOption")
@@ -157,14 +132,14 @@ func (t *httpServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 		Qual(PackagePathHttp, "Handler"),
 	).BlockFunc(func(g *Group) {
 		g.Id("mux").Op(":=").Qual(PackagePathGorillaMux, "NewRouter").Call()
-		for _, fn := range t.Info.Iface.Methods {
+		for _, fn := range t.info.Iface.Methods {
 			g.Id("mux").Dot("Methods").Call(Lit(t.methods[fn.Name])).Dot("Path").
 				Call(Lit("/" + t.paths[fn.Name])).Dot("Handler").Call(
 				Line().Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
 					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
-					Line().Qual(pathToHttpConverter(t.Info.SourcePackageImport), decodeRequestName(fn)),
-					Line().Qual(pathToHttpConverter(t.Info.SourcePackageImport), encodeResponseName(fn)),
-					Line().Add(t.serverOpts(fn)).Op("...")),
+					Line().Id(decodeRequestName(fn)),
+					Line().Id(encodeResponseName(fn)),
+					Line().Add(t.serverOpts(ctx, fn)).Op("...")),
 			)
 		}
 		g.Return(Id("mux"))
@@ -173,14 +148,14 @@ func (t *httpServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 	return f
 }
 
-func (t *httpServerTemplate) serverOpts(fn *types.Function) *Statement {
+func (t *httpServerTemplate) serverOpts(ctx context.Context, fn *types.Function) *Statement {
 	s := &Statement{}
-	if t.tracing {
+	if Tags(ctx).Has(TracingMiddlewareTag) {
 		s.Op("append(")
 		defer s.Op(")")
 	}
 	s.Id("opts")
-	if t.tracing {
+	if Tags(ctx).Has(TracingMiddlewareTag) {
 		s.Op(",").Qual(PackagePathGoKitTransportHTTP, "ServerBefore").Call(
 			Line().Qual(PackagePathGoKitTracing, "HTTPToContext").Call(Id("tracer"), Lit(fn.Name), Id("logger")),
 		)

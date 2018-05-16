@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-// @microgen middleware, logging, grpc, http, recover, main, error-logging, tracing, cache
+// @microgen middleware, logging, grpc, http, recovering, main, error-logging, tracing, caching
 // @grpc-addr service.string
 // @protobuf github.com/devimteam/microgen/example/protobuf
 type StringService interface {

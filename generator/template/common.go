@@ -48,14 +48,13 @@ const (
 
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"
-	ForceTag        = "force"
 	serviceAlias    = "service"
 )
 
 const (
 	MiddlewareTag             = "middleware"
 	LoggingMiddlewareTag      = "logging"
-	RecoverMiddlewareTag      = "recover"
+	RecoveringMiddlewareTag   = "recovering"
 	HttpTag                   = "http"
 	HttpServerTag             = "http-server"
 	HttpClientTag             = "http-client"
@@ -64,15 +63,18 @@ const (
 	GrpcClientTag             = "grpc-client"
 	MainTag                   = "main"
 	ErrorLoggingMiddlewareTag = "error-logging"
-	TracingTag                = "tracing"
-	CacheTag                  = "cache"
+	TracingMiddlewareTag      = "tracing"
+	CachingMiddlewareTag      = "caching"
 	JSONRPCTag                = "json-rpc"
 	JSONRPCServerTag          = "json-rpc-server"
 	JSONRPCClientTag          = "json-rpc-client"
+	Transport                 = "transport"
+	TransportClient           = "transport-client"
+	TransportServer           = "transport-server"
 )
 
 const (
-	MicrogenExt    = "_microgen.go"
+	MicrogenExt    = ".microgen.go"
 	PathService    = "service"
 	PathTransport  = "transport"
 	PathExecutable = "cmd"
@@ -289,11 +291,20 @@ func functionDefinition(ctx context.Context, signature *types.Function) *Stateme
 func removeAlreadyExistingFunctions(existing []types.Function, generating *[]*types.Function, nameFormer func(*types.Function) string) {
 	x := (*generating)[:0]
 	for _, fn := range *generating {
-		if f := util.FindFunctionByName(existing, nameFormer(fn)); f == nil {
+		if f := findFunctionByName(existing, nameFormer(fn)); f == nil {
 			x = append(x, fn)
 		}
 	}
 	*generating = x
+}
+
+func findFunctionByName(fns []types.Function, name string) *types.Function {
+	for i := range fns {
+		if fns[i].Name == name {
+			return &fns[i]
+		}
+	}
+	return nil
 }
 
 type normalizedFunction struct {

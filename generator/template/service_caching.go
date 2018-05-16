@@ -17,14 +17,14 @@ const (
 )
 
 type cacheMiddlewareTemplate struct {
-	Info      *GenerationInfo
+	info      *GenerationInfo
 	cacheKeys map[string]string
 	caching   map[string]bool
 }
 
 func NewCacheMiddlewareTemplate(info *GenerationInfo) Template {
 	return &cacheMiddlewareTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -39,7 +39,7 @@ func (t *cacheMiddlewareTemplate) Render(ctx context.Context) write_strategy.Ren
 	f.Line()
 
 	f.Line().Func().Id(util.ToUpperFirst(cacheMiddlewareStructName)).Params(Id("cache").Id(cacheInterfaceName)).Params(Id(MiddlewareTypeName)).
-		Block(t.newCacheBody(t.Info.Iface))
+		Block(t.newCacheBody(t.info.Iface))
 
 	f.Line()
 
@@ -47,19 +47,19 @@ func (t *cacheMiddlewareTemplate) Render(ctx context.Context) write_strategy.Ren
 	f.Type().Id(cacheMiddlewareStructName).Struct(
 		Id("cache").Id(cacheInterfaceName),
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name),
+		Id(nextVarName).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
 	)
-	for _, signature := range t.Info.Iface.Methods {
+	for _, signature := range t.info.Iface.Methods {
 		f.Line()
 		f.Add(t.cacheFunc(ctx, signature)).Line()
 	}
-	for _, signature := range t.Info.Iface.Methods {
+	for _, signature := range t.info.Iface.Methods {
 		f.Add(cacheEntity(ctx, signature)).Line()
 	}
 
 	file := NewFile("service")
-	file.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
-	file.PackageComment(t.Info.FileHeader)
+	file.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	file.HeaderComment(t.info.FileHeader)
 	file.Add(f)
 	return file
 }
@@ -71,8 +71,8 @@ func (cacheMiddlewareTemplate) DefaultPath() string {
 func (t *cacheMiddlewareTemplate) Prepare(ctx context.Context) error {
 	t.cacheKeys = make(map[string]string)
 	t.caching = make(map[string]bool)
-	for _, method := range t.Info.Iface.Methods {
-		if util.HasTag(method.Docs, TagMark+CacheTag) {
+	for _, method := range t.info.Iface.Methods {
+		if util.HasTag(method.Docs, TagMark+CachingMiddlewareTag) {
 			t.caching[method.Name] = true
 			t.cacheKeys[method.Name] = `"` + method.Name + `"`
 		}
@@ -85,14 +85,14 @@ func (t *cacheMiddlewareTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *cacheMiddlewareTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *cacheMiddlewareTemplate) newCacheBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.Info.SourcePackageImport, i.Name),
+		Id(nextVarName).Qual(t.info.SourcePackageImport, i.Name),
 	).Params(
-		Qual(t.Info.SourcePackageImport, i.Name),
+		Qual(t.info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(cacheMiddlewareStructName).Values(
 			Dict{

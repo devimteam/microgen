@@ -19,14 +19,14 @@ const (
 )
 
 type loggingTemplate struct {
-	Info         *GenerationInfo
+	info         *GenerationInfo
 	ignoreParams map[string][]string
 	lenParams    map[string][]string
 }
 
 func NewLoggingTemplate(info *GenerationInfo) Template {
 	return &loggingTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -72,30 +72,30 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 //
 func (t *loggingTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("service")
-	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
-	f.PackageComment(t.Info.FileHeader)
+	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	f.HeaderComment(t.info.FileHeader)
 
 	f.Comment("LoggingMiddleware writes params, results and working time of method call to provided logger after its execution.").
 		Line().Func().Id(util.ToUpperFirst(serviceLoggingStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
-		Block(t.newLoggingBody(t.Info.Iface))
+		Block(t.newLoggingBody(t.info.Iface))
 
 	f.Line()
 
 	// Render type logger
 	f.Type().Id(serviceLoggingStructName).Struct(
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name),
+		Id(nextVarName).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
 	)
 
 	// Render functions
-	for _, signature := range t.Info.Iface.Methods {
+	for _, signature := range t.info.Iface.Methods {
 		f.Line()
 		f.Add(t.loggingFunc(ctx, signature)).Line()
 	}
-	if len(t.Info.Iface.Methods) > 0 {
+	if len(t.info.Iface.Methods) > 0 {
 		f.Type().Op("(")
 	}
-	for _, signature := range t.Info.Iface.Methods {
+	for _, signature := range t.info.Iface.Methods {
 		if params := RemoveContextIfFirst(signature.Args); t.calcParamAmount(signature.Name, params) > 0 {
 			f.Add(t.loggingEntity(ctx, "log"+requestStructName(signature), signature, params))
 		}
@@ -103,7 +103,7 @@ func (t *loggingTemplate) Render(ctx context.Context) write_strategy.Renderer {
 			f.Add(t.loggingEntity(ctx, "log"+responseStructName(signature), signature, params))
 		}
 	}
-	if len(t.Info.Iface.Methods) > 0 {
+	if len(t.info.Iface.Methods) > 0 {
 		f.Op(")")
 	}
 
@@ -117,7 +117,7 @@ func (loggingTemplate) DefaultPath() string {
 func (t *loggingTemplate) Prepare(ctx context.Context) error {
 	t.ignoreParams = make(map[string][]string)
 	t.lenParams = make(map[string][]string)
-	for _, fn := range t.Info.Iface.Methods {
+	for _, fn := range t.info.Iface.Methods {
 		t.ignoreParams[fn.Name] = util.FetchTags(fn.Docs, TagMark+logIgnoreTag)
 		t.lenParams[fn.Name] = util.FetchTags(fn.Docs, TagMark+lenTag)
 	}
@@ -125,7 +125,7 @@ func (t *loggingTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *loggingTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Render body for new logging middleware.
@@ -139,9 +139,9 @@ func (t *loggingTemplate) ChooseStrategy(ctx context.Context) (write_strategy.St
 //
 func (t *loggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.Info.SourcePackageImport, i.Name),
+		Id(nextVarName).Qual(t.info.SourcePackageImport, i.Name),
 	).Params(
-		Qual(t.Info.SourcePackageImport, i.Name),
+		Qual(t.info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(serviceLoggingStructName).Values(
 			Dict{

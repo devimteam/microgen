@@ -1,8 +1,6 @@
 package template
 
 import (
-	"path/filepath"
-
 	"context"
 
 	. "github.com/dave/jennifer/jen"
@@ -12,12 +10,12 @@ import (
 )
 
 type gRPCServerTemplate struct {
-	Info *GenerationInfo
+	info *GenerationInfo
 }
 
 func NewGRPCServerTemplate(info *GenerationInfo) Template {
 	return &gRPCServerTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -27,10 +25,6 @@ func serverStructName(iface *types.Interface) string {
 
 func privateServerStructName(iface *types.Interface) string {
 	return util.ToLower(iface.Name) + "Server"
-}
-
-func pathToConverter(servicePath string) string {
-	return filepath.Join(servicePath, "transport/converter/protobuf")
 }
 
 // Render whole grpc server file.
@@ -70,38 +64,38 @@ func pathToConverter(servicePath string) string {
 //
 func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transportgrpc")
-	f.ImportAlias(t.Info.ProtobufPackageImport, "pb")
-	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
-	f.PackageComment(t.Info.FileHeader)
+	f.ImportAlias(t.info.ProtobufPackageImport, "pb")
+	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	f.HeaderComment(t.info.FileHeader)
 	f.PackageComment(`DO NOT EDIT.`)
 
-	f.Type().Id(privateServerStructName(t.Info.Iface)).StructFunc(func(g *Group) {
-		for _, method := range t.Info.Iface.Methods {
+	f.Type().Id(privateServerStructName(t.info.Iface)).StructFunc(func(g *Group) {
+		for _, method := range t.info.Iface.Methods {
 			g.Id(util.ToLowerFirst(method.Name)).Qual(PackagePathGoKitTransportGRPC, "Handler")
 		}
 	}).Line()
 
 	f.Func().Id("NewGRPCServer").
 		ParamsFunc(func(p *Group) {
-			p.Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints")
-			if Tags(ctx).Has(TracingTag) {
+			p.Id("endpoints").Op("*").Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName)
+			if Tags(ctx).Has(TracingMiddlewareTag) {
 				p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 			}
-			if Tags(ctx).Has(TracingTag) {
+			if Tags(ctx).Has(TracingMiddlewareTag) {
 				p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
 			}
 			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ServerOption")
 		}).Params(
-		Qual(t.Info.ProtobufPackageImport, serverStructName(t.Info.Iface)),
+		Qual(t.info.ProtobufPackageImport, serverStructName(t.info.Iface)),
 	).
 		Block(
-			Return().Op("&").Id(privateServerStructName(t.Info.Iface)).Values(DictFunc(func(g Dict) {
-				for _, m := range t.Info.Iface.Methods {
+			Return().Op("&").Id(privateServerStructName(t.info.Iface)).Values(DictFunc(func(g Dict) {
+				for _, m := range t.info.Iface.Methods {
 					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
-							Line().Qual(pathToConverter(t.Info.SourcePackageImport), decodeRequestName(m)),
-							Line().Qual(pathToConverter(t.Info.SourcePackageImport), encodeResponseName(m)),
+							Line().Id(decodeRequestName(m)),
+							Line().Id(encodeResponseName(m)),
 							Line().Add(t.serverOpts(ctx, m)).Op("...").Line(),
 						)
 				}
@@ -110,9 +104,9 @@ func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 		)
 	f.Line()
 
-	for _, signature := range t.Info.Iface.Methods {
+	for _, signature := range t.info.Iface.Methods {
 		f.Line()
-		f.Add(t.grpcServerFunc(signature, t.Info.Iface)).Line()
+		f.Add(t.grpcServerFunc(signature, t.info.Iface)).Line()
 	}
 
 	return f
@@ -123,14 +117,14 @@ func (gRPCServerTemplate) DefaultPath() string {
 }
 
 func (t *gRPCServerTemplate) Prepare(ctx context.Context) error {
-	if t.Info.ProtobufPackageImport == "" {
+	if t.info.ProtobufPackageImport == "" {
 		return ErrProtobufEmpty
 	}
 	return nil
 }
 
 func (t *gRPCServerTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Render service interface method for grpc server.
@@ -168,7 +162,7 @@ func (t *gRPCServerTemplate) grpcServerReqStruct(fn *types.Function) *Statement 
 			return sp
 		}
 	}
-	return Op("*").Qual(t.Info.ProtobufPackageImport, requestStructName(fn))
+	return Op("*").Qual(t.info.ProtobufPackageImport, requestStructName(fn))
 }
 
 // Special case for empty response
@@ -187,7 +181,7 @@ func (t *gRPCServerTemplate) grpcServerRespStruct(fn *types.Function) *Statement
 			return sp
 		}
 	}
-	return Op("*").Qual(t.Info.ProtobufPackageImport, responseStructName(fn))
+	return Op("*").Qual(t.info.ProtobufPackageImport, responseStructName(fn))
 }
 
 // Render service method body for grpc server.
@@ -214,12 +208,12 @@ func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 
 func (t *gRPCServerTemplate) serverOpts(ctx context.Context, fn *types.Function) *Statement {
 	s := &Statement{}
-	if Tags(ctx).Has(TracingTag) {
+	if Tags(ctx).Has(TracingMiddlewareTag) {
 		s.Op("append(")
 		defer s.Op(")")
 	}
 	s.Id("opts")
-	if Tags(ctx).Has(TracingTag) {
+	if Tags(ctx).Has(TracingMiddlewareTag) {
 		s.Op(",").Qual(PackagePathGoKitTransportGRPC, "ServerBefore").Call(
 			Line().Qual(PackagePathGoKitTracing, "GRPCToContext").Call(Id("tracer"), Lit(fn.Name), Id("logger")),
 		)

@@ -14,34 +14,34 @@ const (
 )
 
 type recoverTemplate struct {
-	Info *GenerationInfo
+	info *GenerationInfo
 }
 
 func NewRecoverTemplate(info *GenerationInfo) Template {
 	return &recoverTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
 func (t *recoverTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("service")
-	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
-	f.PackageComment(t.Info.FileHeader)
+	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	f.HeaderComment(t.info.FileHeader)
 
 	f.Comment(util.ToUpperFirst(serviceRecoverStructName) + " recovers panics from method calls, writes to provided logger and returns the error of panic as method error.").
 		Line().Func().Id(util.ToUpperFirst(serviceRecoverStructName)).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
-		Block(t.newRecoverBody(t.Info.Iface))
+		Block(t.newRecoverBody(t.info.Iface))
 
 	f.Line()
 
 	// Render type logger
 	f.Type().Id(serviceRecoverStructName).Struct(
 		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name),
+		Id(nextVarName).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
 	)
 
 	// Render functions
-	for _, signature := range t.Info.Iface.Methods {
+	for _, signature := range t.info.Iface.Methods {
 		f.Line()
 		f.Add(t.recoverFunc(ctx, signature)).Line()
 	}
@@ -58,14 +58,14 @@ func (t *recoverTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *recoverTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *recoverTemplate) newRecoverBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.Info.SourcePackageImport, i.Name),
+		Id(nextVarName).Qual(t.info.SourcePackageImport, i.Name),
 	).Params(
-		Qual(t.Info.SourcePackageImport, i.Name),
+		Qual(t.info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(serviceRecoverStructName).Values(
 			Dict{

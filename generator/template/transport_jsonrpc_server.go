@@ -15,7 +15,7 @@ const (
 )
 
 type jsonrpcServerTemplate struct {
-	Info     *GenerationInfo
+	info     *GenerationInfo
 	prefixes map[string]string
 	suffixes map[string]string
 	tracing  bool
@@ -23,7 +23,7 @@ type jsonrpcServerTemplate struct {
 
 func NewJSONRPCServerTemplate(info *GenerationInfo) Template {
 	return &jsonrpcServerTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -32,13 +32,13 @@ func (t *jsonrpcServerTemplate) DefaultPath() string {
 }
 
 func (t *jsonrpcServerTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *jsonrpcServerTemplate) Prepare(ctx context.Context) error {
 	t.prefixes = make(map[string]string)
 	t.suffixes = make(map[string]string)
-	for _, fn := range t.Info.Iface.Methods {
+	for _, fn := range t.info.Iface.Methods {
 		if s := util.FetchTags(fn.Docs, TagMark+prefixJSONRPCAnnotationTag); len(s) > 0 {
 			t.prefixes[fn.Name] = s[0]
 		}
@@ -46,10 +46,10 @@ func (t *jsonrpcServerTemplate) Prepare(ctx context.Context) error {
 			t.suffixes[fn.Name] = s[0]
 		}
 	}
-	tags := util.FetchTags(t.Info.Iface.Docs, TagMark+MicrogenMainTag)
+	tags := util.FetchTags(t.info.Iface.Docs, TagMark+MicrogenMainTag)
 	for _, tag := range tags {
 		switch tag {
-		case TracingTag:
+		case TracingMiddlewareTag:
 			t.tracing = true
 		}
 	}
@@ -58,18 +58,18 @@ func (t *jsonrpcServerTemplate) Prepare(ctx context.Context) error {
 
 func (t *jsonrpcServerTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transportjsonrpc")
-	f.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
-	f.PackageComment(t.Info.FileHeader)
+	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	f.HeaderComment(t.info.FileHeader)
 	f.PackageComment(`DO NOT EDIT.`)
 
-	f.Type().Id(privateServerStructName(t.Info.Iface)).StructFunc(func(g *Group) {
-		for _, method := range t.Info.Iface.Methods {
+	f.Type().Id(privateServerStructName(t.info.Iface)).StructFunc(func(g *Group) {
+		for _, method := range t.info.Iface.Methods {
 			g.Id(util.ToLowerFirst(method.Name)).Qual(PackagePathHttp, "Handler")
 		}
 	}).Line()
 
 	f.Func().Id("NewJSONRPCServer").ParamsFunc(func(p *Group) {
-		p.Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport, "Endpoints")
+		p.Id("endpoints").Op("*").Qual(t.info.SourcePackageImport, "Endpoints")
 		if t.tracing {
 			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 		}
@@ -80,15 +80,15 @@ func (t *jsonrpcServerTemplate) Render(ctx context.Context) write_strategy.Rende
 	}).Params(
 		Qual(PackagePathHttp, "Handler"),
 	).Block(
-		Return().Op("&").Id(privateServerStructName(t.Info.Iface)).Values(DictFunc(func(g Dict) {
-			for _, m := range t.Info.Iface.Methods {
+		Return().Op("&").Id(privateServerStructName(t.info.Iface)).Values(DictFunc(func(g Dict) {
+			for _, m := range t.info.Iface.Methods {
 				g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportJSONRPC, "NewServer").
 					Call(
 						Line().Qual(PackagePathGoKitTransportJSONRPC, "EndpointCodecMap").Values(Dict{
 							Line().Lit(t.prefixes[m.Name] + m.Name + t.suffixes[m.Name]): Qual(PackagePathGoKitTransportJSONRPC, "EndpointCodec").Values(Dict{
 								Id("Endpoint"): Id("endpoints").Dot(endpointStructName(m.Name)),
-								Id("Decode"):   Qual(pathToConverter(t.Info.SourcePackageImport), decodeRequestName(m)),
-								Id("Encode"):   Qual(pathToConverter(t.Info.SourcePackageImport), encodeResponseName(m)),
+								Id("Decode"):   Id(decodeRequestName(m)),
+								Id("Encode"):   Id(encodeResponseName(m)),
 							}),
 						}),
 						Line().Add(t.serverOpts(m)).Op("...").Line(),

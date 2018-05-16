@@ -1,12 +1,10 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 	"strings"
-	"sync"
-
-	"context"
 
 	"github.com/devimteam/microgen/generator"
 	"github.com/devimteam/microgen/generator/template"
@@ -39,7 +37,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	info, err := util.ParseFile(*flagFileName)
+	info, err := astra.ParseFile(*flagFileName)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
@@ -67,20 +65,13 @@ func main() {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
 	}
-	var wg sync.WaitGroup
-	wg.Add(len(units))
-	for _, x := range units {
-		unit := x
-		go func() {
-			defer wg.Done()
-			err := unit.Generate(ctx)
-			if err != nil && err != generator.EmptyStrategyError {
-				lg.Logger.Logln(0, "fatal:", err)
-				os.Exit(1)
-			}
-		}()
+	for _, unit := range units {
+		err := unit.Generate(ctx)
+		if err != nil && err != generator.EmptyStrategyError {
+			lg.Logger.Logln(0, "fatal:", unit.Path(), err)
+			os.Exit(1)
+		}
 	}
-	wg.Wait()
 	lg.Logger.Logln(1, "all files successfully generated")
 }
 

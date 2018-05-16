@@ -21,7 +21,7 @@ var (
 )
 
 type gRPCEndpointConverterTemplate struct {
-	Info             *GenerationInfo
+	info             *GenerationInfo
 	requestEncoders  []*types.Function
 	requestDecoders  []*types.Function
 	responseEncoders []*types.Function
@@ -31,24 +31,24 @@ type gRPCEndpointConverterTemplate struct {
 
 func NewGRPCEndpointConverterTemplate(info *GenerationInfo) Template {
 	return &gRPCEndpointConverterTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
 func decodeRequestName(f *types.Function) string {
-	return "Decode" + f.Name + "Request"
+	return "_Decode_" + f.Name + "_Request"
 }
 
 func decodeResponseName(f *types.Function) string {
-	return "Decode" + f.Name + "Response"
+	return "_Decode_" + f.Name + "_Response"
 }
 
 func encodeRequestName(f *types.Function) string {
-	return "Encode" + f.Name + "Request"
+	return "_Encode_" + f.Name + "_Request"
 }
 
 func encodeResponseName(f *types.Function) string {
-	return "Encode" + f.Name + "Response"
+	return "_Encode_" + f.Name + "_Response"
 }
 
 // Renders converter file.
@@ -124,8 +124,9 @@ func (t *gRPCEndpointConverterTemplate) Render(ctx context.Context) write_strate
 	}
 
 	file := NewFile("transportgrpc")
-	file.PackageComment(t.Info.FileHeader)
+	file.HeaderComment(t.info.FileHeader)
 	file.PackageComment(`Please, do not change functions names!`)
+	file.ImportAlias(t.info.ProtobufPackageImport, "pb")
 	file.Add(f)
 
 	return file
@@ -241,10 +242,10 @@ func (gRPCEndpointConverterTemplate) DefaultPath() string {
 }
 
 func (t *gRPCEndpointConverterTemplate) Prepare(ctx context.Context) error {
-	if t.Info.ProtobufPackageImport == "" {
+	if t.info.ProtobufPackageImport == "" {
 		return ErrProtobufEmpty
 	}
-	for _, fn := range t.Info.Iface.Methods {
+	for _, fn := range t.info.Iface.Methods {
 		t.requestDecoders = append(t.requestDecoders, fn)
 		t.requestEncoders = append(t.requestEncoders, fn)
 		t.responseDecoders = append(t.responseDecoders, fn)
@@ -254,11 +255,11 @@ func (t *gRPCEndpointConverterTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *gRPCEndpointConverterTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); err != nil {
+	if err := statFile(t.info.AbsOutputFilePath, t.DefaultPath()); err != nil {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
+	file, err := parsePackage(filepath.Join(t.info.AbsOutputFilePath, t.DefaultPath()))
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +270,7 @@ func (t *gRPCEndpointConverterTemplate) ChooseStrategy(ctx context.Context) (wri
 	removeAlreadyExistingFunctions(file.Functions, &t.responseDecoders, decodeResponseName)
 
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 func isPointer(p types.Type) bool {
@@ -374,7 +375,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(ctx context.Context, signa
 		Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) == 1 {
-				sp := specialEndpointConverterToProto(methodParams[0], signature, requestStructName, t.Info.SourcePackageImport, fullName, shortName)
+				sp := specialEndpointConverterToProto(methodParams[0], signature, requestStructName, t.info.SourcePackageImport, fullName, shortName)
 				if sp != nil {
 					group.Add(sp)
 					return
@@ -384,14 +385,14 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(ctx context.Context, signa
 				group.If(Id(fullName).Op("==").Nil()).Block(
 					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+requestStructName(signature)))),
 				)
-				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.SourcePackageImport, requestStructName(signature)))
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.info.SourcePackageImport+"/transport", requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := golangTypeToProto(ctx, "", &field); !ok {
 						group.Add(convertCustomType(shortName, typeToProto(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodParams, requestStructName, shortName, golangTypeToProto, t.Info.ProtobufPackageImport), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodParams, requestStructName, shortName, golangTypeToProto, t.info.ProtobufPackageImport), Nil())
 		},
 	).Line()
 }
@@ -438,7 +439,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(ctx context.Context, sign
 	return Line().Func().Id(encodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) == 1 {
-				sp := specialEndpointConverterToProto(methodResults[0], signature, responseStructName, t.Info.SourcePackageImport, fullName, shortName)
+				sp := specialEndpointConverterToProto(methodResults[0], signature, responseStructName, t.info.SourcePackageImport, fullName, shortName)
 				if sp != nil {
 					group.Add(sp)
 					return
@@ -448,14 +449,14 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(ctx context.Context, sign
 				group.If(Id(fullName).Op("==").Nil()).Block(
 					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+responseStructName(signature)))),
 				)
-				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.SourcePackageImport, responseStructName(signature)))
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.info.SourcePackageImport+"/transport", responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := golangTypeToProto(ctx, "", &field); !ok {
 						group.Add(convertCustomType(shortName, typeToProto(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodResults, responseStructName, shortName, golangTypeToProto, t.Info.ProtobufPackageImport), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodResults, responseStructName, shortName, golangTypeToProto, t.info.ProtobufPackageImport), Nil())
 		},
 	).Line()
 }
@@ -477,7 +478,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(ctx context.Context, signa
 	return Line().Func().Id(decodeRequestName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodParams) == 1 {
-				sp := specialEndpointConverterFromProto(methodParams[0], signature, requestStructName, t.Info.SourcePackageImport, fullName, shortName)
+				sp := specialEndpointConverterFromProto(methodParams[0], signature, requestStructName, t.info.SourcePackageImport, fullName, shortName)
 				if sp != nil {
 					group.Add(sp)
 					return
@@ -487,14 +488,14 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(ctx context.Context, signa
 				group.If(Id(fullName).Op("==").Nil()).Block(
 					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+requestStructName(signature)))),
 				)
-				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackageImport, requestStructName(signature)))
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.info.ProtobufPackageImport, requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := protoTypeToGolang(ctx, "", &field); !ok {
 						group.Add(convertCustomType(shortName, protoToType(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodParams, requestStructName, shortName, protoTypeToGolang, t.Info.SourcePackageImport), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodParams, requestStructName, shortName, protoTypeToGolang, t.info.SourcePackageImport+"/transport"), Nil())
 		},
 	).Line()
 }
@@ -520,7 +521,7 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(ctx context.Context, sign
 	return Line().Func().Id(decodeResponseName(signature)).Call(Op("_").Qual(PackagePathContext, "Context"), Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) == 1 {
-				sp := specialEndpointConverterFromProto(methodResults[0], signature, responseStructName, t.Info.SourcePackageImport, fullName, shortName)
+				sp := specialEndpointConverterFromProto(methodResults[0], signature, responseStructName, t.info.SourcePackageImport, fullName, shortName)
 				if sp != nil {
 					group.Add(sp)
 					return
@@ -530,14 +531,14 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(ctx context.Context, sign
 				group.If(Id(fullName).Op("==").Nil()).Block(
 					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+responseStructName(signature)))),
 				)
-				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.Info.ProtobufPackageImport, responseStructName(signature)))
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.info.ProtobufPackageImport, responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := protoTypeToGolang(ctx, "", &field); !ok {
 						group.Add(convertCustomType(shortName, protoToType(field.Type, 0), &field))
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodResults, responseStructName, shortName, protoTypeToGolang, t.Info.SourcePackageImport), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodResults, responseStructName, shortName, protoTypeToGolang, t.info.SourcePackageImport+"/transport"), Nil())
 		},
 	).Line()
 }

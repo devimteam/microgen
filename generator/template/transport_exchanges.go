@@ -9,12 +9,12 @@ import (
 )
 
 type exchangeTemplate struct {
-	Info *GenerationInfo
+	info *GenerationInfo
 }
 
 func NewExchangeTemplate(info *GenerationInfo) Template {
 	return &exchangeTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -45,16 +45,16 @@ func responseStructName(signature *types.Function) string {
 //
 func (t *exchangeTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transport")
-	f.PackageComment(t.Info.FileHeader)
+	f.HeaderComment(t.info.FileHeader)
 
-	if len(t.Info.Iface.Methods) > 0 {
+	if len(t.info.Iface.Methods) > 0 {
 		f.Type().Op("(")
 	}
-	for _, signature := range t.Info.Iface.Methods {
+	for _, signature := range t.info.Iface.Methods {
 		f.Add(exchange(ctx, requestStructName(signature), RemoveContextIfFirst(signature.Args))) //.Line()
 		f.Add(exchange(ctx, responseStructName(signature), removeErrorIfLast(signature.Results))).Line()
 	}
-	if len(t.Info.Iface.Methods) > 0 {
+	if len(t.info.Iface.Methods) > 0 {
 		f.Op(")")
 	}
 
@@ -70,7 +70,7 @@ func (exchangeTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *exchangeTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Renders exchanges that represents requests and responses.

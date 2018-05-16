@@ -22,14 +22,14 @@ const (
 )
 
 type stubGRPCTypeConverterTemplate struct {
-	Info                      *GenerationInfo
+	info                      *GenerationInfo
 	alreadyRenderedConverters []string
 	state                     WriteStrategyState
 }
 
 func NewStubGRPCTypeConverterTemplate(info *GenerationInfo) Template {
 	return &stubGRPCTypeConverterTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -128,7 +128,7 @@ func converterProtoToBody(field *types.Variable) Code {
 func (t *stubGRPCTypeConverterTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := &Statement{}
 
-	for _, signature := range t.Info.Iface.Methods {
+	for _, signature := range t.info.Iface.Methods {
 		args := append(RemoveContextIfFirst(signature.Args), removeErrorIfLast(signature.Results)...)
 		for _, field := range args {
 			if _, ok := golangTypeToProto(ctx, "", &field); !ok && !util.IsInStringSlice(typeToProto(field.Type, 0), t.alreadyRenderedConverters) {
@@ -147,9 +147,9 @@ func (t *stubGRPCTypeConverterTemplate) Render(ctx context.Context) write_strate
 	}
 
 	file := NewFile("transportgrpc")
-	file.ImportAlias(t.Info.ProtobufPackageImport, "pb")
-	file.ImportAlias(t.Info.SourcePackageImport, serviceAlias)
-	file.PackageComment(t.Info.FileHeader)
+	file.ImportAlias(t.info.ProtobufPackageImport, "pb")
+	file.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	file.HeaderComment(t.info.FileHeader)
 	file.PackageComment(`It is better for you if you do not change functions names!`)
 	file.PackageComment(`This file will never be overwritten.`)
 	file.Add(f)
@@ -162,18 +162,18 @@ func (stubGRPCTypeConverterTemplate) DefaultPath() string {
 }
 
 func (t *stubGRPCTypeConverterTemplate) Prepare(ctx context.Context) error {
-	if t.Info.ProtobufPackageImport == "" {
+	if t.info.ProtobufPackageImport == "" {
 		return fmt.Errorf("protobuf package is empty")
 	}
 	return nil
 }
 
 func (t *stubGRPCTypeConverterTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	if err := util.StatFile(t.Info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
+	if err := statFile(t.info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := util.ParseFile(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
+	file, err := parsePackage(filepath.Join(t.info.AbsOutputFilePath, t.DefaultPath()))
 	if err != nil {
 		logger.Logger.Log(0, "can't parse", t.DefaultPath(), ":", err)
 		return write_strategy.NewNopStrategy("", ""), nil
@@ -184,7 +184,7 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy(ctx context.Context) (wri
 	}
 
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Render stub method for golang to protobuf converter.
@@ -222,19 +222,26 @@ func (t *stubGRPCTypeConverterTemplate) protoFieldType(ctx context.Context, fiel
 	if code := specialTypeConverter(field); code != nil {
 		return c.Add(code)
 	}
+	custom := false
 	for field != nil {
 		switch f := field.(type) {
 		case types.TImport:
 			if f.Import != nil {
-				c.Qual(t.Info.ProtobufPackageImport, "")
+				c.Qual(t.info.ProtobufPackageImport, "")
+				custom = true
 			}
 			field = f.Next
 		case types.TName:
 			protoType := f.TypeName
 			if tmp, ok := goToProtoTypesMap[f.TypeName]; ok {
 				protoType = tmp
+				custom = true
 			}
-			c.Id(protoType)
+			if !custom && !types.IsBuiltin(f) {
+				c.Qual(t.info.ProtobufPackageImport, protoType)
+			} else {
+				c.Id(protoType)
+			}
 			field = nil
 		case types.TArray:
 			if f.IsSlice {

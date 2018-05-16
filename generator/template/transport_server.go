@@ -10,12 +10,12 @@ import (
 )
 
 type endpointsServerTemplate struct {
-	Info *GenerationInfo
+	info *GenerationInfo
 }
 
 func NewEndpointsServerTemplate(info *GenerationInfo) Template {
 	return &endpointsServerTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -43,14 +43,15 @@ func NewEndpointsServerTemplate(info *GenerationInfo) Template {
 //
 func (t *endpointsServerTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transport")
-	f.PackageComment(t.Info.FileHeader)
+	f.HeaderComment(t.info.FileHeader)
 
 	f.Add(t.allEndpoints()).Line()
-	if Tags(ctx).HasAny(TracingTag) {
+	if Tags(ctx).HasAny(TracingMiddlewareTag) {
+		f.Comment("TraceServerEndpoints is used for tracing endpoints on server side.")
 		f.Add(t.serverTracingMiddleware()).Line()
 	}
-	for _, signature := range t.Info.Iface.Methods {
-		f.Add(createEndpoint(signature, t.Info)).Line().Line()
+	for _, signature := range t.info.Iface.Methods {
+		f.Add(createEndpoint(signature, t.info)).Line().Line()
 	}
 	return f
 }
@@ -64,7 +65,7 @@ func (t *endpointsServerTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *endpointsServerTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
 
 // Render new Endpoint body.
@@ -138,9 +139,9 @@ func createEndpoint(signature *types.Function, info *GenerationInfo) *Statement 
 
 func (t *endpointsServerTemplate) allEndpoints() *Statement {
 	s := &Statement{}
-	s.Func().Id("Endpoints").Call(Id("svc").Qual(t.Info.SourcePackageImport, t.Info.Iface.Name)).Id(EndpointsSetName).BlockFunc(func(g *Group) {
+	s.Func().Id("Endpoints").Call(Id("svc").Qual(t.info.SourcePackageImport, t.info.Iface.Name)).Id(EndpointsSetName).BlockFunc(func(g *Group) {
 		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
-			for _, signature := range t.Info.Iface.Methods {
+			for _, signature := range t.info.Iface.Methods {
 				d[Id(endpointStructName(signature.Name))] = Id(endpointStructName(signature.Name)).Params(Id("svc"))
 			}
 		})))
@@ -152,7 +153,7 @@ func (t *endpointsServerTemplate) serverTracingMiddleware() *Statement {
 	s := &Statement{}
 	s.Func().Id("TraceServerEndpoints").Call(Id("endpoints").Id(EndpointsSetName), Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")).Id(EndpointsSetName).BlockFunc(func(g *Group) {
 		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
-			for _, signature := range t.Info.Iface.Methods {
+			for _, signature := range t.info.Iface.Methods {
 				d[Id(endpointStructName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceServer").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointStructName(signature.Name)))
 			}
 		})))

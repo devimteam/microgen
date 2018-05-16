@@ -3,6 +3,8 @@ package template
 import (
 	"context"
 
+	"fmt"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 )
@@ -12,12 +14,12 @@ const (
 )
 
 type endpointsTemplate struct {
-	Info *GenerationInfo
+	info *GenerationInfo
 }
 
 func NewEndpointsTemplate(info *GenerationInfo) Template {
 	return &endpointsTemplate{
-		Info: info,
+		info: info,
 	}
 }
 
@@ -42,10 +44,11 @@ func endpointStructName(str string) string {
 //
 func (t *endpointsTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transport")
-	f.PackageComment(t.Info.FileHeader)
+	f.HeaderComment(t.info.FileHeader)
 
+	f.Comment(fmt.Sprintf("%s implements %s API and used for transport purposes.", EndpointsSetName, t.info.Iface.Name))
 	f.Type().Id(EndpointsSetName).StructFunc(func(g *Group) {
-		for _, signature := range t.Info.Iface.Methods {
+		for _, signature := range t.info.Iface.Methods {
 			g.Id(endpointStructName(signature.Name)).Qual(PackagePathGoKitEndpoint, "Endpoint")
 		}
 	}).Line()
@@ -62,5 +65,5 @@ func (t *endpointsTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *endpointsTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
 }
