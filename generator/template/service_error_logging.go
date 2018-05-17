@@ -4,8 +4,8 @@ import (
 	"context"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -13,7 +13,7 @@ const (
 	serviceErrorLoggingStructName = "errorLoggingMiddleware"
 )
 
-var ServiceErrorLoggingMiddlewareName = util.ToUpperFirst(serviceErrorLoggingStructName)
+var ServiceErrorLoggingMiddlewareName = mstrings.ToUpperFirst(serviceErrorLoggingStructName)
 
 type errorLoggingTemplate struct {
 	info *GenerationInfo

@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/devimteam/microgen/generator"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
 	lg "github.com/devimteam/microgen/logger"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra"
 	"github.com/vetcher/go-astra/types"
 )
@@ -84,7 +84,7 @@ func prepareContext(filename string, iface *types.Interface) (context.Context, e
 	ctx = template.WithSourcePackageImport(ctx, p)
 
 	set := template.TagsSet{}
-	genTags := util.FetchTags(iface.Docs, generator.TagMark+generator.MicrogenMainTag)
+	genTags := mstrings.FetchTags(iface.Docs, generator.TagMark+generator.MicrogenMainTag)
 	for _, tag := range genTags {
 		set.Add(tag)
 	}

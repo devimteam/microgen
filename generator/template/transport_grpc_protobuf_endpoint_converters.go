@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -151,11 +151,11 @@ Loop:
 		switch f := field.(type) {
 		case types.TImport:
 			if f.Import != nil {
-				methodName += util.ToUpperFirst(f.Import.Name)
+				methodName += mstrings.ToUpperFirst(f.Import.Name)
 			}
 			field = f.Next
 		case types.TName:
-			methodName += util.ToUpperFirst(f.TypeName)
+			methodName += mstrings.ToUpperFirst(f.TypeName)
 			field = nil
 		case types.TArray:
 			if f.IsSlice {
@@ -201,11 +201,11 @@ Loop:
 		switch f := field.(type) {
 		case types.TImport:
 			if f.Import != nil {
-				methodName += util.ToUpperFirst(f.Import.Name)
+				methodName += mstrings.ToUpperFirst(f.Import.Name)
 			}
 			field = f.Next
 		case types.TName:
-			methodName += util.ToUpperFirst(f.TypeName)
+			methodName += mstrings.ToUpperFirst(f.TypeName)
 			field = nil
 		case types.TArray:
 			if f.IsSlice {
@@ -288,13 +288,13 @@ func isPointer(p types.Type) bool {
 // Second result means can field converts to default protobuf type.
 func golangTypeToProto(ctx context.Context, structName string, field *types.Variable) (*Statement, bool) {
 	if types.IsArray(field.Type) || isPointer(field.Type) {
-		return Id(structName + util.ToUpperFirst(field.Name)), false
+		return Id(structName + mstrings.ToUpperFirst(field.Name)), false
 	} else if isDefaultProtoField(field) {
-		return Id(structName).Dot(util.ToUpperFirst(field.Name)), true
+		return Id(structName).Dot(mstrings.ToUpperFirst(field.Name)), true
 	}
 	name := types.TypeName(field.Type)
 	if name == nil {
-		return Id(structName + util.ToUpperFirst(field.Name)), false
+		return Id(structName + mstrings.ToUpperFirst(field.Name)), false
 	}
 	if newType, ok := goToProtoTypesMap[*name]; ok {
 		var newField types.Type
@@ -307,9 +307,9 @@ func golangTypeToProto(ctx context.Context, structName string, field *types.Vari
 				Import: imp,
 			}
 		}
-		return fieldType(ctx, newField, false).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
+		return fieldType(ctx, newField, false).Call(Id(structName).Dot(mstrings.ToUpperFirst(field.Name))), true
 	}
-	return Id(structName + util.ToUpperFirst(field.Name)), false
+	return Id(structName + mstrings.ToUpperFirst(field.Name)), false
 }
 
 // Renders type conversion to default golang types.
@@ -320,21 +320,21 @@ func golangTypeToProto(ctx context.Context, structName string, field *types.Vari
 // Second result means can field converts to golang type.
 func protoTypeToGolang(ctx context.Context, structName string, field *types.Variable) (*Statement, bool) {
 	if types.IsArray(field.Type) || isPointer(field.Type) {
-		return Id(structName + util.ToUpperFirst(field.Name)), false
+		return Id(structName + mstrings.ToUpperFirst(field.Name)), false
 	} else if isDefaultGolangField(field) {
-		return fieldType(ctx, field.Type, false).Call(Id(structName).Dot(util.ToUpperFirst(field.Name))), true
+		return fieldType(ctx, field.Type, false).Call(Id(structName).Dot(mstrings.ToUpperFirst(field.Name))), true
 	}
-	return Id(structName + util.ToUpperFirst(field.Name)), false
+	return Id(structName + mstrings.ToUpperFirst(field.Name)), false
 }
 
 func isDefaultProtoField(field *types.Variable) bool {
 	name := types.TypeName(field.Type)
-	return name != nil && util.IsInStringSlice(*name, defaultProtoTypes)
+	return name != nil && mstrings.IsInStringSlice(*name, defaultProtoTypes)
 }
 
 func isDefaultGolangField(field *types.Variable) bool {
 	name := types.TypeName(field.Type)
-	return name != nil && util.IsInStringSlice(*name, defaultGolangTypes)
+	return name != nil && mstrings.IsInStringSlice(*name, defaultGolangTypes)
 }
 
 // Render custom type converting and error checking
@@ -345,11 +345,11 @@ func isDefaultGolangField(field *types.Variable) bool {
 //		}
 //
 func convertCustomType(structName, converterName string, field *types.Variable) *Statement {
-	return List(Id(structName+util.ToUpperFirst(field.Name)), Err()).
+	return List(Id(structName+mstrings.ToUpperFirst(field.Name)), Err()).
 		Op(":=").
 		Add(
 			Id(converterName).Call(
-				Id(structName).Dot(util.ToUpperFirst(field.Name)),
+				Id(structName).Dot(mstrings.ToUpperFirst(field.Name)),
 			),
 		).
 		Line().If(Err().Op("!=").Nil()).Block(

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -18,7 +18,7 @@ const (
 	lenTag       = "logs-len"
 )
 
-var ServiceLoggingMiddlewareName = util.ToUpperFirst(serviceLoggingStructName)
+var ServiceLoggingMiddlewareName = mstrings.ToUpperFirst(serviceLoggingStructName)
 
 type loggingTemplate struct {
 	info         *GenerationInfo
@@ -120,8 +120,8 @@ func (t *loggingTemplate) Prepare(ctx context.Context) error {
 	t.ignoreParams = make(map[string][]string)
 	t.lenParams = make(map[string][]string)
 	for _, fn := range t.info.Iface.Methods {
-		t.ignoreParams[fn.Name] = util.FetchTags(fn.Docs, TagMark+logIgnoreTag)
-		t.lenParams[fn.Name] = util.FetchTags(fn.Docs, TagMark+lenTag)
+		t.ignoreParams[fn.Name] = mstrings.FetchTags(fn.Docs, TagMark+logIgnoreTag)
+		t.lenParams[fn.Name] = mstrings.FetchTags(fn.Docs, TagMark+lenTag)
 	}
 	return nil
 }
@@ -162,11 +162,11 @@ func (t *loggingTemplate) loggingEntity(ctx context.Context, name string, fn *ty
 		ignore := t.ignoreParams[fn.Name]
 		lenParams := t.lenParams[fn.Name]
 		for _, field := range params {
-			if !util.IsInStringSlice(field.Name, ignore) {
-				g.Id(util.ToUpperFirst(field.Name)).Add(fieldType(ctx, field.Type, false))
+			if !mstrings.IsInStringSlice(field.Name, ignore) {
+				g.Id(mstrings.ToUpperFirst(field.Name)).Add(fieldType(ctx, field.Type, false))
 			}
-			if util.IsInStringSlice(field.Name, lenParams) {
-				g.Id("Len" + util.ToUpperFirst(field.Name)).Int().Tag(map[string]string{"json": "len(" + util.ToUpperFirst(field.Name) + ")"})
+			if mstrings.IsInStringSlice(field.Name, lenParams) {
+				g.Id("Len" + mstrings.ToUpperFirst(field.Name)).Int().Tag(map[string]string{"json": "len(" + mstrings.ToUpperFirst(field.Name) + ")"})
 			}
 		}
 	})
@@ -216,7 +216,7 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 				if t.calcParamAmount(signature.Name, removeErrorIfLast(signature.Results)) > 0 {
 					g.Line().List(Lit("response"), t.logResponse(normal))
 				}
-				if !util.IsInStringSlice(nameOfLastResultError(signature), t.ignoreParams[signature.Name]) {
+				if !mstrings.IsInStringSlice(nameOfLastResultError(signature), t.ignoreParams[signature.Name]) {
 					g.Line().List(Lit(nameOfLastResultError(signature)), Id(nameOfLastResultError(&normal.Function)))
 				}
 
@@ -240,10 +240,10 @@ func (t *loggingTemplate) paramsNameAndValue(fields []types.Variable, functionNa
 		ignore := t.ignoreParams[functionName]
 		lenParams := t.lenParams[functionName]
 		for _, field := range fields {
-			if !util.IsInStringSlice(field.Name, ignore) {
+			if !mstrings.IsInStringSlice(field.Name, ignore) {
 				g.Line().List(Lit(field.Name), Id(field.Name))
 			}
-			if util.IsInStringSlice(field.Name, lenParams) {
+			if mstrings.IsInStringSlice(field.Name, lenParams) {
 				g.Line().List(Lit("len("+field.Name+")"), Len(Id(field.Name)))
 			}
 		}
@@ -255,11 +255,11 @@ func (t *loggingTemplate) fillMap(fn *types.Function, params, normal []types.Var
 		ignore := t.ignoreParams[fn.Name]
 		lenParams := t.lenParams[fn.Name]
 		for i, field := range params {
-			if !util.IsInStringSlice(field.Name, ignore) {
-				d[Id(util.ToUpperFirst(field.Name))] = Id(normal[i].Name)
+			if !mstrings.IsInStringSlice(field.Name, ignore) {
+				d[Id(mstrings.ToUpperFirst(field.Name))] = Id(normal[i].Name)
 			}
-			if util.IsInStringSlice(field.Name, lenParams) {
-				d[Id("Len"+util.ToUpperFirst(field.Name))] = Len(Id(normal[i].Name))
+			if mstrings.IsInStringSlice(field.Name, lenParams) {
+				d[Id("Len"+mstrings.ToUpperFirst(field.Name))] = Len(Id(normal[i].Name))
 			}
 		}
 	}))
@@ -286,10 +286,10 @@ func (t *loggingTemplate) calcParamAmount(name string, params []types.Variable) 
 	lenParams := t.lenParams[name]
 	paramAmount := len(params)
 	for _, field := range params {
-		if util.IsInStringSlice(field.Name, ignore) {
+		if mstrings.IsInStringSlice(field.Name, ignore) {
 			paramAmount -= 1
 		}
-		if util.IsInStringSlice(field.Name, lenParams) {
+		if mstrings.IsInStringSlice(field.Name, lenParams) {
 			paramAmount += 1
 		}
 	}

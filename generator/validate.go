@@ -2,11 +2,10 @@ package generator
 
 import (
 	"fmt"
-
 	"strings"
 
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -66,7 +65,7 @@ var insertableToUrlTypes = []string{"string", "int", "int32", "int64", "uint", "
 // We can make url variable from string, int, int32, int64, uint, uint32, uint64
 func canInsertToPath(p *types.Variable) bool {
 	name := types.TypeName(p.Type)
-	return name != nil && util.IsInStringSlice(*name, insertableToUrlTypes)
+	return name != nil && mstrings.IsInStringSlice(*name, insertableToUrlTypes)
 }
 
 func composeErrors(errs ...error) error {

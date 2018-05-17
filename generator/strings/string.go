@@ -1,4 +1,4 @@
-package util
+package strings
 
 import (
 	"strings"
@@ -39,7 +39,7 @@ func isExtendedSpace(r rune) bool {
 }
 
 var (
-	ToSnakeCase = ToSomeCaseWithSep('_', unicode.ToLower)
+	ToSnakeCase    = ToSomeCaseWithSep('_', unicode.ToLower)
 	ToURLSnakeCase = ToSomeCaseWithSep('-', unicode.ToLower)
 )
 

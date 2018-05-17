@@ -4,8 +4,8 @@ import (
 	"context"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -16,7 +16,7 @@ const (
 	cachingMiddlewareStructName = "cachingMiddleware"
 )
 
-var CachingMiddlewareName = util.ToUpperFirst(cachingMiddlewareStructName)
+var CachingMiddlewareName = mstrings.ToUpperFirst(cachingMiddlewareStructName)
 
 type cacheMiddlewareTemplate struct {
 	info      *GenerationInfo
@@ -74,11 +74,11 @@ func (t *cacheMiddlewareTemplate) Prepare(ctx context.Context) error {
 	t.cacheKeys = make(map[string]string)
 	t.caching = make(map[string]bool)
 	for _, method := range t.info.Iface.Methods {
-		if util.HasTag(method.Docs, TagMark+CachingMiddlewareTag) {
+		if mstrings.HasTag(method.Docs, TagMark+CachingMiddlewareTag) {
 			t.caching[method.Name] = true
 			t.cacheKeys[method.Name] = `"` + method.Name + `"`
 		}
-		if s := util.FetchTags(method.Docs, TagMark+cacheKeyTag); len(s) > 0 {
+		if s := mstrings.FetchTags(method.Docs, TagMark+cacheKeyTag); len(s) > 0 {
 			t.cacheKeys[method.Name] = s[0]
 			t.caching[method.Name] = true
 		}
@@ -138,7 +138,7 @@ func (t *cacheMiddlewareTemplate) cacheFuncBody(signature *types.Function, norma
 }
 
 func cacheEntityStructName(signature *types.Function) string {
-	return util.ToLowerFirst(responseStructName(signature) + "CacheEntity")
+	return mstrings.ToLowerFirst(responseStructName(signature) + "CacheEntity")
 }
 
 func cacheEntity(ctx context.Context, signature *types.Function) *Statement {

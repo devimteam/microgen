@@ -1,17 +1,15 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"context"
-
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
 	lg "github.com/devimteam/microgen/logger"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -74,7 +72,7 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 	}
 	units = append(units, stubSvc)*/
 
-	genTags := util.FetchTags(iface.Docs, TagMark+MicrogenMainTag)
+	genTags := mstrings.FetchTags(iface.Docs, TagMark+MicrogenMainTag)
 	lg.Logger.Logln(2, "Tags:", strings.Join(genTags, ", "))
 	uniqueTemplate := make(map[string]template.Template)
 	for _, tag := range genTags {

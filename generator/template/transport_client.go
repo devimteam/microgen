@@ -5,8 +5,8 @@ import (
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/strings"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -158,7 +158,7 @@ func endpointResponse(respName string, fn *types.Function) *Statement {
 
 // For custom ctx in service interface (e.g. context or ctxxx).
 func firstArgName(signature *types.Function) string {
-	return util.ToLowerFirst(signature.Args[0].Name)
+	return mstrings.ToLowerFirst(signature.Args[0].Name)
 }
 
 func (t *endpointsClientTemplate) clientTracingMiddleware() *Statement {

@@ -1,16 +1,13 @@
 package template
 
 import (
+	"context"
+	"path/filepath"
 	"strconv"
 	"strings"
 
-	"path/filepath"
-
-	"context"
-
 	. "github.com/dave/jennifer/jen"
-	strings2 "github.com/devimteam/microgen/generator/strings"
-	"github.com/devimteam/microgen/util"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -102,7 +99,7 @@ type GenerationInfo struct {
 }
 
 func structFieldName(field *types.Variable) *Statement {
-	return Id(util.ToUpperFirst(field.Name))
+	return Id(mstrings.ToUpperFirst(field.Name))
 }
 
 // Remove from function fields context if it is first in slice
@@ -157,7 +154,7 @@ func nameOfLastResultError(fn *types.Function) string {
 func structField(ctx context.Context, field *types.Variable) *Statement {
 	s := structFieldName(field)
 	s.Add(fieldType(ctx, field.Type, false))
-	s.Tag(map[string]string{"json": util.ToSnakeCase(field.Name)})
+	s.Tag(map[string]string{"json": mstrings.ToSnakeCase(field.Name)})
 	if types.IsEllipsis(field.Type) {
 		s.Comment("This field was defined with ellipsis (...).")
 	}
@@ -172,7 +169,7 @@ func funcDefinitionParams(ctx context.Context, fields []types.Variable) *Stateme
 	c := &Statement{}
 	c.ListFunc(func(g *Group) {
 		for _, field := range fields {
-			g.Id(util.ToLowerFirst(field.Name)).Add(fieldType(ctx, field.Type, true))
+			g.Id(mstrings.ToLowerFirst(field.Name)).Add(fieldType(ctx, field.Type, true))
 		}
 	})
 	return c
@@ -244,7 +241,7 @@ func interfaceType(ctx context.Context, p *types.Interface) (code []Code) {
 func dictByVariables(fields []types.Variable) Dict {
 	return DictFunc(func(d Dict) {
 		for _, field := range fields {
-			d[structFieldName(&field)] = Id(util.ToLowerFirst(field.Name))
+			d[structFieldName(&field)] = Id(mstrings.ToLowerFirst(field.Name))
 		}
 	})
 }
@@ -256,7 +253,7 @@ func dictByVariables(fields []types.Variable) Dict {
 func paramNames(fields []types.Variable) *Statement {
 	var list []Code
 	for _, field := range fields {
-		v := Id(util.ToLowerFirst(field.Name))
+		v := Id(mstrings.ToLowerFirst(field.Name))
 		if types.IsEllipsis(field.Type) {
 			v.Op("...")
 		}
@@ -277,7 +274,7 @@ func methodDefinition(ctx context.Context, obj string, signature *types.Function
 
 func methodDefinitionFull(ctx context.Context, obj string, signature *types.Function) *Statement {
 	return Func().
-		Params(Id(strings2.LastWordFromName(obj)).Id(obj)).
+		Params(Id(mstrings.LastWordFromName(obj)).Id(obj)).
 		Add(functionDefinition(ctx, signature))
 }
 
@@ -362,13 +359,13 @@ func dictByNormalVariables(fields []types.Variable, normals []types.Variable) Di
 	}
 	return DictFunc(func(d Dict) {
 		for i, field := range fields {
-			d[structFieldName(&field)] = Id(util.ToLowerFirst(normals[i].Name))
+			d[structFieldName(&field)] = Id(mstrings.ToLowerFirst(normals[i].Name))
 		}
 	})
 }
 
 func rec(name string) string {
-	return util.LastUpperOrFirst(name)
+	return mstrings.LastUpperOrFirst(name)
 }
 
 type Rendered struct {
@@ -380,7 +377,7 @@ func (r *Rendered) Add(s string) {
 }
 
 func (r *Rendered) Contain(s string) bool {
-	return util.IsInStringSlice(s, r.slice)
+	return mstrings.IsInStringSlice(s, r.slice)
 }
 
 func (r *Rendered) NotContain(s string) bool {

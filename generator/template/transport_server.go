@@ -4,8 +4,8 @@ import (
 	"context"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -99,7 +99,7 @@ func createEndpointBody(signature *normalizedFunction) *Statement {
 			CallFunc(func(g *Group) {
 				g.Add(Id(firstArgName(&signature.Function)))
 				for _, field := range methodParams {
-					v := Dot(util.ToUpperFirst(field.Name))
+					v := Dot(mstrings.ToUpperFirst(field.Name))
 					if types.IsEllipsis(field.Type) {
 						v.Op("...")
 					}

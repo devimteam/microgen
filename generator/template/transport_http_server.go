@@ -9,7 +9,6 @@ import (
 	. "github.com/dave/jennifer/jen"
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -51,7 +50,7 @@ func (t *httpServerTemplate) Prepare(ctx context.Context) error {
 }
 
 func FetchHttpMethodTag(rawString []string) string {
-	tags := util.FetchTags(rawString, TagMark+HttpMethodTag)
+	tags := mstrings.FetchTags(rawString, TagMark+HttpMethodTag)
 	if len(tags) == 1 {
 		return strings.ToTitle(tags[0])
 	}
@@ -67,7 +66,7 @@ func buildMethodPath(fn *types.Function) string {
 }
 
 func buildDefaultMethodPath(fn *types.Function) string {
-	edges := []string{util.ToURLSnakeCase(fn.Name)} // parts of full path
+	edges := []string{mstrings.ToURLSnakeCase(fn.Name)} // parts of full path
 	if FetchHttpMethodTag(fn.Docs) == "GET" {
 		edges = append(edges, gorillaMuxUrlTemplateVarList(RemoveContextIfFirst(fn.Args))...)
 	}
@@ -77,7 +76,7 @@ func buildDefaultMethodPath(fn *types.Function) string {
 func gorillaMuxUrlTemplateVarList(vars []types.Variable) []string {
 	var list []string
 	for i := range vars {
-		list = append(list, "{"+util.ToURLSnakeCase(vars[i].Name)+"}")
+		list = append(list, "{"+mstrings.ToURLSnakeCase(vars[i].Name)+"}")
 	}
 	return list
 }

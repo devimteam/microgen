@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -32,7 +32,7 @@ func (t *jsonrpcClientTemplate) ChooseStrategy(ctx context.Context) (write_strat
 }
 
 func (t *jsonrpcClientTemplate) Prepare(ctx context.Context) error {
-	tags := util.FetchTags(t.info.Iface.Docs, TagMark+MicrogenMainTag)
+	tags := mstrings.FetchTags(t.info.Iface.Docs, TagMark+MicrogenMainTag)
 	for _, tag := range tags {
 		switch tag {
 		case TracingMiddlewareTag:
@@ -42,10 +42,10 @@ func (t *jsonrpcClientTemplate) Prepare(ctx context.Context) error {
 	t.prefixes = make(map[string]string)
 	t.suffixes = make(map[string]string)
 	for _, fn := range t.info.Iface.Methods {
-		if s := util.FetchTags(fn.Docs, TagMark+prefixJSONRPCAnnotationTag); len(s) > 0 {
+		if s := mstrings.FetchTags(fn.Docs, TagMark+prefixJSONRPCAnnotationTag); len(s) > 0 {
 			t.prefixes[fn.Name] = s[0]
 		}
-		if s := util.FetchTags(fn.Docs, TagMark+suffixJSONRPCAnnotationTag); len(s) > 0 {
+		if s := mstrings.FetchTags(fn.Docs, TagMark+suffixJSONRPCAnnotationTag); len(s) > 0 {
 			t.suffixes[fn.Name] = s[0]
 		}
 	}

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -24,7 +24,7 @@ func serverStructName(iface *types.Interface) string {
 }
 
 func privateServerStructName(iface *types.Interface) string {
-	return util.ToLower(iface.Name) + "Server"
+	return mstrings.ToLower(iface.Name) + "Server"
 }
 
 // Render whole grpc server file.
@@ -71,7 +71,7 @@ func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 
 	f.Type().Id(privateServerStructName(t.info.Iface)).StructFunc(func(g *Group) {
 		for _, method := range t.info.Iface.Methods {
-			g.Id(util.ToLowerFirst(method.Name)).Qual(PackagePathGoKitTransportGRPC, "Handler")
+			g.Id(mstrings.ToLowerFirst(method.Name)).Qual(PackagePathGoKitTransportGRPC, "Handler")
 		}
 	}).Line()
 
@@ -91,7 +91,7 @@ func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 		Block(
 			Return().Op("&").Id(privateServerStructName(t.info.Iface)).Values(DictFunc(func(g Dict) {
 				for _, m := range t.info.Iface.Methods {
-					g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
+					g[(&Statement{}).Id(mstrings.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
 							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
 							Line().Id(decodeRequestName(m)),
@@ -196,7 +196,7 @@ func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 	return func(g *Group) {
 		g.List(Id("_"), Id("resp"), Err()).
 			Op(":=").
-			Id(rec(privateServerStructName(i))).Dot(util.ToLowerFirst(signature.Name)).Dot("ServeGRPC").Call(Id("ctx"), Id("req"))
+			Id(rec(privateServerStructName(i))).Dot(mstrings.ToLowerFirst(signature.Name)).Dot("ServeGRPC").Call(Id("ctx"), Id("req"))
 
 		g.If(Err().Op("!=").Nil()).Block(
 			Return().List(Nil(), Err()),

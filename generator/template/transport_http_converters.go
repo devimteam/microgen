@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -98,7 +98,7 @@ func (t *httpConverterTemplate) Prepare(ctx context.Context) error {
 //			if err := json.NewEncoder(&buf).Encode(request); err != nil {
 //				return err
 //			}
-//			r.Body = ioutil.NopCloser(&buf)
+//			r.Body = iomstrings.NopCloser(&buf)
 //			return nil
 //		}
 //
@@ -336,7 +336,7 @@ func (t *httpConverterTemplate) encodeHTTPRequest(fn *types.Function) *Statement
 
 func (t *httpConverterTemplate) encodeHTTPRequestBody(fn *types.Function) *Statement {
 	s := &Statement{}
-	pathVars := Lit(util.ToURLSnakeCase(fn.Name))
+	pathVars := Lit(mstrings.ToURLSnakeCase(fn.Name))
 	if FetchHttpMethodTag(fn.Docs) == "GET" {
 		s.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.info.OutputPackageImport+"/transport", requestStructName(fn))).Line()
 		pathVars.Add(t.pathConverters(fn))

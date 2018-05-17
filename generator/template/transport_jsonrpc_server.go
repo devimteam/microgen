@@ -4,8 +4,8 @@ import (
 	"context"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -39,14 +39,14 @@ func (t *jsonrpcServerTemplate) Prepare(ctx context.Context) error {
 	t.prefixes = make(map[string]string)
 	t.suffixes = make(map[string]string)
 	for _, fn := range t.info.Iface.Methods {
-		if s := util.FetchTags(fn.Docs, TagMark+prefixJSONRPCAnnotationTag); len(s) > 0 {
+		if s := mstrings.FetchTags(fn.Docs, TagMark+prefixJSONRPCAnnotationTag); len(s) > 0 {
 			t.prefixes[fn.Name] = s[0]
 		}
-		if s := util.FetchTags(fn.Docs, TagMark+suffixJSONRPCAnnotationTag); len(s) > 0 {
+		if s := mstrings.FetchTags(fn.Docs, TagMark+suffixJSONRPCAnnotationTag); len(s) > 0 {
 			t.suffixes[fn.Name] = s[0]
 		}
 	}
-	tags := util.FetchTags(t.info.Iface.Docs, TagMark+MicrogenMainTag)
+	tags := mstrings.FetchTags(t.info.Iface.Docs, TagMark+MicrogenMainTag)
 	for _, tag := range tags {
 		switch tag {
 		case TracingMiddlewareTag:
@@ -64,7 +64,7 @@ func (t *jsonrpcServerTemplate) Render(ctx context.Context) write_strategy.Rende
 
 	f.Type().Id(privateServerStructName(t.info.Iface)).StructFunc(func(g *Group) {
 		for _, method := range t.info.Iface.Methods {
-			g.Id(util.ToLowerFirst(method.Name)).Qual(PackagePathHttp, "Handler")
+			g.Id(mstrings.ToLowerFirst(method.Name)).Qual(PackagePathHttp, "Handler")
 		}
 	}).Line()
 
@@ -82,7 +82,7 @@ func (t *jsonrpcServerTemplate) Render(ctx context.Context) write_strategy.Rende
 	).Block(
 		Return().Op("&").Id(privateServerStructName(t.info.Iface)).Values(DictFunc(func(g Dict) {
 			for _, m := range t.info.Iface.Methods {
-				g[(&Statement{}).Id(util.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportJSONRPC, "NewServer").
+				g[(&Statement{}).Id(mstrings.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportJSONRPC, "NewServer").
 					Call(
 						Line().Qual(PackagePathGoKitTransportJSONRPC, "EndpointCodecMap").Values(Dict{
 							Line().Lit(t.prefixes[m.Name] + m.Name + t.suffixes[m.Name]): Qual(PackagePathGoKitTransportJSONRPC, "EndpointCodec").Values(Dict{

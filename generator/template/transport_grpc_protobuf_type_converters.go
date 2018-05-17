@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/logger"
-	"github.com/devimteam/microgen/util"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -62,25 +62,25 @@ func converterToProtoBody(field *types.Variable) Code {
 	s := &Statement{}
 	switch typeToProto(field.Type, 0) {
 	case "ErrorToProto":
-		s.If(Id(util.ToLowerFirst(field.Name))).Op("==").Nil().Block(
+		s.If(Id(mstrings.ToLowerFirst(field.Name))).Op("==").Nil().Block(
 			Return().List(Lit(""), Nil()),
 		).Line()
-		s.Return().List(Id(util.ToLowerFirst(field.Name)).Dot("Error").Call(), Nil())
+		s.Return().List(Id(mstrings.ToLowerFirst(field.Name)).Dot("Error").Call(), Nil())
 	case "ByteListToProto", "ListByteToProto":
-		s.Return().List(Id(util.ToLowerFirst(field.Name)), Nil())
+		s.Return().List(Id(mstrings.ToLowerFirst(field.Name)), Nil())
 	case "TimeTimeToProto":
 		s.Return().Qual(GolangProtobufPtypes, "TimestampProto").Call(Id(field.Name))
 	case "ListStringToProto", "SliceStringToProto":
-		s.Return().List(Id(util.ToLowerFirst(field.Name)), Nil())
+		s.Return().List(Id(mstrings.ToLowerFirst(field.Name)), Nil())
 	//	if str == "" {
 	//		return nil
 	//	}
 	//	return &wrappers.StringValue{Value: str}
 	case "PtrStringToProto":
-		s.If(Id(util.ToLowerFirst(field.Name)).Op("==").Nil()).Block(
+		s.If(Id(mstrings.ToLowerFirst(field.Name)).Op("==").Nil()).Block(
 			Return().List(Nil(), Nil()),
 		)
-		s.Line().Return().List(Op("&").Qual(GolangProtobufWrappers, "StringValue").Block(Dict{Id("Value"): Op("*").Id(util.ToLowerFirst(field.Name)).Op(",")}), Nil())
+		s.Line().Return().List(Op("&").Qual(GolangProtobufWrappers, "StringValue").Block(Dict{Id("Value"): Op("*").Id(mstrings.ToLowerFirst(field.Name)).Op(",")}), Nil())
 	default:
 		s.Panic(Lit("function not provided")).Comment("// TODO: provide converter")
 	}
@@ -91,21 +91,21 @@ func converterProtoToBody(field *types.Variable) Code {
 	s := &Statement{}
 	switch protoToType(field.Type, 0) {
 	case "ProtoToError":
-		s.If().Id("proto" + util.ToUpperFirst(field.Name)).Op("==").Lit("").Block(
+		s.If().Id("proto" + mstrings.ToUpperFirst(field.Name)).Op("==").Lit("").Block(
 			Return().List(Nil(), Nil()),
 		).Line()
-		s.Return().List(Qual("errors", "New").Call(Id("proto"+util.ToUpperFirst(field.Name))), Nil())
+		s.Return().List(Qual("errors", "New").Call(Id("proto"+mstrings.ToUpperFirst(field.Name))), Nil())
 	case "ProtoToByteList", "ProtoToListByte":
-		s.Return().List(Id("proto"+util.ToUpperFirst(field.Name)), Nil())
+		s.Return().List(Id("proto"+mstrings.ToUpperFirst(field.Name)), Nil())
 	case "ProtoToTimeTime":
-		s.Return().Qual(GolangProtobufPtypes, "Timestamp").Call(Id("proto" + util.ToUpperFirst(field.Name)))
+		s.Return().Qual(GolangProtobufPtypes, "Timestamp").Call(Id("proto" + mstrings.ToUpperFirst(field.Name)))
 	case "ProtoToListString", "ProtoToSliceString":
-		s.Return().List(Id("proto"+util.ToUpperFirst(field.Name)), Nil())
+		s.Return().List(Id("proto"+mstrings.ToUpperFirst(field.Name)), Nil())
 	case "ProtoToPtrString":
-		s.If(Id("proto" + util.ToUpperFirst(field.Name)).Op("==").Nil()).Block(
+		s.If(Id("proto" + mstrings.ToUpperFirst(field.Name)).Op("==").Nil()).Block(
 			Return().List(Nil(), Nil()),
 		)
-		s.Line().Return().List(Op("&").Id("proto"+util.ToUpperFirst(field.Name)).Dot("Value"), Nil())
+		s.Line().Return().List(Op("&").Id("proto"+mstrings.ToUpperFirst(field.Name)).Dot("Value"), Nil())
 	default:
 		s.Panic(Lit("function not provided")).Comment("// TODO: provide converter")
 	}
@@ -131,11 +131,11 @@ func (t *stubGRPCTypeConverterTemplate) Render(ctx context.Context) write_strate
 	for _, signature := range t.info.Iface.Methods {
 		args := append(RemoveContextIfFirst(signature.Args), removeErrorIfLast(signature.Results)...)
 		for _, field := range args {
-			if _, ok := golangTypeToProto(ctx, "", &field); !ok && !util.IsInStringSlice(typeToProto(field.Type, 0), t.alreadyRenderedConverters) {
+			if _, ok := golangTypeToProto(ctx, "", &field); !ok && !mstrings.IsInStringSlice(typeToProto(field.Type, 0), t.alreadyRenderedConverters) {
 				f.Line().Add(t.stubConverterToProto(ctx, &field)).Line()
 				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, typeToProto(field.Type, 0))
 			}
-			if _, ok := protoTypeToGolang(ctx, "", &field); !ok && !util.IsInStringSlice(protoToType(field.Type, 0), t.alreadyRenderedConverters) {
+			if _, ok := protoTypeToGolang(ctx, "", &field); !ok && !mstrings.IsInStringSlice(protoToType(field.Type, 0), t.alreadyRenderedConverters) {
 				f.Line().Add(t.stubConverterProtoTo(ctx, &field)).Line()
 				t.alreadyRenderedConverters = append(t.alreadyRenderedConverters, protoToType(field.Type, 0))
 			}
@@ -195,7 +195,7 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy(ctx context.Context) (wri
 //
 func (t *stubGRPCTypeConverterTemplate) stubConverterToProto(ctx context.Context, field *types.Variable) *Statement {
 	return Func().Id(typeToProto(field.Type, 0)).
-		Params(Id(util.ToLowerFirst(field.Name)).Add(fieldType(ctx, field.Type, false))).
+		Params(Id(mstrings.ToLowerFirst(field.Name)).Add(fieldType(ctx, field.Type, false))).
 		Params(Add(t.protoFieldType(ctx, field.Type)), Error()).
 		Block(converterToProtoBody(field))
 }
@@ -208,7 +208,7 @@ func (t *stubGRPCTypeConverterTemplate) stubConverterToProto(ctx context.Context
 //
 func (t *stubGRPCTypeConverterTemplate) stubConverterProtoTo(ctx context.Context, field *types.Variable) *Statement {
 	return Func().Id(protoToType(field.Type, 0)).
-		Params(Id("proto"+util.ToUpperFirst(field.Name)).Add(t.protoFieldType(ctx, field.Type))).
+		Params(Id("proto"+mstrings.ToUpperFirst(field.Name)).Add(t.protoFieldType(ctx, field.Type))).
 		Params(Add(fieldType(ctx, field.Type, false)), Error()).
 		Block(converterProtoToBody(field))
 }

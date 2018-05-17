@@ -7,9 +7,9 @@ import (
 	"context"
 
 	. "github.com/dave/jennifer/jen"
+	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/devimteam/microgen/logger"
-	"github.com/devimteam/microgen/util"
 )
 
 const (
@@ -59,7 +59,7 @@ func (t *mainTemplate) Render(ctx context.Context) write_strategy.Renderer {
 }
 
 func (t *mainTemplate) DefaultPath() string {
-	return "./cmd/" + util.ToSnakeCase(t.Info.Iface.Name) + "/main.go"
+	return "./cmd/" + mstrings.ToSnakeCase(t.Info.Iface.Name) + "/main.go"
 }
 
 func (t *mainTemplate) Prepare(ctx context.Context) error {
@@ -84,7 +84,7 @@ func (t *mainTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strat
 }
 
 func (t *mainTemplate) interruptHandler() *Statement {
-	if util.IsInStringSlice(nameInterruptHandler, t.rendered) {
+	if mstrings.IsInStringSlice(nameInterruptHandler, t.rendered) {
 		return nil
 	}
 	s := &Statement{}
@@ -107,7 +107,7 @@ func (t *mainTemplate) interruptHandler() *Statement {
 }
 
 func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
-	if util.IsInStringSlice(nameMain, t.rendered) {
+	if mstrings.IsInStringSlice(nameMain, t.rendered) {
 		return nil
 	}
 	return Func().Id(nameMain).Call().BlockFunc(func(main *Group) {
@@ -201,7 +201,7 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 //			return logger
 //		}
 func (t *mainTemplate) initLogger() *Statement {
-	if util.IsInStringSlice(nameInitLogger, t.rendered) {
+	if mstrings.IsInStringSlice(nameInitLogger, t.rendered) {
 		return nil
 	}
 	return Comment(nameInitLogger + ` initialize go-kit JSON logger with timestamp and caller.`).Line().
@@ -230,7 +230,7 @@ func (t *mainTemplate) initLogger() *Statement {
 // 			errCh <- grpcs.Serve(listener)
 // 		}
 func (t *mainTemplate) serveGrpc(ctx context.Context) *Statement {
-	if !Tags(ctx).HasAny(GrpcTag, GrpcServerTag) || util.IsInStringSlice(nameServeGRPC, t.rendered) {
+	if !Tags(ctx).HasAny(GrpcTag, GrpcServerTag) || mstrings.IsInStringSlice(nameServeGRPC, t.rendered) {
 		return nil
 	}
 	return Comment(nameServeGRPC+` starts new GRPC server on address and sends first error to channel.`).Line().
@@ -249,7 +249,7 @@ func (t *mainTemplate) serveGrpc(ctx context.Context) *Statement {
 		body.Comment(`Here you can add middlewares for grpc server.`)
 		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.SourcePackageImport, "transport/grpc"), "NewGRPCServer").Call(t.newServerParams(ctx))
 		body.Id("grpcServer").Op(":=").Qual(PackagePathGoogleGRPC, "NewServer").Call()
-		body.Qual(t.Info.ProtobufPackageImport, "Register"+util.ToUpperFirst(t.Info.Iface.Name)+"Server").Call(Id("grpcServer"), Id("server"))
+		body.Qual(t.Info.ProtobufPackageImport, "Register"+mstrings.ToUpperFirst(t.Info.Iface.Name)+"Server").Call(Id("grpcServer"), Id("server"))
 		body.Id(_logger_).Dot("Log").Call(Lit("listen on"), Id("addr"))
 		body.Id("ch").Op(":=").Make(Id("chan error"))
 		body.Go().Func().Call().Block(
@@ -266,7 +266,7 @@ func (t *mainTemplate) serveGrpc(ctx context.Context) *Statement {
 }
 
 func (t *mainTemplate) serveHTTP(ctx context.Context) *Statement {
-	if !Tags(ctx).HasAny(HttpTag, HttpServerTag) || util.IsInStringSlice(nameServeHTTP, t.rendered) {
+	if !Tags(ctx).HasAny(HttpTag, HttpServerTag) || mstrings.IsInStringSlice(nameServeHTTP, t.rendered) {
 		return nil
 	}
 	return Comment(nameServeHTTP+` starts new HTTP server on address and sends first error to channel.`).Line().
