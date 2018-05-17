@@ -88,8 +88,8 @@ func gorillaMuxUrlTemplateVarList(vars []types.Variable) []string {
 //		package transporthttp
 //
 //		import (
-//			svc "github.com/devimteam/microgen/example/svc"
-//			http2 "github.com/devimteam/microgen/example/svc/transport/converter/http"
+//			svc "github.com/devimteam/microgen/examples/svc"
+//			http2 "github.com/devimteam/microgen/examples/svc/transport/converter/http"
 //			http "github.com/go-kit/kit/transport/http"
 //			http1 "net/http"
 //		)

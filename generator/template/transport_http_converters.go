@@ -88,7 +88,7 @@ func (t *httpConverterTemplate) Prepare(ctx context.Context) error {
 //			bytes "bytes"
 //			context "context"
 //			json "encoding/json"
-//			svc "github.com/devimteam/microgen/example/svc"
+//			svc "github.com/devimteam/microgen/examples/svc"
 //			ioutil "io/ioutil"
 //			http "net/http"
 //		)

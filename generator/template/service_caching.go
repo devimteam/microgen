@@ -114,7 +114,7 @@ func (t *cacheMiddlewareTemplate) cacheFunc(ctx context.Context, signature *type
 func (t *cacheMiddlewareTemplate) cacheFuncBody(signature *types.Function, normalized *types.Function) func(g *Group) {
 	return func(g *Group) {
 		if t.caching[signature.Name] {
-			g.List(Id("value"), Id("e")).Op(":=").Id(CachingMiddlewareName).Dot("cache").Dot("Get").Call(Id(t.cacheKeys[signature.Name]))
+			g.List(Id("value"), Id("e")).Op(":=").Id(rec(cachingMiddlewareStructName)).Dot("cache").Dot("Get").Call(Id(t.cacheKeys[signature.Name]))
 			g.If(Id("e").Op("==").Nil()).Block(
 				ReturnFunc(func(group *Group) {
 					for _, field := range removeErrorIfLast(signature.Results) {
@@ -124,7 +124,7 @@ func (t *cacheMiddlewareTemplate) cacheFuncBody(signature *types.Function, norma
 				}),
 			)
 			g.Defer().Func().Params().Block(
-				Id(CachingMiddlewareName).Dot("cache").Dot("Set").Call(
+				Id(rec(cachingMiddlewareStructName)).Dot("cache").Dot("Set").Call(
 					Id(t.cacheKeys[signature.Name]),
 					Op("&").Id(cacheEntityStructName(normalized)).Values(dictByNormalVariables(
 						removeErrorIfLast(signature.Results),
@@ -133,7 +133,7 @@ func (t *cacheMiddlewareTemplate) cacheFuncBody(signature *types.Function, norma
 				),
 			).Call()
 		}
-		g.Return().Id(CachingMiddlewareName).Dot(nextVarName).Dot(signature.Name).Call(paramNames(normalized.Args))
+		g.Return().Id(rec(cachingMiddlewareStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(normalized.Args))
 	}
 }
 

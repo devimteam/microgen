@@ -36,8 +36,8 @@ func (t *httpClientTemplate) Prepare(ctx context.Context) error {
 //		package transporthttp
 //
 //		import (
-//			svc "github.com/devimteam/microgen/example/svc"
-//			http1 "github.com/devimteam/microgen/example/svc/transport/converter/http"
+//			svc "github.com/devimteam/microgen/examples/svc"
+//			http1 "github.com/devimteam/microgen/examples/svc/transport/converter/http"
 //			http "github.com/go-kit/kit/transport/http"
 //			url "net/url"
 //			strings "strings"

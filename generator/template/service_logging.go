@@ -40,7 +40,7 @@ func NewLoggingTemplate(info *GenerationInfo) Template {
 //
 //		import (
 //			context "context"
-//			svc "github.com/devimteam/microgen/example/svc"
+//			svc "github.com/devimteam/microgen/examples/svc"
 //			log "github.com/go-kit/kit/log"
 //			time "time"
 //		)
@@ -206,7 +206,7 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 	normal := normalizeFunction(signature)
 	return func(g *Group) {
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
-			Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").CallFunc(func(g *Group) {
+			Id(rec(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").CallFunc(func(g *Group) {
 				g.Line().Lit("method")
 				g.Lit(signature.Name)
 
@@ -225,7 +225,7 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 			}),
 		).Call(Qual(PackagePathTime, "Now").Call())
 
-		g.Return().Id(util.LastUpperOrFirst(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(normal.Args))
+		g.Return().Id(rec(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(normal.Args))
 	}
 }
 

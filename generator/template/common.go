@@ -270,7 +270,7 @@ func paramNames(fields []types.Variable) *Statement {
 //
 func methodDefinition(ctx context.Context, obj string, signature *types.Function) *Statement {
 	return Func().
-		Params(Id(util.LastUpperOrFirst(obj)). /*.Op("*")*/ Id(obj)).
+		Params(Id(rec(obj)). /*.Op("*")*/ Id(obj)).
 		Add(functionDefinition(ctx, signature))
 }
 
@@ -364,6 +364,10 @@ func dictByNormalVariables(fields []types.Variable, normals []types.Variable) Di
 			d[structFieldName(&field)] = Id(util.ToLowerFirst(normals[i].Name))
 		}
 	})
+}
+
+func rec(name string) string {
+	return util.LastUpperOrFirst(name)
 }
 
 type Rendered struct {

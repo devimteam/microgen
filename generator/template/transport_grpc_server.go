@@ -34,8 +34,8 @@ func privateServerStructName(iface *types.Interface) string {
 //		package transportgrpc
 //
 //		import (
-//			svc "github.com/devimteam/microgen/example/svc"
-//			protobuf "github.com/devimteam/microgen/example/svc/transport/converter/protobuf"
+//			svc "github.com/devimteam/microgen/examples/svc"
+//			protobuf "github.com/devimteam/microgen/examples/svc/transport/converter/protobuf"
 //			grpc "github.com/go-kit/kit/transport/grpc"
 //			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //			context "golang.org/x/net/context"
@@ -139,7 +139,7 @@ func (t *gRPCServerTemplate) ChooseStrategy(ctx context.Context) (write_strategy
 //
 func (t *gRPCServerTemplate) grpcServerFunc(signature *types.Function, i *types.Interface) *Statement {
 	return Func().
-		Params(Id(util.LastUpperOrFirst(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
+		Params(Id(rec(privateServerStructName(i))).Op("*").Id(privateServerStructName(i))).
 		Id(signature.Name).
 		Call(Id("ctx").Qual(PackagePathNetContext, "Context"), Id("req").Add(t.grpcServerReqStruct(signature))).
 		Params(t.grpcServerRespStruct(signature), Error()).
@@ -196,7 +196,7 @@ func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 	return func(g *Group) {
 		g.List(Id("_"), Id("resp"), Err()).
 			Op(":=").
-			Id(util.LastUpperOrFirst(privateServerStructName(i))).Dot(util.ToLowerFirst(signature.Name)).Dot("ServeGRPC").Call(Id("ctx"), Id("req"))
+			Id(rec(privateServerStructName(i))).Dot(util.ToLowerFirst(signature.Name)).Dot("ServeGRPC").Call(Id("ctx"), Id("req"))
 
 		g.If(Err().Op("!=").Nil()).Block(
 			Return().List(Nil(), Err()),

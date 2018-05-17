@@ -87,7 +87,7 @@ func (t *recoverTemplate) recoverFuncBody(signature *types.Function) func(g *Gro
 	return func(g *Group) {
 		g.Defer().Func().Params().Block(
 			If(Id("r").Op(":=").Recover(), Id("r").Op("!=").Nil()).Block(
-				Id(util.LastUpperOrFirst(serviceRecoveringStructName)).Dot(loggerVarName).Dot("Log").Call(
+				Id(rec(serviceRecoveringStructName)).Dot(loggerVarName).Dot("Log").Call(
 					Lit("method"), Lit(signature.Name),
 					Lit("message"), Id("r"),
 				),
@@ -95,6 +95,6 @@ func (t *recoverTemplate) recoverFuncBody(signature *types.Function) func(g *Gro
 			),
 		).Call()
 
-		g.Return().Id(util.LastUpperOrFirst(serviceRecoveringStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
+		g.Return().Id(rec(serviceRecoveringStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
 	}
 }

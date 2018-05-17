@@ -1,0 +1,1 @@
+gen: ; microgen -file=./usersvc/api.go -out=.

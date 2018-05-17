@@ -87,13 +87,13 @@ func (t *errorLoggingTemplate) recoverFuncBody(signature *types.Function) func(g
 	return func(g *Group) {
 		g.Defer().Func().Params().Block(
 			If(Id(nameOfLastResultError(signature)).Op("!=").Nil()).Block(
-				Id(util.LastUpperOrFirst(serviceErrorLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
+				Id(rec(serviceErrorLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
 					Lit("method"), Lit(signature.Name),
 					Lit("message"), Id(nameOfLastResultError(signature)),
 				),
 			),
 		).Call()
 
-		g.Return().Id(util.LastUpperOrFirst(serviceErrorLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
+		g.Return().Id(rec(serviceErrorLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
 	}
 }

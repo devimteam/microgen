@@ -27,7 +27,7 @@ func NewMiddlewareTemplate(info *GenerationInfo) Template {
 //		// DO NOT EDIT.
 //		package middleware
 //
-//		import svc "github.com/devimteam/microgen/example/svc"
+//		import svc "github.com/devimteam/microgen/examples/svc"
 //
 //		type Middleware func(svc.StringService) svc.StringService
 //

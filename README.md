@@ -141,7 +141,7 @@ All allowed tags for customize generation provided here.
 | Cache middleware  | ./middleware/cache.go  |  Adds methods if they were missed. Checks function names to understand it.|
 
 ## Example
-You may find examples in `example` directory, where `svc` contains all, what you need for successful generation, and `generated` contains what you will get after `microgen`.  
+You may find examples in `examples` directory, where `svc` contains all, what you need for successful generation, and `generated` contains what you will get after `microgen`.
 
 Follow this short guide to try microgen tool.
 

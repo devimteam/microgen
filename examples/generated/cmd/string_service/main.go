@@ -7,21 +7,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	service "github.com/devimteam/microgen/example/generated/service"
-	transport "github.com/devimteam/microgen/example/generated/transport"
-	grpc "github.com/devimteam/microgen/example/generated/transport/grpc"
-	http "github.com/devimteam/microgen/example/generated/transport/http"
-	protobuf "github.com/devimteam/microgen/example/protobuf"
-	log "github.com/go-kit/kit/log"
-	opentracinggo "github.com/opentracing/opentracing-go"
-	errgroup "golang.org/x/sync/errgroup"
-	grpc1 "google.golang.org/grpc"
 	"io"
 	"net"
 	http1 "net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	generated "github.com/devimteam/microgen/examples/generated"
+	service "github.com/devimteam/microgen/examples/generated/service"
+	transport "github.com/devimteam/microgen/examples/generated/transport"
+	grpc "github.com/devimteam/microgen/examples/generated/transport/grpc"
+	http "github.com/devimteam/microgen/examples/generated/transport/http"
+	protobuf "github.com/devimteam/microgen/examples/protobuf"
+	log "github.com/go-kit/kit/log"
+	opentracinggo "github.com/opentracing/opentracing-go"
+	errgroup "golang.org/x/sync/errgroup"
+	grpc1 "google.golang.org/grpc"
 )
 
 func main() {
@@ -35,7 +37,7 @@ func main() {
 		return InterruptHandler(ctx)
 	})
 
-	svc := service.NewStringService()                    // Create new service.
+	var svc generated.StringService                      // TODO: = service.NewStringService () // Create new service.
 	svc = service.LoggingMiddleware(logger)(svc)         // Setup service logging.
 	svc = service.ErrorLoggingMiddleware(logger)(svc)    // Setup error logging.
 	svc = service.RecoveringMiddleware(errorLogger)(svc) // Setup service recovering.

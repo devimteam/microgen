@@ -127,7 +127,7 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 			),
 		)
 		main.Line()
-		main.Id(_service_).Op(":=").Qual(t.Info.SourcePackageImport+"/service", constructorName(t.Info.Iface)).Call().
+		main.Var().Id(_service_).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name).Comment("// TODO:").Op("=").Qual(t.Info.SourcePackageImport+"/service", constructorName(t.Info.Iface)).Call().
 			Comment(`Create new service.`)
 		//if Tags(ctx).Has(CachingMiddlewareTag) {
 		//	main.Id(_service_).Op("=").

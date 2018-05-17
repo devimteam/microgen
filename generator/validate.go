@@ -12,6 +12,9 @@ import (
 
 func ValidateInterface(iface *types.Interface) error {
 	var errs []error
+	if len(iface.Methods) == 0 {
+		errs = append(errs, fmt.Errorf("%s does not have any methods", iface.Name))
+	}
 	for _, m := range iface.Methods {
 		errs = append(errs, validateFunction(m)...)
 	}

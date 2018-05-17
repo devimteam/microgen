@@ -30,8 +30,8 @@ func NewGRPCClientTemplate(info *GenerationInfo) Template {
 //		package transportgrpc
 //
 //		import (
-//			svc "github.com/devimteam/microgen/example/svc"
-//			protobuf "github.com/devimteam/microgen/example/svc/transport/converter/protobuf"
+//			svc "github.com/devimteam/microgen/examples/svc"
+//			protobuf "github.com/devimteam/microgen/examples/svc/transport/converter/protobuf"
 //			grpc1 "github.com/go-kit/kit/transport/grpc"
 //			stringsvc "gitlab.devim.team/protobuf/stringsvc"
 //			grpc "google.golang.org/grpc"
@@ -130,9 +130,6 @@ func (gRPCClientTemplate) DefaultPath() string {
 }
 
 func (t *gRPCClientTemplate) Prepare(ctx context.Context) error {
-	if t.info.ProtobufPackageImport == "" {
-		return ErrProtobufEmpty
-	}
 	return nil
 }
 
