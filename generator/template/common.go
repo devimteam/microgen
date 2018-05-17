@@ -43,6 +43,8 @@ const (
 	PackagePathGoKitTracing          = "github.com/go-kit/kit/tracing/opentracing"
 	PackagePathGoKitTransportJSONRPC = "github.com/go-kit/kit/transport/http/jsonrpc"
 	PackagePathGoKitMetrics          = "github.com/go-kit/kit/metrics"
+	PackagePathGoKitSD               = "github.com/go-kit/kit/sd"
+	PackagePathGoKitLB               = "github.com/go-kit/kit/sd/lb"
 	PackagePathSyncErrgroup          = "golang.org/x/sync/errgroup"
 
 	TagMark         = "// @"
@@ -71,6 +73,7 @@ const (
 	TransportClient           = "transport-client"
 	TransportServer           = "transport-server"
 	MetricsMiddlewareTag      = "metrics"
+	ServiceDiscoveryTag       = "service-discovery"
 )
 
 const (

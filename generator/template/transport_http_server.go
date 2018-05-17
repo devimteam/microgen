@@ -135,7 +135,7 @@ func (t *httpServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 			g.Id("mux").Dot("Methods").Call(Lit(t.methods[fn.Name])).Dot("Path").
 				Call(Lit("/" + t.paths[fn.Name])).Dot("Handler").Call(
 				Line().Qual(PackagePathGoKitTransportHTTP, "NewServer").Call(
-					Line().Id("endpoints").Dot(endpointStructName(fn.Name)),
+					Line().Id("endpoints").Dot(endpointsStructFieldName(fn.Name)),
 					Line().Id(decodeRequestName(fn)),
 					Line().Id(encodeResponseName(fn)),
 					Line().Add(t.serverOpts(ctx, fn)).Op("...")),

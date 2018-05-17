@@ -59,7 +59,7 @@ func (t *mainTemplate) Render(ctx context.Context) write_strategy.Renderer {
 }
 
 func (t *mainTemplate) DefaultPath() string {
-	return "./cmd/" + mstrings.ToSnakeCase(t.Info.Iface.Name) + "/main.go"
+	return filepath.Join("./", PathExecutable, mstrings.ToSnakeCase(t.Info.Iface.Name), "/main.go")
 }
 
 func (t *mainTemplate) Prepare(ctx context.Context) error {

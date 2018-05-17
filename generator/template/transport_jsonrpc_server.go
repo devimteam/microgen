@@ -86,7 +86,7 @@ func (t *jsonrpcServerTemplate) Render(ctx context.Context) write_strategy.Rende
 					Call(
 						Line().Qual(PackagePathGoKitTransportJSONRPC, "EndpointCodecMap").Values(Dict{
 							Line().Lit(t.prefixes[m.Name] + m.Name + t.suffixes[m.Name]): Qual(PackagePathGoKitTransportJSONRPC, "EndpointCodec").Values(Dict{
-								Id("Endpoint"): Id("endpoints").Dot(endpointStructName(m.Name)),
+								Id("Endpoint"): Id("endpoints").Dot(endpointsStructFieldName(m.Name)),
 								Id("Decode"):   Id(decodeRequestName(m)),
 								Id("Encode"):   Id(encodeResponseName(m)),
 							}),

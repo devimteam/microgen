@@ -93,7 +93,7 @@ func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 				for _, m := range t.info.Iface.Methods {
 					g[(&Statement{}).Id(mstrings.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
-							Line().Id("endpoints").Dot(endpointStructName(m.Name)),
+							Line().Id("endpoints").Dot(endpointsStructFieldName(m.Name)),
 							Line().Id(decodeRequestName(m)),
 							Line().Id(encodeResponseName(m)),
 							Line().Add(t.serverOpts(ctx, m)).Op("...").Line(),

@@ -120,7 +120,7 @@ func serviceEndpointMethodBody(ctx context.Context, fn *types.Function, normal *
 	respName := "response"
 	return func(g *Group) {
 		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByNormalVariables(RemoveContextIfFirst(fn.Args), RemoveContextIfFirst(normal.Args)))
-		g.Add(endpointResponse(respName, normal)).Id(strings.LastWordFromName(EndpointsSetName)).Dot(endpointStructName(fn.Name)).Call(Id(firstArgName(normal)), Op("&").Id(reqName))
+		g.Add(endpointResponse(respName, normal)).Id(strings.LastWordFromName(EndpointsSetName)).Dot(endpointsStructFieldName(fn.Name)).Call(Id(firstArgName(normal)), Op("&").Id(reqName))
 		g.If(Id(nameOfLastResultError(normal)).Op("!=").Nil().BlockFunc(func(ifg *Group) {
 			if Tags(ctx).HasAny(GrpcTag, GrpcClientTag, GrpcServerTag) {
 				ifg.Add(checkGRPCError(normal))
@@ -166,7 +166,7 @@ func (t *endpointsClientTemplate) clientTracingMiddleware() *Statement {
 	s.Func().Id("TraceClientEndpoints").Call(Id("endpoints").Id(EndpointsSetName), Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")).Id(EndpointsSetName).BlockFunc(func(g *Group) {
 		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
 			for _, signature := range t.info.Iface.Methods {
-				d[Id(endpointStructName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceClient").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointStructName(signature.Name)))
+				d[Id(endpointsStructFieldName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceClient").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointsStructFieldName(signature.Name)))
 			}
 		})))
 	})

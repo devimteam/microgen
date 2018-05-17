@@ -3,12 +3,16 @@
 package transporthttp
 
 import (
-	transport "github.com/devimteam/microgen/examples/usersvc/transport"
-	log "github.com/go-kit/kit/log"
-	opentracing "github.com/go-kit/kit/tracing/opentracing"
+	"io"
+	"net/url"
+
+	"github.com/devimteam/microgen/examples/usersvc/transport"
+	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/kit/tracing/opentracing"
 	httpkit "github.com/go-kit/kit/transport/http"
 	opentracinggo "github.com/opentracing/opentracing-go"
-	"net/url"
 )
 
 func NewHTTPClient(u *url.URL, opts ...httpkit.ClientOption) transport.EndpointsSet {
@@ -63,5 +67,16 @@ func TracingHTTPClientOptions(tracer opentracinggo.Tracer, logger log.Logger) fu
 		return append(opts, httpkit.ClientBefore(
 			opentracing.ContextToHTTP(tracer, logger),
 		))
+	}
+}
+
+func ServiceDiscoveriedClient(opts ...httpkit.ClientOption) transport.EndpointsSet {
+	return transport.EndpointsSet{}
+}
+
+func ServiceDiscoveryHTTPFactory(clientMaker func(string) transport.EndpointsSet) sd.Factory {
+	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		s := clientMaker(instance)
+		return s.CreateCommentEndpoint, nil, nil
 	}
 }

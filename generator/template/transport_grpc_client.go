@@ -73,7 +73,7 @@ func (t *gRPCClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 						Line().Add(t.replyType(m)),
 						Line().Add(t.clientOpts(m)).Op("...").Line(),
 					).Dot("Endpoint").Call()
-					d[Id(endpointStructName(m.Name))] = client
+					d[Id(endpointsStructFieldName(m.Name))] = client
 				}
 			}))
 		})

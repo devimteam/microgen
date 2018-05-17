@@ -4,6 +4,7 @@ import (
 	"context"
 
 	. "github.com/dave/jennifer/jen"
+	"github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/vetcher/go-astra/types"
 )
@@ -105,7 +106,44 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 			),
 		)
 	}
-
+	if Tags(ctx).Has(ServiceDiscoveryTag) {
+		f.Line().Func().Id("NewHTTPClientSD").Params(
+			Id("instancer").Qual(PackagePathGoKitSD, "Instancer"),
+			Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption"),
+		).Params(
+			Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName),
+		).BlockFunc(func(g *Group) {
+			g.Var().Id("endpoints").Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName)
+			for _, fn := range t.info.Iface.Methods {
+				g.Block(
+					Id("endpointer").Op(":=").Qual(PackagePathGoKitSD, "NewEndpointer").Call(
+						Id("instancer"),
+						Id(serviceDiscoveryFactoryName(fn.Name)).Call(Id("HTTPClientMaker").Call(Id("opts").Op("..."))),
+						Id("NewNopLogger{}")),
+					List(Id("endpoints").Dot(endpointsStructFieldName(fn.Name)), Id("_")).
+						Op("=").
+						Qual(PackagePathGoKitLB, "NewRoundRobin").Call(Id("endpointer")).Dot("Endpoint").Call(),
+				)
+			}
+			g.Return(Id("endpoints"))
+		})
+		f.Line().Func().Id("HTTPClientMaker").Params(
+			Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption"),
+		).Params(
+			Func().Params(String()).Params(Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName), Error()),
+		).Block(
+			Return().Func().Params(Id("instance").String()).Params(Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName), Error()).Block(
+				List(Id("u"), Err()).Op(":=").Qual(PackagePathUrl, "Parse").Call(Id("instance")),
+				If(Err().Op("!=").Nil()).Block(
+					Return(Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName).Values(), Err()),
+				),
+				Return(Id("NewHTTPClient").Call(Id("u"), Id("opts").Op("...")), Nil()),
+			),
+		)
+		for _, signature := range t.info.Iface.Methods {
+			f.Add(t.serviceDiscoveryFactory(ctx, signature))
+		}
+	}
 	return f
 }
 
@@ -147,7 +185,7 @@ func (t *httpClientTemplate) clientBody(ctx context.Context) *Statement {
 					Line().Id(decodeResponseName(fn)),
 					Line().Add(t.clientOpts(fn)).Op("...").Line(),
 				).Dot("Endpoint").Call()
-				d[Id(endpointStructName(fn.Name))] = client
+				d[Id(endpointsStructFieldName(fn.Name))] = client
 			}
 		},
 	)))
@@ -158,4 +196,26 @@ func (t *httpClientTemplate) clientOpts(fn *types.Function) *Statement {
 	s := &Statement{}
 	s.Id("opts")
 	return s
+}
+
+//		func createUserSDFactory(clientMaker func(string) transport.EndpointsSet) sd.Factory {
+//			return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+//				return clientMaker(instance).CreateCommentEndpoint, nil, nil
+//			}
+//		}
+//
+func (t *httpClientTemplate) serviceDiscoveryFactory(ctx context.Context, fn *types.Function) *Statement {
+	s := &Statement{}
+	const _clientMaker_ = "clientMaker"
+	s.Func().Id(serviceDiscoveryFactoryName(fn.Name)).Params(Id(_clientMaker_).Func().Params(String()).Params(Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName), Error())).Params(Qual(PackagePathGoKitSD, "Factory")).Block(
+		Return(Func().Params(Id("instance").String()).Params(Qual(PackagePathGoKitEndpoint, "Endpoint"), Qual(PackagePathIO, "Closer"), Error()).Block(
+			List(Id("c"), Err()).Op(":=").Id(_clientMaker_).Call(Id("instance")),
+			Return(Id("c").Dot(endpointsStructFieldName(fn.Name)), Nil(), Err()),
+		)),
+	)
+	return s
+}
+
+func serviceDiscoveryFactoryName(str string) string {
+	return strings.ToLowerFirst(str) + "SDFactory"
 }

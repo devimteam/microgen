@@ -133,7 +133,7 @@ func createEndpointBody(signature *normalizedFunction) *Statement {
 func createEndpoint(signature *types.Function, info *GenerationInfo) *Statement {
 	normal := normalizeFunction(signature)
 	return Func().
-		Id(endpointStructName(signature.Name)).Params(Id("svc").Qual(info.SourcePackageImport, info.Iface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
+		Id(endpointsStructFieldName(signature.Name)).Params(Id("svc").Qual(info.SourcePackageImport, info.Iface.Name)).Params(Qual(PackagePathGoKitEndpoint, "Endpoint")).
 		Block(createEndpointBody(normal))
 }
 
@@ -142,7 +142,7 @@ func (t *endpointsServerTemplate) allEndpoints() *Statement {
 	s.Func().Id("Endpoints").Call(Id("svc").Qual(t.info.SourcePackageImport, t.info.Iface.Name)).Id(EndpointsSetName).BlockFunc(func(g *Group) {
 		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
 			for _, signature := range t.info.Iface.Methods {
-				d[Id(endpointStructName(signature.Name))] = Id(endpointStructName(signature.Name)).Params(Id("svc"))
+				d[Id(endpointsStructFieldName(signature.Name))] = Id(endpointsStructFieldName(signature.Name)).Params(Id("svc"))
 			}
 		})))
 	})
@@ -154,7 +154,7 @@ func (t *endpointsServerTemplate) serverTracingMiddleware() *Statement {
 	s.Func().Id("TraceServerEndpoints").Call(Id("endpoints").Id(EndpointsSetName), Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")).Id(EndpointsSetName).BlockFunc(func(g *Group) {
 		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
 			for _, signature := range t.info.Iface.Methods {
-				d[Id(endpointStructName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceServer").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointStructName(signature.Name)))
+				d[Id(endpointsStructFieldName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceServer").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointsStructFieldName(signature.Name)))
 			}
 		})))
 	})

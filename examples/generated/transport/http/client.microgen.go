@@ -4,10 +4,14 @@ package transporthttp
 
 import (
 	transport "github.com/devimteam/microgen/examples/generated/transport"
+	endpoint "github.com/go-kit/kit/endpoint"
 	log "github.com/go-kit/kit/log"
+	sd "github.com/go-kit/kit/sd"
+	lb "github.com/go-kit/kit/sd/lb"
 	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	httpkit "github.com/go-kit/kit/transport/http"
 	opentracinggo "github.com/opentracing/opentracing-go"
+	"io"
 	"net/url"
 )
 
@@ -39,5 +43,50 @@ func TracingHTTPClientOptions(tracer opentracinggo.Tracer, logger log.Logger) fu
 		return append(opts, httpkit.ClientBefore(
 			opentracing.ContextToHTTP(tracer, logger),
 		))
+	}
+}
+
+func NewHTTPClientSD(instancer sd.Instancer, opts ...httpkit.ClientOption) transport.EndpointsSet {
+	var endpoints transport.EndpointsSet
+	{
+		endpointer := sd.NewEndpointer(instancer, uppercaseSDFactory(HTTPClientMaker(opts...)), NewNopLogger{})
+		endpoints.UppercaseEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
+	}
+	{
+		endpointer := sd.NewEndpointer(instancer, countSDFactory(HTTPClientMaker(opts...)), NewNopLogger{})
+		endpoints.CountEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
+	}
+	{
+		endpointer := sd.NewEndpointer(instancer, testCaseSDFactory(HTTPClientMaker(opts...)), NewNopLogger{})
+		endpoints.TestCaseEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
+	}
+	return endpoints
+}
+
+func HTTPClientMaker(opts ...httpkit.ClientOption) func(string) (transport.EndpointsSet, error) {
+	return func(instance string) (transport.EndpointsSet, error) {
+		u, err := url.Parse(instance)
+		if err != nil {
+			return transport.EndpointsSet{}, err
+		}
+		return NewHTTPClient(u, opts...), nil
+	}
+}
+func uppercaseSDFactory(clientMaker func(string) (transport.EndpointsSet, error)) sd.Factory {
+	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		c, err := clientMaker(instance)
+		return c.UppercaseEndpoint, nil, err
+	}
+}
+func countSDFactory(clientMaker func(string) (transport.EndpointsSet, error)) sd.Factory {
+	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		c, err := clientMaker(instance)
+		return c.CountEndpoint, nil, err
+	}
+}
+func testCaseSDFactory(clientMaker func(string) (transport.EndpointsSet, error)) sd.Factory {
+	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		c, err := clientMaker(instance)
+		return c.TestCaseEndpoint, nil, err
 	}
 }

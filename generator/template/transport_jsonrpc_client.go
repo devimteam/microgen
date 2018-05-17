@@ -116,7 +116,7 @@ func (t *jsonrpcClientTemplate) clientBody() *Statement {
 							Call(Qual(pathToJSONRPCConverter(t.info.SourcePackageImport), decodeResponseName(fn))).Op(",").Line(),
 					).Op("...").Line(),
 				).Dot("Endpoint").Call()
-				d[Id(endpointStructName(fn.Name))] = client
+				d[Id(endpointsStructFieldName(fn.Name))] = client
 			}
 		},
 	)), Nil())
