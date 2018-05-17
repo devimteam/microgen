@@ -3,7 +3,7 @@
 package transporthttp
 
 import (
-	service "github.com/devimteam/microgen/examples/addsvc"
+	transport "github.com/devimteam/microgen/examples/addsvc/transport"
 	log "github.com/go-kit/kit/log"
 	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	http "github.com/go-kit/kit/transport/http"
@@ -12,7 +12,7 @@ import (
 	http1 "net/http"
 )
 
-func NewHTTPHandler(endpoints *service.Endpoints, logger log.Logger, tracer opentracinggo.Tracer, opts ...http.ServerOption) http1.Handler {
+func NewHTTPHandler(endpoints *transport.EndpointsSet, logger log.Logger, tracer opentracinggo.Tracer, opts ...http.ServerOption) http1.Handler {
 	mux := mux.NewRouter()
 	mux.Methods("POST").Path("/sum").Handler(
 		http.NewServer(

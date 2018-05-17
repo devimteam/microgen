@@ -67,11 +67,11 @@ func (t *mainTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *mainTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	if err := statFile(t.Info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
+	if err := statFile(t.Info.OutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.Info.OutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := parsePackage(filepath.Join(t.Info.AbsOutputFilePath, t.DefaultPath()))
+	file, err := parsePackage(filepath.Join(t.Info.OutputFilePath, t.DefaultPath()))
 	if err != nil {
 		logger.Logger.Logln(0, "can't parse", t.DefaultPath(), ":", err)
 		return write_strategy.NewNopStrategy("", ""), nil
@@ -80,7 +80,7 @@ func (t *mainTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strat
 		t.rendered = append(t.rendered, f.Name)
 	}
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.Info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.Info.OutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *mainTemplate) interruptHandler() *Statement {
@@ -98,7 +98,7 @@ func (t *mainTemplate) interruptHandler() *Statement {
 		),
 		Select().Block(
 			Case(Id("sig").Op(":= <-").Id("interruptHandler")),
-			Return().Qual(PackagePathFmt, "Errorf").Call(Lit("signal received: %d (%s)"), Int().Parens(Id("sig")), Id("sig").Dot("String").Call()),
+			Return().Qual(PackagePathFmt, "Errorf").Call(Lit("signal received: %v"), Id("sig").Dot("String").Call()),
 			Case(Op("<-").Id(_ctx_).Dot("Done").Call()),
 			Return().Qual(PackagePathErrors, "New").Call(Lit("signal listener: context canceled")),
 		),
@@ -127,7 +127,7 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 			),
 		)
 		main.Line()
-		main.Var().Id(_service_).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name).Comment("// TODO:").Op("=").Qual(t.Info.SourcePackageImport+"/service", constructorName(t.Info.Iface)).Call().
+		main.Var().Id(_service_).Qual(t.Info.SourcePackageImport, t.Info.Iface.Name).Comment("// TODO:").Op("=").Qual(t.Info.OutputPackageImport+"/service", constructorName(t.Info.Iface)).Call().
 			Comment(`Create new service.`)
 		//if Tags(ctx).Has(CachingMiddlewareTag) {
 		//	main.Id(_service_).Op("=").
@@ -136,22 +136,22 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 		//}
 		if Tags(ctx).Has(LoggingMiddlewareTag) {
 			main.Id(_service_).Op("=").
-				Qual(filepath.Join(t.Info.SourcePackageImport, PathService), ServiceLoggingMiddlewareName).Call(Id(_logger_)).Call(Id(_service_)).
+				Qual(filepath.Join(t.Info.OutputPackageImport, PathService), ServiceLoggingMiddlewareName).Call(Id(_logger_)).Call(Id(_service_)).
 				Comment(`Setup service logging.`)
 		}
 		if Tags(ctx).Has(ErrorLoggingMiddlewareTag) {
 			main.Id(_service_).Op("=").
-				Qual(filepath.Join(t.Info.SourcePackageImport, PathService), ServiceErrorLoggingMiddlewareName).Call(Id(_logger_)).Call(Id(_service_)).
+				Qual(filepath.Join(t.Info.OutputPackageImport, PathService), ServiceErrorLoggingMiddlewareName).Call(Id(_logger_)).Call(Id(_service_)).
 				Comment(`Setup error logging.`)
 		}
 		if Tags(ctx).Has(RecoveringMiddlewareTag) {
 			main.Id(_service_).Op("=").
-				Qual(filepath.Join(t.Info.SourcePackageImport, PathService), ServiceRecoveringMiddlewareName).Call(Id("errorLogger")).Call(Id(_service_)).
+				Qual(filepath.Join(t.Info.OutputPackageImport, PathService), ServiceRecoveringMiddlewareName).Call(Id("errorLogger")).Call(Id(_service_)).
 				Comment(`Setup service recovering.`)
 		}
-		main.Line().Id("endpoints").Op(":=").Qual(t.Info.SourcePackageImport+"/transport", "Endpoints").Call(t.endpointsParams(ctx))
+		main.Line().Id("endpoints").Op(":=").Qual(t.Info.OutputPackageImport+"/transport", "Endpoints").Call(t.endpointsParams(ctx))
 		if Tags(ctx).HasAny(TracingMiddlewareTag) {
-			main.Id("endpoints").Op("=").Qual(t.Info.SourcePackageImport+"/transport", "TraceServerEndpoints").Call(
+			main.Id("endpoints").Op("=").Qual(t.Info.OutputPackageImport+"/transport", "TraceServerEndpoints").Call(
 				Id("endpoints"),
 				Qual(PackagePathOpenTracingGo, "NoopTracer{}"),
 			).Comment("TODO: Add tracer")
@@ -163,7 +163,8 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 			main.Id("g").Dot("Go").Call(
 				Func().Params().Params(Error()).Block(
 					Return().Id(nameServeGRPC).Call(
-						Id("endpoints"),
+						Id(_ctx_),
+						Op("&").Id("endpoints"),
 						Id("grpcAddr"),
 						Qual(PackagePathGoKitLog, "With").Call(Id(_logger_), Lit("transport"), Lit("GRPC")),
 					),
@@ -177,7 +178,8 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 			main.Id("g").Dot("Go").Call(
 				Func().Params().Params(Error()).Block(
 					Return().Id(nameServeHTTP).Call(
-						Id("endpoints"),
+						Id(_ctx_),
+						Op("&").Id("endpoints"),
 						Id("httpAddr"),
 						Qual(PackagePathGoKitLog, "With").Call(Id(_logger_), Lit("transport"), Lit("HTTP")),
 					),

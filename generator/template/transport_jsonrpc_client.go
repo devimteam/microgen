@@ -28,7 +28,7 @@ func (t *jsonrpcClientTemplate) DefaultPath() string {
 }
 
 func (t *jsonrpcClientTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *jsonrpcClientTemplate) Prepare(ctx context.Context) error {

@@ -37,7 +37,7 @@ func (t *httpServerTemplate) DefaultPath() string {
 }
 
 func (t *httpServerTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *httpServerTemplate) Prepare(ctx context.Context) error {
@@ -120,7 +120,7 @@ func (t *httpServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 	f.HeaderComment(t.info.FileHeader)
 
 	f.Func().Id("NewHTTPHandler").ParamsFunc(func(p *Group) {
-		p.Id("endpoints").Op("*").Qual(t.info.SourcePackageImport, "Endpoints")
+		p.Id("endpoints").Op("*").Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName)
 		if Tags(ctx).Has(TracingMiddlewareTag) {
 			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 		}

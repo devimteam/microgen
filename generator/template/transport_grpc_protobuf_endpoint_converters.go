@@ -255,11 +255,11 @@ func (t *gRPCEndpointConverterTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *gRPCEndpointConverterTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	if err := statFile(t.info.AbsOutputFilePath, t.DefaultPath()); err != nil {
+	if err := statFile(t.info.OutputFilePath, t.DefaultPath()); err != nil {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := parsePackage(filepath.Join(t.info.AbsOutputFilePath, t.DefaultPath()))
+	file, err := parsePackage(filepath.Join(t.info.OutputFilePath, t.DefaultPath()))
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +270,7 @@ func (t *gRPCEndpointConverterTemplate) ChooseStrategy(ctx context.Context) (wri
 	removeAlreadyExistingFunctions(file.Functions, &t.responseDecoders, decodeResponseName)
 
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 }
 
 func isPointer(p types.Type) bool {
@@ -385,7 +385,7 @@ func (t *gRPCEndpointConverterTemplate) encodeRequest(ctx context.Context, signa
 				group.If(Id(fullName).Op("==").Nil()).Block(
 					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+requestStructName(signature)))),
 				)
-				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.info.SourcePackageImport+"/transport", requestStructName(signature)))
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.info.OutputPackageImport+"/transport", requestStructName(signature)))
 				for _, field := range methodParams {
 					if _, ok := golangTypeToProto(ctx, "", &field); !ok {
 						group.Add(convertCustomType(shortName, typeToProto(field.Type, 0), &field))
@@ -449,7 +449,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(ctx context.Context, sign
 				group.If(Id(fullName).Op("==").Nil()).Block(
 					Return(Nil(), Qual(PackagePathErrors, "New").Call(Lit("nil "+responseStructName(signature)))),
 				)
-				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.info.SourcePackageImport+"/transport", responseStructName(signature)))
+				group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(t.info.OutputPackageImport+"/transport", responseStructName(signature)))
 				for _, field := range methodResults {
 					if _, ok := golangTypeToProto(ctx, "", &field); !ok {
 						group.Add(convertCustomType(shortName, typeToProto(field.Type, 0), &field))
@@ -495,7 +495,7 @@ func (t *gRPCEndpointConverterTemplate) decodeRequest(ctx context.Context, signa
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodParams, requestStructName, shortName, protoTypeToGolang, t.info.SourcePackageImport+"/transport"), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodParams, requestStructName, shortName, protoTypeToGolang, t.info.OutputPackageImport+"/transport"), Nil())
 		},
 	).Line()
 }
@@ -538,7 +538,7 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(ctx context.Context, sign
 					}
 				}
 			}
-			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodResults, responseStructName, shortName, protoTypeToGolang, t.info.SourcePackageImport+"/transport"), Nil())
+			group.Return().List(t.grpcEndpointConvReturn(ctx, signature, methodResults, responseStructName, shortName, protoTypeToGolang, t.info.OutputPackageImport+"/transport"), Nil())
 		},
 	).Line()
 }

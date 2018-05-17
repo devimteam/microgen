@@ -169,11 +169,11 @@ func (t *stubGRPCTypeConverterTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *stubGRPCTypeConverterTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	if err := statFile(t.info.AbsOutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
+	if err := statFile(t.info.OutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := parsePackage(filepath.Join(t.info.AbsOutputFilePath, t.DefaultPath()))
+	file, err := parsePackage(filepath.Join(t.info.OutputFilePath, t.DefaultPath()))
 	if err != nil {
 		logger.Logger.Log(0, "can't parse", t.DefaultPath(), ":", err)
 		return write_strategy.NewNopStrategy("", ""), nil
@@ -184,7 +184,7 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy(ctx context.Context) (wri
 	}
 
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 }
 
 // Render stub method for golang to protobuf converter.

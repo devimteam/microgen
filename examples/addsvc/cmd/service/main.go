@@ -7,11 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	addsvc "github.com/devimteam/microgen/examples/addsvc"
+	addsvc "github.com/devimteam/microgen/examples/addsvc/addsvc"
+	transport1 "github.com/devimteam/microgen/examples/addsvc/addsvc/transport"
+	grpc "github.com/devimteam/microgen/examples/addsvc/addsvc/transport/grpc"
+	http "github.com/devimteam/microgen/examples/addsvc/addsvc/transport/http"
 	service "github.com/devimteam/microgen/examples/addsvc/service"
 	transport "github.com/devimteam/microgen/examples/addsvc/transport"
-	grpc "github.com/devimteam/microgen/examples/addsvc/transport/grpc"
-	http "github.com/devimteam/microgen/examples/addsvc/transport/http"
 	protobuf "github.com/devimteam/microgen/examples/protobuf"
 	log "github.com/go-kit/kit/log"
 	opentracinggo "github.com/opentracing/opentracing-go"
@@ -47,13 +48,13 @@ func main() {
 	grpcAddr := ":8081" // TODO: use normal address
 	// Start grpc server.
 	g.Go(func() error {
-		return ServeGRPC(endpoints, grpcAddr, log.With(logger, "transport", "GRPC"))
+		return ServeGRPC(ctx, &endpoints, grpcAddr, log.With(logger, "transport", "GRPC"))
 	})
 
 	httpAddr := ":8080" // TODO: use normal address
 	// Start http server.
 	g.Go(func() error {
-		return ServeHTTP(endpoints, httpAddr, log.With(logger, "transport", "HTTP"))
+		return ServeHTTP(ctx, &endpoints, httpAddr, log.With(logger, "transport", "HTTP"))
 	})
 
 	if err := g.Wait(); err != nil {
@@ -75,14 +76,14 @@ func InterruptHandler(ctx context.Context) error {
 	signal.Notify(interruptHandler, syscall.SIGINT, syscall.SIGTERM)
 	select {
 	case sig := <-interruptHandler:
-		return fmt.Errorf("signal received: %d (%s)", int(sig), sig.String())
+		return fmt.Errorf("signal received: %v", sig.String())
 	case <-ctx.Done():
 		return errors.New("signal listener: context canceled")
 	}
 }
 
 // ServeGRPC starts new GRPC server on address and sends first error to channel.
-func ServeGRPC(ctx context.Context, endpoints *transport.EndpointsSet, addr string, logger log.Logger) error {
+func ServeGRPC(ctx context.Context, endpoints *transport1.EndpointsSet, addr string, logger log.Logger) error {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
@@ -109,7 +110,7 @@ func ServeGRPC(ctx context.Context, endpoints *transport.EndpointsSet, addr stri
 }
 
 // ServeHTTP starts new HTTP server on address and sends first error to channel.
-func ServeHTTP(ctx context.Context, endpoints *transport.EndpointsSet, addr string, logger log.Logger) error {
+func ServeHTTP(ctx context.Context, endpoints *transport1.EndpointsSet, addr string, logger log.Logger) error {
 	handler := http.NewHTTPHandler(endpoints,
 		logger,
 		opentracinggo.NoopTracer{}, // TODO: Add tracer

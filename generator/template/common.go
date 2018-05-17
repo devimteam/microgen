@@ -94,7 +94,8 @@ type GenerationInfo struct {
 	Iface               *types.Interface
 	SourcePackageImport string
 	SourceFilePath      string
-	AbsOutputFilePath   string
+	OutputPackageImport string
+	OutputFilePath      string
 	FileHeader          string
 
 	ProtobufPackageImport string

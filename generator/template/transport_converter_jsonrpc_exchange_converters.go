@@ -68,11 +68,11 @@ func (t *jsonrpcEndpointConverterTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *jsonrpcEndpointConverterTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	if err := statFile(t.info.AbsOutputFilePath, t.DefaultPath()); err != nil {
+	if err := statFile(t.info.OutputFilePath, t.DefaultPath()); err != nil {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := parsePackage(filepath.Join(t.info.AbsOutputFilePath, t.DefaultPath()))
+	file, err := parsePackage(filepath.Join(t.info.OutputFilePath, t.DefaultPath()))
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (t *jsonrpcEndpointConverterTemplate) ChooseStrategy(ctx context.Context) (
 	removeAlreadyExistingFunctions(file.Functions, &t.responseDecoders, decodeResponseName)
 
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *jsonrpcEndpointConverterTemplate) encodeRequest(fn *types.Function) Code {

@@ -7,6 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"context"
+
+	strings2 "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/stretchr/testify/assert"
 	"github.com/vetcher/go-astra"
@@ -45,14 +48,11 @@ func TestTemplates(t *testing.T) {
 	}
 
 	genInfo := &template.GenerationInfo{
-		ServiceImportPackageName: "stringsvc",
-		SourcePackageImport:      importPackagePath,
-		Force:                    true,
-		Iface:                    iface,
-		AbsOutputFilePath:        outPath,
-		SourceFilePath:           absSourcePath,
-		ProtobufPackageImport:    fetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
-		GRPCRegAddr:              fetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
+		SourcePackageImport:   importPackagePath,
+		Iface:                 iface,
+		OutputFilePath:        outPath,
+		SourceFilePath:        absSourcePath,
+		ProtobufPackageImport: strings2.FetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
 	}
 	t.Log("protobuf pkg", genInfo.ProtobufPackageImport)
 
@@ -110,11 +110,11 @@ func TestTemplates(t *testing.T) {
 			}
 
 			absOutPath := "./test_out/"
-			gen, err := NewGenUnit(test.Template, absOutPath)
+			gen, err := NewGenUnit(context.Background(), test.Template, absOutPath)
 			if err != nil {
 				t.Fatalf("NewGenUnit: %v", err)
 			}
-			err = gen.Generate()
+			err = gen.Generate(context.Background())
 			if err != nil {
 				t.Fatalf("unable to generate: %v", err)
 			}

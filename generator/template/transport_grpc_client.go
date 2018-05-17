@@ -61,9 +61,9 @@ func (t *gRPCClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 			p.Id("conn").Op("*").Qual(PackagePathGoogleGRPC, "ClientConn")
 			p.Id("addr").Id("string")
 			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption")
-		}).Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName).
+		}).Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName).
 		BlockFunc(func(g *Group) {
-			g.Return().Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName).Values(DictFunc(func(d Dict) {
+			g.Return().Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName).Values(DictFunc(func(d Dict) {
 				for _, m := range t.info.Iface.Methods {
 					client := &Statement{}
 					client.Qual(PackagePathGoKitTransportGRPC, "NewClient").Call(
@@ -134,7 +134,7 @@ func (t *gRPCClientTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *gRPCClientTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *gRPCClientTemplate) clientOpts(fn *types.Function) *Statement {

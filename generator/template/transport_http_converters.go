@@ -37,11 +37,11 @@ func (t *httpConverterTemplate) DefaultPath() string {
 }
 
 func (t *httpConverterTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	if err := statFile(t.info.AbsOutputFilePath, t.DefaultPath()); err != nil {
+	if err := statFile(t.info.OutputFilePath, t.DefaultPath()); err != nil {
 		t.state = FileStrat
-		return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+		return write_strategy.NewCreateFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 	}
-	file, err := parsePackage(filepath.Join(t.info.AbsOutputFilePath, t.DefaultPath()))
+	file, err := parsePackage(filepath.Join(t.info.OutputFilePath, t.DefaultPath()))
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (t *httpConverterTemplate) ChooseStrategy(ctx context.Context) (write_strat
 	}
 
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *httpConverterTemplate) Prepare(ctx context.Context) error {
@@ -230,7 +230,7 @@ func (t *httpConverterTemplate) decodeHTTPRequest(fn *types.Function) *Statement
 					g.Add(stringToTypeConverter(&arg))
 				}
 			}
-			g.Return(Op("&").Qual(t.info.SourcePackageImport+"/transport", requestStructName(fn)).Values(DictFunc(func(d Dict) {
+			g.Return(Op("&").Qual(t.info.OutputPackageImport+"/transport", requestStructName(fn)).Values(DictFunc(func(d Dict) {
 				for _, arg := range arguments {
 					typename := types.TypeName(arg.Type)
 					if typename == nil {
@@ -240,7 +240,7 @@ func (t *httpConverterTemplate) decodeHTTPRequest(fn *types.Function) *Statement
 				}
 			})), Nil())
 		} else {
-			g.Var().Id("req").Qual(t.info.SourcePackageImport+"/transport", requestStructName(fn))
+			g.Var().Id("req").Qual(t.info.OutputPackageImport+"/transport", requestStructName(fn))
 			g.Err().Op(":=").Qual(PackagePathJson, "NewDecoder").Call(Id("r").Dot("Body")).Dot("Decode").Call(Op("&").Id("req"))
 			g.Return(Op("&").Id("req"), Err())
 		}
@@ -294,7 +294,7 @@ func (t *httpConverterTemplate) decodeHTTPResponse(fn *types.Function) *Statemen
 		Error(),
 	).
 		BlockFunc(func(g *Group) {
-			g.Var().Id("resp").Qual(t.info.SourcePackageImport+"/transport", responseStructName(fn))
+			g.Var().Id("resp").Qual(t.info.OutputPackageImport+"/transport", responseStructName(fn))
 			g.Err().Op(":=").Qual(PackagePathJson, "NewDecoder").Call(Id("r").Dot("Body")).Dot("Decode").Call(Op("&").Id("resp"))
 			g.Return(Op("&").Id("resp"), Err())
 		})
@@ -338,7 +338,7 @@ func (t *httpConverterTemplate) encodeHTTPRequestBody(fn *types.Function) *State
 	s := &Statement{}
 	pathVars := Lit(util.ToURLSnakeCase(fn.Name))
 	if FetchHttpMethodTag(fn.Docs) == "GET" {
-		s.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.info.SourcePackageImport+"/transport", requestStructName(fn))).Line()
+		s.Id("req").Op(":=").Id("request").Assert(Op("*").Qual(t.info.OutputPackageImport+"/transport", requestStructName(fn))).Line()
 		pathVars.Add(t.pathConverters(fn))
 	}
 	s.Id("r").Dot("URL").Dot("Path").Op("=").

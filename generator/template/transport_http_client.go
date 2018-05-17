@@ -23,7 +23,7 @@ func (t *httpClientTemplate) DefaultPath() string {
 }
 
 func (t *httpClientTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *httpClientTemplate) Prepare(ctx context.Context) error {
@@ -86,7 +86,7 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 		p.Id("u").Op("*").Qual(PackagePathUrl, "URL")
 		p.Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption")
 	}).Params(
-		Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName),
+		Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName),
 	).Block(
 		t.clientBody(ctx),
 	)
@@ -136,7 +136,7 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 //
 func (t *httpClientTemplate) clientBody(ctx context.Context) *Statement {
 	g := &Statement{}
-	g.Return(Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName).Values(DictFunc(
+	g.Return(Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName).Values(DictFunc(
 		func(d Dict) {
 			for _, fn := range t.info.Iface.Methods {
 				method := FetchHttpMethodTag(fn.Docs)

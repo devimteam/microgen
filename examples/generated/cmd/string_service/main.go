@@ -7,13 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"net"
-	http1 "net/http"
-	"os"
-	"os/signal"
-	"syscall"
-
 	generated "github.com/devimteam/microgen/examples/generated"
 	service "github.com/devimteam/microgen/examples/generated/service"
 	transport "github.com/devimteam/microgen/examples/generated/transport"
@@ -24,6 +17,12 @@ import (
 	opentracinggo "github.com/opentracing/opentracing-go"
 	errgroup "golang.org/x/sync/errgroup"
 	grpc1 "google.golang.org/grpc"
+	"io"
+	"net"
+	http1 "net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -48,13 +47,13 @@ func main() {
 	grpcAddr := ":8081" // TODO: use normal address
 	// Start grpc server.
 	g.Go(func() error {
-		return ServeGRPC(endpoints, grpcAddr, log.With(logger, "transport", "GRPC"))
+		return ServeGRPC(ctx, &endpoints, grpcAddr, log.With(logger, "transport", "GRPC"))
 	})
 
 	httpAddr := ":8080" // TODO: use normal address
 	// Start http server.
 	g.Go(func() error {
-		return ServeHTTP(endpoints, httpAddr, log.With(logger, "transport", "HTTP"))
+		return ServeHTTP(ctx, &endpoints, httpAddr, log.With(logger, "transport", "HTTP"))
 	})
 
 	if err := g.Wait(); err != nil {
@@ -76,7 +75,7 @@ func InterruptHandler(ctx context.Context) error {
 	signal.Notify(interruptHandler, syscall.SIGINT, syscall.SIGTERM)
 	select {
 	case sig := <-interruptHandler:
-		return fmt.Errorf("signal received: %d (%s)", int(sig), sig.String())
+		return fmt.Errorf("signal received: %v", sig.String())
 	case <-ctx.Done():
 		return errors.New("signal listener: context canceled")
 	}

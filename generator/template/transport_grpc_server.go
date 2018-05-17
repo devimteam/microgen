@@ -77,7 +77,7 @@ func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 
 	f.Func().Id("NewGRPCServer").
 		ParamsFunc(func(p *Group) {
-			p.Id("endpoints").Op("*").Qual(t.info.SourcePackageImport+"/transport", EndpointsSetName)
+			p.Id("endpoints").Op("*").Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName)
 			if Tags(ctx).Has(TracingMiddlewareTag) {
 				p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 			}
@@ -124,7 +124,7 @@ func (t *gRPCServerTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *gRPCServerTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 }
 
 // Render service interface method for grpc server.

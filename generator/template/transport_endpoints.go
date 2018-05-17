@@ -65,7 +65,7 @@ func (t *endpointsTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *endpointsTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewCreateFileStrategy(t.info.AbsOutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewCreateFileStrategy(t.info.OutputFilePath, t.DefaultPath()), nil
 }
 
 func (t *endpointsTemplate) serverMetrics(ctx context.Context) *Statement {
