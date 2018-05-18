@@ -59,3 +59,11 @@ func (set EndpointsSet) TestCase(arg0 context.Context, arg1 []*generated.Comment
 	}
 	return response.(*TestCaseResponse).Tree, res1
 }
+
+func (set EndpointsSet) IgnoredMethod() {
+	return
+}
+
+func (set EndpointsSet) IgnoredErrorMethod() (res0 error) {
+	return
+}

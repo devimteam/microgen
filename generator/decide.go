@@ -58,6 +58,10 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 	if err != nil {
 		return nil, err
 	}
+	m := make(map[string]bool, len(iface.Methods))
+	for _, fn := range iface.Methods {
+		m[fn.Name] = !mstrings.ContainTag(mstrings.FetchTags(fn.Docs, TagMark+MicrogenMainTag), "-")
+	}
 	info := &template.GenerationInfo{
 		SourcePackageImport:   importPackagePath,
 		SourceFilePath:        absSourcePath,
@@ -66,6 +70,7 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 		OutputFilePath:        absOutPath,
 		ProtobufPackageImport: mstrings.FetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
 		FileHeader:            defaultFileHeader,
+		AllowedMethods:        m,
 	}
 	/*stubSvc, err := NewGenUnit(ctx, template.NewStubInterfaceTemplate(info), absOutPath)
 	if err != nil {

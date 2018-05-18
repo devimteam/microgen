@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	loggerVarName            = "logger"
-	nextVarName              = "next"
+	_next_                   = "next"
 	serviceLoggingStructName = "loggingMiddleware"
 
 	logIgnoreTag = "logs-ignore"
@@ -78,15 +77,15 @@ func (t *loggingTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f.HeaderComment(t.info.FileHeader)
 
 	f.Comment(ServiceLoggingMiddlewareName + " writes params, results and working time of method call to provided logger after its execution.").
-		Line().Func().Id(ServiceLoggingMiddlewareName).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
+		Line().Func().Id(ServiceLoggingMiddlewareName).Params(Id(_logger_).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newLoggingBody(t.info.Iface))
 
 	f.Line()
 
 	// Render type logger
 	f.Type().Id(serviceLoggingStructName).Struct(
-		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
+		Id(_logger_).Qual(PackagePathGoKitLog, "Logger"),
+		Id(_next_).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
 	)
 
 	// Render functions
@@ -141,14 +140,14 @@ func (t *loggingTemplate) ChooseStrategy(ctx context.Context) (write_strategy.St
 //
 func (t *loggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.info.SourcePackageImport, i.Name),
+		Id(_next_).Qual(t.info.SourcePackageImport, i.Name),
 	).Params(
 		Qual(t.info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(serviceLoggingStructName).Values(
 			Dict{
-				Id(loggerVarName): Id(loggerVarName),
-				Id(nextVarName):   Id(nextVarName),
+				Id(_logger_): Id(_logger_),
+				Id(_next_):   Id(_next_),
 			},
 		))
 	}))
@@ -156,7 +155,10 @@ func (t *loggingTemplate) newLoggingBody(i *types.Interface) *Statement {
 
 func (t *loggingTemplate) loggingEntity(ctx context.Context, name string, fn *types.Function, params []types.Variable) Code {
 	if len(params) == 0 {
-		return nil
+		return Empty()
+	}
+	if !t.info.AllowedMethods[fn.Name] {
+		return Empty()
 	}
 	return Id(name).StructFunc(func(g *Group) {
 		ignore := t.ignoreParams[fn.Name]
@@ -205,8 +207,17 @@ func (t *loggingTemplate) loggingFunc(ctx context.Context, signature *types.Func
 func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Group) {
 	normal := normalizeFunction(signature)
 	return func(g *Group) {
+		if !t.info.AllowedMethods[signature.Name] {
+			s := &Statement{}
+			if len(normal.Results) > 0 {
+				s.Return()
+			}
+			s.Id(rec(serviceLoggingStructName)).Dot(_next_).Dot(signature.Name).Call(paramNames(normal.Args))
+			g.Add(s)
+			return
+		}
 		g.Defer().Func().Params(Id("begin").Qual(PackagePathTime, "Time")).Block(
-			Id(rec(serviceLoggingStructName)).Dot(loggerVarName).Dot("Log").CallFunc(func(g *Group) {
+			Id(rec(serviceLoggingStructName)).Dot(_logger_).Dot("Log").CallFunc(func(g *Group) {
 				g.Line().Lit("method")
 				g.Lit(signature.Name)
 
@@ -224,8 +235,7 @@ func (t *loggingTemplate) loggingFuncBody(signature *types.Function) func(g *Gro
 				g.Qual(PackagePathTime, "Since").Call(Id("begin"))
 			}),
 		).Call(Qual(PackagePathTime, "Now").Call())
-
-		g.Return().Id(rec(serviceLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(normal.Args))
+		g.Return().Id(rec(serviceLoggingStructName)).Dot(_next_).Dot(signature.Name).Call(paramNames(normal.Args))
 	}
 }
 

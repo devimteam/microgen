@@ -67,6 +67,14 @@ func (M loggingMiddleware) TestCase(arg0 context.Context, arg1 []*service.Commen
 	return M.next.TestCase(arg0, arg1)
 }
 
+func (M loggingMiddleware) IgnoredMethod() {
+	M.next.IgnoredMethod()
+}
+
+func (M loggingMiddleware) IgnoredErrorMethod() (res0 error) {
+	return M.next.IgnoredErrorMethod()
+}
+
 type (
 	logUppercaseRequest struct {
 		StringsMap map[string]string

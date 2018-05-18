@@ -129,6 +129,9 @@ func (t *stubGRPCTypeConverterTemplate) Render(ctx context.Context) write_strate
 	f := &Statement{}
 
 	for _, signature := range t.info.Iface.Methods {
+		if !t.info.AllowedMethods[signature.Name] {
+			continue
+		}
 		args := append(RemoveContextIfFirst(signature.Args), removeErrorIfLast(signature.Results)...)
 		for _, field := range args {
 			if _, ok := golangTypeToProto(ctx, "", &field); !ok && !mstrings.IsInStringSlice(typeToProto(field.Type, 0), t.alreadyRenderedConverters) {

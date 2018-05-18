@@ -49,3 +49,11 @@ func (M errorLoggingMiddleware) TestCase(ctx context.Context, comments []*servic
 	}()
 	return M.next.TestCase(ctx, comments)
 }
+
+func (M errorLoggingMiddleware) IgnoredMethod() {
+	M.next.IgnoredMethod()
+}
+
+func (M errorLoggingMiddleware) IgnoredErrorMethod() error {
+	return M.next.IgnoredErrorMethod()
+}

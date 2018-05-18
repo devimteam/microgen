@@ -66,7 +66,7 @@ func (t *endpointsClientTemplate) Render(ctx context.Context) write_strategy.Ren
 		f.Add(t.clientTracingMiddleware()).Line()
 	}
 	for _, signature := range t.info.Iface.Methods {
-		f.Add(serviceEndpointMethod(ctx, signature)).Line().Line()
+		f.Add(t.serviceEndpointMethod(ctx, signature)).Line().Line()
 	}
 	return f
 }
@@ -97,10 +97,10 @@ func (t *endpointsClientTemplate) ChooseStrategy(ctx context.Context) (write_str
 //			return resp.(*CountResponse).Count, resp.(*CountResponse).Positions
 //		}
 //
-func serviceEndpointMethod(ctx context.Context, signature *types.Function) *Statement {
+func (t *endpointsClientTemplate) serviceEndpointMethod(ctx context.Context, signature *types.Function) *Statement {
 	normal := normalizeFunction(signature)
 	return methodDefinitionFull(ctx, EndpointsSetName, &normal.Function).
-		BlockFunc(serviceEndpointMethodBody(ctx, signature, &normal.Function))
+		BlockFunc(t.serviceEndpointMethodBody(ctx, signature, &normal.Function))
 }
 
 // Render interface method body.
@@ -115,10 +115,14 @@ func serviceEndpointMethod(ctx context.Context, signature *types.Function) *Stat
 //		}
 //		return endpointCountResponse.(*CountResponse).Count, endpointCountResponse.(*CountResponse).Positions, err
 //
-func serviceEndpointMethodBody(ctx context.Context, fn *types.Function, normal *types.Function) func(g *Group) {
+func (t *endpointsClientTemplate) serviceEndpointMethodBody(ctx context.Context, fn *types.Function, normal *types.Function) func(g *Group) {
 	reqName := "request"
 	respName := "response"
 	return func(g *Group) {
+		if !t.info.AllowedMethods[fn.Name] {
+			g.Return()
+			return
+		}
 		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByNormalVariables(RemoveContextIfFirst(fn.Args), RemoveContextIfFirst(normal.Args)))
 		g.Add(endpointResponse(respName, normal)).Id(strings.LastWordFromName(EndpointsSetName)).Dot(endpointsStructFieldName(fn.Name)).Call(Id(firstArgName(normal)), Op("&").Id(reqName))
 		g.If(Id(nameOfLastResultError(normal)).Op("!=").Nil().BlockFunc(func(ifg *Group) {
@@ -166,7 +170,9 @@ func (t *endpointsClientTemplate) clientTracingMiddleware() *Statement {
 	s.Func().Id("TraceClientEndpoints").Call(Id("endpoints").Id(EndpointsSetName), Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")).Id(EndpointsSetName).BlockFunc(func(g *Group) {
 		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
 			for _, signature := range t.info.Iface.Methods {
-				d[Id(endpointsStructFieldName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceClient").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointsStructFieldName(signature.Name)))
+				if t.info.AllowedMethods[signature.Name] {
+					d[Id(endpointsStructFieldName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceClient").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointsStructFieldName(signature.Name)))
+				}
 			}
 		})))
 	})

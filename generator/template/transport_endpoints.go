@@ -49,7 +49,9 @@ func (t *endpointsTemplate) Render(ctx context.Context) write_strategy.Renderer 
 	f.Comment(fmt.Sprintf("%s implements %s API and used for transport purposes.", EndpointsSetName, t.info.Iface.Name))
 	f.Type().Id(EndpointsSetName).StructFunc(func(g *Group) {
 		for _, signature := range t.info.Iface.Methods {
-			g.Id(endpointsStructFieldName(signature.Name)).Qual(PackagePathGoKitEndpoint, "Endpoint")
+			if t.info.AllowedMethods[signature.Name] {
+				g.Id(endpointsStructFieldName(signature.Name)).Qual(PackagePathGoKitEndpoint, "Endpoint")
+			}
 		}
 	}).Line()
 	f.Add(t.serverMetrics(ctx)).Line()
@@ -77,7 +79,9 @@ func (t *endpointsTemplate) serverMetrics(ctx context.Context) *Statement {
 	s.Func().Id("InstrumentingEndpoints").Call(Id("endpoints").Id(EndpointsSetName), Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")).Id(EndpointsSetName).BlockFunc(func(g *Group) {
 		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
 			for _, signature := range t.info.Iface.Methods {
-				d[Id(endpointsStructFieldName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceServer").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointsStructFieldName(signature.Name)))
+				if t.info.AllowedMethods[signature.Name] {
+					d[Id(endpointsStructFieldName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceServer").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointsStructFieldName(signature.Name)))
+				}
 			}
 		})))
 	})

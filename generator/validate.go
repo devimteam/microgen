@@ -25,6 +25,10 @@ func ValidateInterface(iface *types.Interface) error {
 // * Last result is error.
 // * All params have names.
 func validateFunction(fn *types.Function) (errs []error) {
+	// don't validate when `@microgen -` provided
+	if mstrings.ContainTag(mstrings.FetchTags(fn.Docs, TagMark+MicrogenMainTag), "-") {
+		return
+	}
 	if !template.IsContextFirst(fn.Args) {
 		errs = append(errs, fmt.Errorf("%s: first argument should be of type context.Context", fn.Name))
 	}

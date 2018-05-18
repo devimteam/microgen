@@ -51,6 +51,14 @@ func (M cachingMiddleware) TestCase(ctx context.Context, comments []*service.Com
 	return M.next.TestCase(ctx, comments)
 }
 
+func (M cachingMiddleware) IgnoredMethod() {
+	M.next.IgnoredMethod()
+}
+
+func (M cachingMiddleware) IgnoredErrorMethod() (res0 error) {
+	return M.next.IgnoredErrorMethod()
+}
+
 type uppercaseResponseCacheEntity struct {
 	Ans string
 }

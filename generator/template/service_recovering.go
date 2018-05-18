@@ -31,15 +31,15 @@ func (t *recoverTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f.HeaderComment(t.info.FileHeader)
 
 	f.Comment(ServiceRecoveringMiddlewareName + " recovers panics from method calls, writes to provided logger and returns the error of panic as method error.").
-		Line().Func().Id(ServiceRecoveringMiddlewareName).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
+		Line().Func().Id(ServiceRecoveringMiddlewareName).Params(Id(_logger_).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newRecoverBody(t.info.Iface))
 
 	f.Line()
 
 	// Render type logger
 	f.Type().Id(serviceRecoveringStructName).Struct(
-		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
+		Id(_logger_).Qual(PackagePathGoKitLog, "Logger"),
+		Id(_next_).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
 	)
 
 	// Render functions
@@ -65,14 +65,14 @@ func (t *recoverTemplate) ChooseStrategy(ctx context.Context) (write_strategy.St
 
 func (t *recoverTemplate) newRecoverBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.info.SourcePackageImport, i.Name),
+		Id(_next_).Qual(t.info.SourcePackageImport, i.Name),
 	).Params(
 		Qual(t.info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(serviceRecoveringStructName).Values(
 			Dict{
-				Id(loggerVarName): Id(loggerVarName),
-				Id(nextVarName):   Id(nextVarName),
+				Id(_logger_): Id(_logger_),
+				Id(_next_):   Id(_next_),
 			},
 		))
 	}))
@@ -85,16 +85,24 @@ func (t *recoverTemplate) recoverFunc(ctx context.Context, signature *types.Func
 
 func (t *recoverTemplate) recoverFuncBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
+		if !t.info.AllowedMethods[signature.Name] {
+			s := &Statement{}
+			if len(signature.Results) > 0 {
+				s.Return()
+			}
+			s.Id(rec(serviceRecoveringStructName)).Dot(_next_).Dot(signature.Name).Call(paramNames(signature.Args))
+			g.Add(s)
+			return
+		}
 		g.Defer().Func().Params().Block(
 			If(Id("r").Op(":=").Recover(), Id("r").Op("!=").Nil()).Block(
-				Id(rec(serviceRecoveringStructName)).Dot(loggerVarName).Dot("Log").Call(
+				Id(rec(serviceRecoveringStructName)).Dot(_logger_).Dot("Log").Call(
 					Lit("method"), Lit(signature.Name),
 					Lit("message"), Id("r"),
 				),
 				Id(nameOfLastResultError(signature)).Op("=").Qual(PackagePathFmt, "Errorf").Call(Lit("%v"), Id("r")),
 			),
 		).Call()
-
-		g.Return().Id(rec(serviceRecoveringStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
+		g.Return().Id(rec(serviceRecoveringStructName)).Dot(_next_).Dot(signature.Name).Call(paramNames(signature.Args))
 	}
 }

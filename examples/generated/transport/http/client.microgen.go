@@ -72,7 +72,7 @@ func sdClientFactory(
 }
 
 // httpClientFactoryMaker returns function, that describes what to do with `instance string` to create new instance of client.
-// Commonly, for http protocol it would be `host:port`.
+// Commonly, for http protocol it would be some sort of url, e.g. `host:port`.
 func httpClientFactoryMaker(opts ...httpkit.ClientOption) func(string) (transport.EndpointsSet, error) {
 	return func(instance string) (transport.EndpointsSet, error) {
 		u, err := url.Parse(instance)

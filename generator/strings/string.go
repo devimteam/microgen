@@ -69,12 +69,7 @@ func FetchTags(strs []string, prefix string) (tags []string) {
 }
 
 func HasTag(strs []string, prefix string) bool {
-	for _, comment := range strs {
-		if strings.HasPrefix(comment, prefix) {
-			return true
-		}
-	}
-	return false
+	return ContainTag(strs, prefix)
 }
 
 func ToLower(str string) string {

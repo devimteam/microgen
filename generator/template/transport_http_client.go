@@ -121,6 +121,9 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 			Return().Func().Add(sdClientSignature(t.info, true)).BlockFunc(func(g *Group) {
 				g.Var().Id("endpoints").Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName)
 				for _, fn := range t.info.Iface.Methods {
+					if !t.info.AllowedMethods[fn.Name] {
+						continue
+					}
 					g.Block(
 						Id("endpointer").Op(":=").Qual(PackagePathGoKitSD, "NewEndpointer").Call(
 							Id("instancer"),
@@ -146,6 +149,9 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 			),
 		)
 		for _, signature := range t.info.Iface.Methods {
+			if !t.info.AllowedMethods[signature.Name] {
+				continue
+			}
 			src.Add(t.serviceDiscoveryFactory(ctx, signature))
 		}
 	}
@@ -182,6 +188,9 @@ func (t *httpClientTemplate) clientBody(ctx context.Context) *Statement {
 	g.Return(Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName).Values(DictFunc(
 		func(d Dict) {
 			for _, fn := range t.info.Iface.Methods {
+				if !t.info.AllowedMethods[fn.Name] {
+					continue
+				}
 				method := FetchHttpMethodTag(fn.Docs)
 				client := &Statement{}
 				client.Qual(PackagePathGoKitTransportHTTP, "NewClient").Call(

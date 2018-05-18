@@ -48,14 +48,17 @@ func (t *cacheMiddlewareTemplate) Render(ctx context.Context) write_strategy.Ren
 	// Render middleware struct
 	f.Type().Id(cachingMiddlewareStructName).Struct(
 		Id("cache").Id(cacheInterfaceName),
-		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
+		Id(_logger_).Qual(PackagePathGoKitLog, "Logger"),
+		Id(_next_).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
 	)
 	for _, signature := range t.info.Iface.Methods {
 		f.Line()
 		f.Add(t.cacheFunc(ctx, signature)).Line()
 	}
 	for _, signature := range t.info.Iface.Methods {
+		if !t.info.AllowedMethods[signature.Name] {
+			continue
+		}
 		f.Add(cacheEntity(ctx, signature)).Line()
 	}
 
@@ -92,14 +95,14 @@ func (t *cacheMiddlewareTemplate) ChooseStrategy(ctx context.Context) (write_str
 
 func (t *cacheMiddlewareTemplate) newCacheBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.info.SourcePackageImport, i.Name),
+		Id(_next_).Qual(t.info.SourcePackageImport, i.Name),
 	).Params(
 		Qual(t.info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(cachingMiddlewareStructName).Values(
 			Dict{
-				Id("cache"):     Id("cache"),
-				Id(nextVarName): Id(nextVarName),
+				Id("cache"): Id("cache"),
+				Id(_next_):  Id(_next_),
 			},
 		))
 	}))
@@ -113,6 +116,15 @@ func (t *cacheMiddlewareTemplate) cacheFunc(ctx context.Context, signature *type
 
 func (t *cacheMiddlewareTemplate) cacheFuncBody(signature *types.Function, normalized *types.Function) func(g *Group) {
 	return func(g *Group) {
+		if !t.info.AllowedMethods[signature.Name] {
+			s := &Statement{}
+			if len(normalized.Results) > 0 {
+				s.Return()
+			}
+			s.Id(rec(cachingMiddlewareStructName)).Dot(_next_).Dot(signature.Name).Call(paramNames(normalized.Args))
+			g.Add(s)
+			return
+		}
 		if t.caching[signature.Name] {
 			g.List(Id("value"), Id("e")).Op(":=").Id(rec(cachingMiddlewareStructName)).Dot("cache").Dot("Get").Call(Id(t.cacheKeys[signature.Name]))
 			g.If(Id("e").Op("==").Nil()).Block(
@@ -133,7 +145,7 @@ func (t *cacheMiddlewareTemplate) cacheFuncBody(signature *types.Function, norma
 				),
 			).Call()
 		}
-		g.Return().Id(rec(cachingMiddlewareStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(normalized.Args))
+		g.Return().Id(rec(cachingMiddlewareStructName)).Dot(_next_).Dot(signature.Name).Call(paramNames(normalized.Args))
 	}
 }
 

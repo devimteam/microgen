@@ -71,6 +71,9 @@ func (t *httpConverterTemplate) ChooseStrategy(ctx context.Context) (write_strat
 
 func (t *httpConverterTemplate) Prepare(ctx context.Context) error {
 	for _, fn := range t.info.Iface.Methods {
+		if !t.info.AllowedMethods[fn.Name] {
+			continue
+		}
 		t.decodersRequest = append(t.decodersRequest, fn)
 		t.encodersRequest = append(t.encodersRequest, fn)
 		t.decodersResponse = append(t.decodersResponse, fn)

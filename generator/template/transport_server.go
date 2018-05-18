@@ -51,7 +51,9 @@ func (t *endpointsServerTemplate) Render(ctx context.Context) write_strategy.Ren
 		f.Add(t.serverTracingMiddleware()).Line()
 	}
 	for _, signature := range t.info.Iface.Methods {
-		f.Add(createEndpoint(signature, t.info)).Line().Line()
+		if t.info.AllowedMethods[signature.Name] {
+			f.Add(createEndpoint(signature, t.info)).Line().Line()
+		}
 	}
 	return f
 }
@@ -142,7 +144,9 @@ func (t *endpointsServerTemplate) allEndpoints() *Statement {
 	s.Func().Id("Endpoints").Call(Id("svc").Qual(t.info.SourcePackageImport, t.info.Iface.Name)).Id(EndpointsSetName).BlockFunc(func(g *Group) {
 		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
 			for _, signature := range t.info.Iface.Methods {
-				d[Id(endpointsStructFieldName(signature.Name))] = Id(endpointsStructFieldName(signature.Name)).Params(Id("svc"))
+				if t.info.AllowedMethods[signature.Name] {
+					d[Id(endpointsStructFieldName(signature.Name))] = Id(endpointsStructFieldName(signature.Name)).Params(Id("svc"))
+				}
 			}
 		})))
 	})
@@ -154,7 +158,9 @@ func (t *endpointsServerTemplate) serverTracingMiddleware() *Statement {
 	s.Func().Id("TraceServerEndpoints").Call(Id("endpoints").Id(EndpointsSetName), Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")).Id(EndpointsSetName).BlockFunc(func(g *Group) {
 		g.Return(Id(EndpointsSetName).Values(DictFunc(func(d Dict) {
 			for _, signature := range t.info.Iface.Methods {
-				d[Id(endpointsStructFieldName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceServer").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointsStructFieldName(signature.Name)))
+				if t.info.AllowedMethods[signature.Name] {
+					d[Id(endpointsStructFieldName(signature.Name))] = Qual(PackagePathGoKitTracing, "TraceServer").Call(Id("tracer"), Lit(signature.Name)).Call(Id("endpoints").Dot(endpointsStructFieldName(signature.Name)))
+				}
 			}
 		})))
 	})

@@ -51,8 +51,10 @@ func (t *exchangeTemplate) Render(ctx context.Context) write_strategy.Renderer {
 		f.Type().Op("(")
 	}
 	for _, signature := range t.info.Iface.Methods {
-		f.Add(exchange(ctx, requestStructName(signature), RemoveContextIfFirst(signature.Args))) //.Line()
-		f.Add(exchange(ctx, responseStructName(signature), removeErrorIfLast(signature.Results))).Line()
+		if t.info.AllowedMethods[signature.Name] {
+			f.Add(exchange(ctx, requestStructName(signature), RemoveContextIfFirst(signature.Args))) //.Line()
+			f.Add(exchange(ctx, responseStructName(signature), removeErrorIfLast(signature.Results))).Line()
+		}
 	}
 	if len(t.info.Iface.Methods) > 0 {
 		f.Op(")")

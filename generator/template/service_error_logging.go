@@ -31,15 +31,15 @@ func (t *errorLoggingTemplate) Render(ctx context.Context) write_strategy.Render
 	f.HeaderComment(t.info.FileHeader)
 
 	f.Comment("ErrorLoggingMiddleware writes to logger any error, if it is not nil.").
-		Line().Func().Id(ServiceErrorLoggingMiddlewareName).Params(Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
+		Line().Func().Id(ServiceErrorLoggingMiddlewareName).Params(Id(_logger_).Qual(PackagePathGoKitLog, "Logger")).Params(Id(MiddlewareTypeName)).
 		Block(t.newRecoverBody(t.info.Iface))
 
 	f.Line()
 
 	// Render type logger
 	f.Type().Id(serviceErrorLoggingStructName).Struct(
-		Id(loggerVarName).Qual(PackagePathGoKitLog, "Logger"),
-		Id(nextVarName).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
+		Id(_logger_).Qual(PackagePathGoKitLog, "Logger"),
+		Id(_next_).Qual(t.info.SourcePackageImport, t.info.Iface.Name),
 	)
 
 	// Render functions
@@ -65,14 +65,14 @@ func (t *errorLoggingTemplate) ChooseStrategy(ctx context.Context) (write_strate
 
 func (t *errorLoggingTemplate) newRecoverBody(i *types.Interface) *Statement {
 	return Return(Func().Params(
-		Id(nextVarName).Qual(t.info.SourcePackageImport, i.Name),
+		Id(_next_).Qual(t.info.SourcePackageImport, i.Name),
 	).Params(
 		Qual(t.info.SourcePackageImport, i.Name),
 	).BlockFunc(func(g *Group) {
 		g.Return(Op("&").Id(serviceErrorLoggingStructName).Values(
 			Dict{
-				Id(loggerVarName): Id(loggerVarName),
-				Id(nextVarName):   Id(nextVarName),
+				Id(_logger_): Id(_logger_),
+				Id(_next_):   Id(_next_),
 			},
 		))
 	}))
@@ -85,15 +85,24 @@ func (t *errorLoggingTemplate) recoverFunc(ctx context.Context, signature *types
 
 func (t *errorLoggingTemplate) recoverFuncBody(signature *types.Function) func(g *Group) {
 	return func(g *Group) {
+		if !t.info.AllowedMethods[signature.Name] {
+			s := &Statement{}
+			if len(signature.Results) > 0 {
+				s.Return()
+			}
+			s.Id(rec(serviceErrorLoggingStructName)).Dot(_next_).Dot(signature.Name).Call(paramNames(signature.Args))
+			g.Add(s)
+			return
+		}
 		g.Defer().Func().Params().Block(
 			If(Id(nameOfLastResultError(signature)).Op("!=").Nil()).Block(
-				Id(rec(serviceErrorLoggingStructName)).Dot(loggerVarName).Dot("Log").Call(
+				Id(rec(serviceErrorLoggingStructName)).Dot(_logger_).Dot("Log").Call(
 					Lit("method"), Lit(signature.Name),
 					Lit("message"), Id(nameOfLastResultError(signature)),
 				),
 			),
 		).Call()
 
-		g.Return().Id(rec(serviceErrorLoggingStructName)).Dot(nextVarName).Dot(signature.Name).Call(paramNames(signature.Args))
+		g.Return().Id(rec(serviceErrorLoggingStructName)).Dot(_next_).Dot(signature.Name).Call(paramNames(signature.Args))
 	}
 }

@@ -246,6 +246,9 @@ func (t *gRPCEndpointConverterTemplate) Prepare(ctx context.Context) error {
 		return ErrProtobufEmpty
 	}
 	for _, fn := range t.info.Iface.Methods {
+		if !t.info.AllowedMethods[fn.Name] {
+			continue
+		}
 		t.requestDecoders = append(t.requestDecoders, fn)
 		t.requestEncoders = append(t.requestEncoders, fn)
 		t.responseDecoders = append(t.responseDecoders, fn)

@@ -65,6 +65,9 @@ func (t *gRPCClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 		BlockFunc(func(g *Group) {
 			g.Return().Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName).Values(DictFunc(func(d Dict) {
 				for _, m := range t.info.Iface.Methods {
+					if !t.info.AllowedMethods[m.Name] {
+						continue
+					}
 					client := &Statement{}
 					client.Qual(PackagePathGoKitTransportGRPC, "NewClient").Call(
 						Line().Id("conn"), Id("addr"), Lit(m.Name),

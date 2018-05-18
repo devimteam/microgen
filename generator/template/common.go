@@ -99,6 +99,7 @@ type GenerationInfo struct {
 	FileHeader          string
 
 	ProtobufPackageImport string
+	AllowedMethods        map[string]bool
 }
 
 func structFieldName(field *types.Variable) *Statement {
@@ -391,7 +392,3 @@ func filenameBuilder(ss ...string) string {
 	ss[len(ss)-1] = ss[len(ss)-1] + MicrogenExt
 	return filepath.Join(ss...)
 }
-
-// Hard
-// Soft
-// Nop?

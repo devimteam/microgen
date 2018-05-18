@@ -71,6 +71,9 @@ func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 
 	f.Type().Id(privateServerStructName(t.info.Iface)).StructFunc(func(g *Group) {
 		for _, method := range t.info.Iface.Methods {
+			if !t.info.AllowedMethods[method.Name] {
+				continue
+			}
 			g.Id(mstrings.ToLowerFirst(method.Name)).Qual(PackagePathGoKitTransportGRPC, "Handler")
 		}
 	}).Line()
@@ -91,6 +94,9 @@ func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 		Block(
 			Return().Op("&").Id(privateServerStructName(t.info.Iface)).Values(DictFunc(func(g Dict) {
 				for _, m := range t.info.Iface.Methods {
+					if !t.info.AllowedMethods[m.Name] {
+						continue
+					}
 					g[(&Statement{}).Id(mstrings.ToLowerFirst(m.Name))] = Qual(PackagePathGoKitTransportGRPC, "NewServer").
 						Call(
 							Line().Id("endpoints").Dot(endpointsStructFieldName(m.Name)),
@@ -105,7 +111,9 @@ func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 	f.Line()
 
 	for _, signature := range t.info.Iface.Methods {
-		f.Line()
+		if !t.info.AllowedMethods[signature.Name] {
+			continue
+		}
 		f.Add(t.grpcServerFunc(signature, t.info.Iface)).Line()
 	}
 
