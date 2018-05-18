@@ -46,24 +46,34 @@ func TracingHTTPClientOptions(tracer opentracinggo.Tracer, logger log.Logger) fu
 	}
 }
 
-func NewHTTPClientSD(instancer sd.Instancer, opts ...httpkit.ClientOption) transport.EndpointsSet {
-	var endpoints transport.EndpointsSet
-	{
-		endpointer := sd.NewEndpointer(instancer, uppercaseSDFactory(HTTPClientMaker(opts...)), NewNopLogger{})
-		endpoints.UppercaseEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
+// NewHTTPClientSD is a http client for StringService and uses service discovery inside.
+var NewHTTPClientSD = sdClientFactory(httpClientFactoryMaker)
+
+// sdClientFactory is a factory to create constructors for HTTPClientSD
+func sdClientFactory(
+	maker func(opts ...httpkit.ClientOption) func(string) (transport.EndpointsSet, error),
+) func(sd.Instancer, log.Logger, ...httpkit.ClientOption) transport.EndpointsSet {
+	return func(instancer sd.Instancer, logger log.Logger, opts ...httpkit.ClientOption) transport.EndpointsSet {
+		var endpoints transport.EndpointsSet
+		{
+			endpointer := sd.NewEndpointer(instancer, uppercaseSDFactory(maker(opts...)), logger)
+			endpoints.UppercaseEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
+		}
+		{
+			endpointer := sd.NewEndpointer(instancer, countSDFactory(maker(opts...)), logger)
+			endpoints.CountEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
+		}
+		{
+			endpointer := sd.NewEndpointer(instancer, testCaseSDFactory(maker(opts...)), logger)
+			endpoints.TestCaseEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
+		}
+		return endpoints
 	}
-	{
-		endpointer := sd.NewEndpointer(instancer, countSDFactory(HTTPClientMaker(opts...)), NewNopLogger{})
-		endpoints.CountEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
-	}
-	{
-		endpointer := sd.NewEndpointer(instancer, testCaseSDFactory(HTTPClientMaker(opts...)), NewNopLogger{})
-		endpoints.TestCaseEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
-	}
-	return endpoints
 }
 
-func HTTPClientMaker(opts ...httpkit.ClientOption) func(string) (transport.EndpointsSet, error) {
+// httpClientFactoryMaker returns function, that describes what to do with `instance string` to create new instance of client.
+// Commonly, for http protocol it would be `host:port`.
+func httpClientFactoryMaker(opts ...httpkit.ClientOption) func(string) (transport.EndpointsSet, error) {
 	return func(instance string) (transport.EndpointsSet, error) {
 		u, err := url.Parse(instance)
 		if err != nil {

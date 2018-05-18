@@ -2,6 +2,7 @@ package template
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/strings"
@@ -78,12 +79,12 @@ func (t *httpClientTemplate) Prepare(ctx context.Context) error {
 //		}
 //
 func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer {
-	f := NewFile("transporthttp")
-	f.ImportAlias(t.info.SourcePackageImport, serviceAlias)
-	f.ImportAlias(PackagePathGoKitTransportHTTP, "httpkit")
-	f.HeaderComment(t.info.FileHeader)
+	src := NewFile("transporthttp")
+	src.ImportAlias(t.info.SourcePackageImport, serviceAlias)
+	src.ImportAlias(PackagePathGoKitTransportHTTP, "httpkit")
+	src.HeaderComment(t.info.FileHeader)
 
-	f.Func().Id("NewHTTPClient").ParamsFunc(func(p *Group) {
+	src.Func().Id("NewHTTPClient").ParamsFunc(func(p *Group) {
 		p.Id("u").Op("*").Qual(PackagePathUrl, "URL")
 		p.Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption")
 	}).Params(
@@ -93,7 +94,7 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 	)
 
 	if Tags(ctx).Has(TracingMiddlewareTag) {
-		f.Line().Func().Id("TracingHTTPClientOptions").Params(
+		src.Line().Func().Id("TracingHTTPClientOptions").Params(
 			Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer"),
 			Id("logger").Qual(PackagePathGoKitLog, "Logger"),
 		).Params(
@@ -107,31 +108,35 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 		)
 	}
 	if Tags(ctx).Has(ServiceDiscoveryTag) {
-		f.Line().Func().Id("NewHTTPClientSD").Params(
-			Id("instancer").Qual(PackagePathGoKitSD, "Instancer"),
-			Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption"),
+		src.Comment(fmt.Sprintf("NewHTTPClientSD is a http client for %s and uses service discovery inside.", t.info.Iface.Name)).
+			Line().Var().Id("NewHTTPClientSD").Op("=").Id("sdClientFactory").Call(Id("httpClientFactoryMaker"))
+		src.Comment("sdClientFactory is a factory to create constructors for HTTPClientSD").
+			Line().Func().Id("sdClientFactory").Params(
+			Line().Id("maker").Func().Add(factoryMakerSignature(t.info)),
+			Line(),
 		).Params(
-			Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName),
-		).BlockFunc(func(g *Group) {
-			g.Var().Id("endpoints").Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName)
-			for _, fn := range t.info.Iface.Methods {
-				g.Block(
-					Id("endpointer").Op(":=").Qual(PackagePathGoKitSD, "NewEndpointer").Call(
-						Id("instancer"),
-						Id(serviceDiscoveryFactoryName(fn.Name)).Call(Id("HTTPClientMaker").Call(Id("opts").Op("..."))),
-						Id("NewNopLogger{}")),
-					List(Id("endpoints").Dot(endpointsStructFieldName(fn.Name)), Id("_")).
-						Op("=").
-						Qual(PackagePathGoKitLB, "NewRoundRobin").Call(Id("endpointer")).Dot("Endpoint").Call(),
-				)
-			}
-			g.Return(Id("endpoints"))
-		})
-		f.Line().Func().Id("HTTPClientMaker").Params(
-			Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption"),
-		).Params(
-			Func().Params(String()).Params(Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName), Error()),
+			Line().Func().Add(sdClientSignature(t.info, false)),
+			Line(),
 		).Block(
+			Return().Func().Add(sdClientSignature(t.info, true)).BlockFunc(func(g *Group) {
+				g.Var().Id("endpoints").Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName)
+				for _, fn := range t.info.Iface.Methods {
+					g.Block(
+						Id("endpointer").Op(":=").Qual(PackagePathGoKitSD, "NewEndpointer").Call(
+							Id("instancer"),
+							Id(serviceDiscoveryFactoryName(fn.Name)).Call(Id("maker").Call(Id("opts").Op("..."))),
+							Id(_logger_)),
+						List(Id("endpoints").Dot(endpointsStructFieldName(fn.Name)), Id("_")).
+							Op("=").
+							Qual(PackagePathGoKitLB, "NewRoundRobin").Call(Id("endpointer")).Dot("Endpoint").Call(),
+					)
+				}
+				g.Return(Id("endpoints"))
+			}),
+		)
+		src.Comment("httpClientFactoryMaker returns function, that describes what to do with `instance string` to create new instance of client.").
+			Line().Comment("Commonly, for http protocol it would be some sort of url, e.g. `host:port`.").
+			Line().Func().Id("httpClientFactoryMaker").Add(factoryMakerSignature(t.info)).Block(
 			Return().Func().Params(Id("instance").String()).Params(Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName), Error()).Block(
 				List(Id("u"), Err()).Op(":=").Qual(PackagePathUrl, "Parse").Call(Id("instance")),
 				If(Err().Op("!=").Nil()).Block(
@@ -141,10 +146,10 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 			),
 		)
 		for _, signature := range t.info.Iface.Methods {
-			f.Add(t.serviceDiscoveryFactory(ctx, signature))
+			src.Add(t.serviceDiscoveryFactory(ctx, signature))
 		}
 	}
-	return f
+	return src
 }
 
 // Render client body.
@@ -218,4 +223,28 @@ func (t *httpClientTemplate) serviceDiscoveryFactory(ctx context.Context, fn *ty
 
 func serviceDiscoveryFactoryName(str string) string {
 	return strings.ToLowerFirst(str) + "SDFactory"
+}
+
+func factoryMakerSignature(info *GenerationInfo) *Statement {
+	return Params(
+		Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption"),
+	).Params(
+		Func().Params(String()).Params(Qual(info.OutputPackageImport+"/transport", EndpointsSetName), Error()),
+	)
+}
+
+func sdClientSignature(info *GenerationInfo, names bool) *Statement {
+	_instancer_ := "instancer"
+	_lg_ := _logger_
+	_opts_ := "opts"
+	if !names {
+		_instancer_, _lg_, _opts_ = "", "", ""
+	}
+	return Params(
+		Id(_instancer_).Qual(PackagePathGoKitSD, "Instancer"),
+		Id(_lg_).Qual(PackagePathGoKitLog, "Logger"),
+		Id(_opts_).Op("...").Qual(PackagePathGoKitTransportHTTP, "ClientOption"),
+	).Params(
+		Qual(info.OutputPackageImport+"/transport", EndpointsSetName),
+	)
 }

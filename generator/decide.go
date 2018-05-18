@@ -39,6 +39,7 @@ const (
 	TransportClient           = template.TransportClient
 	TransportServer           = template.TransportServer
 	MetricsMiddlewareTag      = template.MetricsMiddlewareTag
+	ServiceDiscoveryTag       = template.ServiceDiscoveryTag
 
 	HttpMethodTag  = template.HttpMethodTag
 	HttpMethodPath = template.HttpMethodPath
@@ -165,6 +166,8 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 	case TracingMiddlewareTag:
 		return append(tmpls, template.EmptyTemplate{})
 	case MetricsMiddlewareTag:
+		return append(tmpls, template.EmptyTemplate{})
+	case ServiceDiscoveryTag:
 		return append(tmpls, template.EmptyTemplate{})
 	case Transport:
 		return append(tmpls,
