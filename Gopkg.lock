@@ -24,10 +24,12 @@
   packages = [
     "endpoint",
     "log",
+    "metrics",
+    "sd",
+    "sd/lb",
     "tracing/opentracing",
     "transport/grpc",
-    "transport/http",
-    "transport/http/jsonrpc"
+    "transport/http"
   ]
   revision = "ca4112baa34cb55091301bdc13b1420a122b1b9e"
   version = "v0.7.0"
@@ -51,6 +53,7 @@
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
+    "ptypes/empty",
     "ptypes/timestamp"
   ]
   revision = "925541529c1fa6821df4e44ce2723319eb2be768"
@@ -101,7 +104,7 @@
     ".",
     "types"
   ]
-  revision = "e604edf6c9f8abae969b1ab08605f3908b49c164"
+  revision = "3e1e91982a81af711fe604327d335a5e3c125f5c"
   version = "v1.1.0"
 
 [[projects]]
@@ -117,6 +120,12 @@
     "trace"
   ]
   revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -178,6 +187,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6a60ab0faac406209f7f7bdcba86ddc00f913d3827ed85b92ed6977d2d33cd6d"
+  inputs-digest = "5b114cf9ba55b6c77ed8e106cf80730da075f26fa85167993dc0c8cb889ca695"
   solver-name = "gps-cdcl"
   solver-version = 1
