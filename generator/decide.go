@@ -46,7 +46,7 @@ const (
 )
 
 func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath, sourcePath string) (units []*GenerationUnit, err error) {
-	importPackagePath, err := resolvePackagePath(sourcePath)
+	importPackagePath, err := resolvePackagePath(filepath.Dir(sourcePath))
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +73,7 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 		AllowedMethods:        m,
 		ProtobufClientAddr:    mstrings.FetchMetaInfo(TagMark+GRPCClientAddr, iface.Docs),
 	}
+	lg.Logger.Logln(3, "\nGeneration Info:", info.String())
 	/*stubSvc, err := NewGenUnit(ctx, template.NewStubInterfaceTemplate(info), absOutPath)
 	if err != nil {
 		return nil, err
@@ -222,7 +223,6 @@ func resolvePackagePath(outPath string) (string, error) {
 		return "", fmt.Errorf("GOPATH is empty")
 	}
 
-	outPath = filepath.Dir(outPath)
 	absOutPath, err := filepath.Abs(outPath)
 	if err != nil {
 		return "", err

@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"path/filepath"
+
 	"github.com/devimteam/microgen/generator"
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
@@ -19,7 +21,7 @@ const (
 )
 
 var (
-	flagFileName  = flag.String("file", "service.go", "Name of file where described interface definition")
+	flagFileName  = flag.String("file", "service.go", "Path to input file with interface")
 	flagOutputDir = flag.String("out", ".", "Output directory")
 	flagHelp      = flag.Bool("help", false, "Show help")
 	flagVerbose   = flag.Int("v", 1, "Verbose log level")
@@ -60,7 +62,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	units, err := generator.ListTemplatesForGen(ctx, i, *flagOutputDir, *flagFileName)
+	absOutputDir, err := filepath.Abs(*flagOutputDir)
+	if err != nil {
+		lg.Logger.Logln(0, "fatal:", err)
+		os.Exit(1)
+	}
+	units, err := generator.ListTemplatesForGen(ctx, i, absOutputDir, *flagFileName)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)

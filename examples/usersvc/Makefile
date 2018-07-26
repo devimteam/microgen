@@ -1,1 +1,1 @@
-gen: ; microgen -file=./usersvc/api.go -out=.
+gen: ; microgen -file=./pkg/usersvc/api.go -out=./pkg/

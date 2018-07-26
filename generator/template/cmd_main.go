@@ -236,7 +236,7 @@ func (t *mainTemplate) serveGrpc(ctx context.Context) *Statement {
 	return Comment(nameServeGRPC+` starts new GRPC server on address and sends first error to channel.`).Line().
 		Func().Id(nameServeGRPC).Params(
 		ctx_contextContext,
-		Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport+"/transport", EndpointsSetName),
+		Id("endpoints").Op("*").Qual(filepath.Join(t.Info.OutputPackageImport, "transport"), EndpointsSetName),
 		Id("addr").Id("string"),
 		Id(_logger_).Qual(PackagePathGoKitLog, "Logger"),
 	).Params(
@@ -247,7 +247,7 @@ func (t *mainTemplate) serveGrpc(ctx context.Context) *Statement {
 			Return().Err(),
 		)
 		body.Comment(`Here you can add middlewares for grpc server.`)
-		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.SourcePackageImport, "transport/grpc"), "NewGRPCServer").Call(t.newServerParams(ctx))
+		body.Id("server").Op(":=").Qual(filepath.Join(t.Info.OutputPackageImport, "transport/grpc"), "NewGRPCServer").Call(t.newServerParams(ctx))
 		body.Id("grpcServer").Op(":=").Qual(PackagePathGoogleGRPC, "NewServer").Call()
 		body.Qual(t.Info.ProtobufPackageImport, "Register"+mstrings.ToUpperFirst(t.Info.Iface.Name)+"Server").Call(Id("grpcServer"), Id("server"))
 		body.Id(_logger_).Dot("Log").Call(Lit("listen on"), Id("addr"))
@@ -272,13 +272,13 @@ func (t *mainTemplate) serveHTTP(ctx context.Context) *Statement {
 	return Comment(nameServeHTTP+` starts new HTTP server on address and sends first error to channel.`).Line().
 		Func().Id(nameServeHTTP).Params(
 		ctx_contextContext,
-		Id("endpoints").Op("*").Qual(t.Info.SourcePackageImport+"/transport", EndpointsSetName),
+		Id("endpoints").Op("*").Qual(t.Info.OutputPackageImport+"/transport", EndpointsSetName),
 		Id("addr").Id("string"),
 		Id(_logger_).Qual(PackagePathGoKitLog, "Logger"),
 	).Params(
 		Error(),
 	).BlockFunc(func(body *Group) {
-		body.Id("handler").Op(":=").Qual(t.Info.SourcePackageImport+"/transport/http", "NewHTTPHandler").Call(t.newServerParams(ctx))
+		body.Id("handler").Op(":=").Qual(t.Info.OutputPackageImport+"/transport/http", "NewHTTPHandler").Call(t.newServerParams(ctx))
 		body.Id("httpServer").Op(":=").Op("&").Qual(PackagePathHttp, "Server").Values(DictFunc(func(d Dict) {
 			d[Id("Addr")] = Id("addr")
 			d[Id("Handler")] = Id("handler")

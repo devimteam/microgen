@@ -2,7 +2,9 @@ package template
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -101,6 +103,35 @@ type GenerationInfo struct {
 	ProtobufPackageImport string
 	ProtobufClientAddr    string
 	AllowedMethods        map[string]bool
+}
+
+func (i GenerationInfo) String() string {
+	var ss []string
+	ss = append(ss,
+		fmt.Sprint(),
+		fmt.Sprint("SourcePackageImport: ", i.SourcePackageImport),
+		fmt.Sprint("SourceFilePath: ", i.SourceFilePath),
+		fmt.Sprint("OutputPackageImport: ", i.OutputPackageImport),
+		fmt.Sprint("OutputFilePath: ", i.OutputFilePath),
+		fmt.Sprint("FileHeader: ", i.FileHeader),
+		fmt.Sprint(),
+		fmt.Sprint("ProtobufPackageImport: ", i.ProtobufPackageImport),
+		fmt.Sprint("ProtobufClientAddr: ", i.ProtobufClientAddr),
+		fmt.Sprint("AllowedMethods: ", listKeysOfMap(i.AllowedMethods)),
+		fmt.Sprint(),
+	)
+	return strings.Join(ss, "\n\t")
+}
+
+func listKeysOfMap(m map[string]bool) string {
+	var keys = make([]string, len(m))
+	i := 0
+	for k := range m {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys) // to keep order
+	return strings.Join(keys, ", ")
 }
 
 func structFieldName(field *types.Variable) *Statement {

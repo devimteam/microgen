@@ -442,7 +442,7 @@ func (t *gRPCEndpointConverterTemplate) encodeResponse(ctx context.Context, sign
 	return Line().Func().Id(encodeResponseName(signature)).Call(ctx_contextContext, Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) == 1 {
-				sp := specialEndpointConverterToProto(methodResults[0], signature, responseStructName, t.info.SourcePackageImport, fullName, shortName)
+				sp := specialEndpointConverterToProto(methodResults[0], signature, responseStructName, t.info.SourcePackageImport+"/transport", fullName, shortName)
 				if sp != nil {
 					group.Add(sp)
 					return
@@ -524,7 +524,7 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(ctx context.Context, sign
 	return Line().Func().Id(decodeResponseName(signature)).Call(ctx_contextContext, Id(fullName).Interface()).Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
 			if len(methodResults) == 1 {
-				sp := specialEndpointConverterFromProto(methodResults[0], signature, responseStructName, t.info.SourcePackageImport, fullName, shortName)
+				sp := specialEndpointConverterFromProto(methodResults[0], signature, responseStructName, t.info.SourcePackageImport+"/transport", fullName, shortName)
 				if sp != nil {
 					group.Add(sp)
 					return
@@ -546,7 +546,8 @@ func (t *gRPCEndpointConverterTemplate) decodeResponse(ctx context.Context, sign
 	).Line()
 }
 
-func specialEndpointConverterToProto(v types.Variable,
+func specialEndpointConverterToProto(
+	v types.Variable,
 	fn *types.Function,
 	strNameFn func(*types.Function) string,
 	pkg string,
@@ -571,7 +572,8 @@ func specialEndpointConverterToProto(v types.Variable,
 	return nil
 }
 
-func specialEndpointConverterFromProto(v types.Variable,
+func specialEndpointConverterFromProto(
+	v types.Variable,
 	fn *types.Function,
 	strNameFn func(*types.Function) string,
 	pkg string,
