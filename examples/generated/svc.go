@@ -5,7 +5,7 @@ import (
 )
 
 // @microgen middleware, logging, grpc, http, recovering, main, error-logging, tracing, caching, metrics, service-discovery
-// @grpc-addr service.string
+// @grpc-addr service.string.StringService
 // @protobuf github.com/devimteam/microgen/examples/protobuf
 type StringService interface {
 	// @logs-ignore ans, err

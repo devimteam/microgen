@@ -13,6 +13,9 @@ import (
 )
 
 func NewGRPCClient(conn *grpc.ClientConn, addr string, opts ...grpckit.ClientOption) transport.EndpointsSet {
+	if addr == "" {
+		addr = "service.string.StringService"
+	}
 	return transport.EndpointsSet{
 		CountEndpoint: grpckit.NewClient(
 			conn, addr, "Count",

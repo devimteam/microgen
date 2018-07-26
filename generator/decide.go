@@ -17,7 +17,7 @@ const (
 	TagMark         = template.TagMark
 	MicrogenMainTag = template.MicrogenMainTag
 	ProtobufTag     = "protobuf"
-	GRPCRegAddr     = "grpc-addr"
+	GRPCClientAddr  = "grpc-addr"
 
 	MiddlewareTag             = template.MiddlewareTag
 	LoggingMiddlewareTag      = template.LoggingMiddlewareTag
@@ -71,6 +71,7 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 		ProtobufPackageImport: mstrings.FetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
 		FileHeader:            defaultFileHeader,
 		AllowedMethods:        m,
+		ProtobufClientAddr:    mstrings.FetchMetaInfo(TagMark+GRPCClientAddr, iface.Docs),
 	}
 	/*stubSvc, err := NewGenUnit(ctx, template.NewStubInterfaceTemplate(info), absOutPath)
 	if err != nil {

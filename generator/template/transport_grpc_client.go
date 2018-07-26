@@ -63,6 +63,11 @@ func (t *gRPCClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ClientOption")
 		}).Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName).
 		BlockFunc(func(g *Group) {
+			if t.info.ProtobufClientAddr != "" {
+				g.If(Id("addr").Op("==").Lit("")).Block(
+					Id("addr").Op("=").Lit(t.info.ProtobufClientAddr),
+				)
+			}
 			g.Return().Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName).Values(DictFunc(func(d Dict) {
 				for _, m := range t.info.Iface.Methods {
 					if !t.info.AllowedMethods[m.Name] {

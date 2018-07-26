@@ -99,6 +99,7 @@ type GenerationInfo struct {
 	FileHeader          string
 
 	ProtobufPackageImport string
+	ProtobufClientAddr    string
 	AllowedMethods        map[string]bool
 }
 
