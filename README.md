@@ -114,6 +114,22 @@ type StringService interface {
 ```
 `@protobuf` tag is optional, but required for `grpc`, `grpc-server`, `grpc-client` generation.
 
+#### @grpc-addr
+This tag allows to add construction for default grpc server addr in generated grpc client.
+```go
+if addr == "" {
+    addr = "service.string.StringService"
+}
+```
+Example:
+```go
+// @microgen grpc-client
+// @grpc-addr service.string.StringService
+type StringService interface {
+    ServiceMethod(ctx context.Context) (err error)
+}
+```
+
 ### Method's tags
 #### @microgen -
 Microgen will ignore method with this tag everywere it can.
