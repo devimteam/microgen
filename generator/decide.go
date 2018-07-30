@@ -195,29 +195,12 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 			template.NewEndpointsTemplate(info),
 			template.NewEndpointsServerTemplate(info),
 		)
-		// JSON-RPC commented for now, and, I think, will be deleted in future.
-		/*case JSONRPCTag:
-			return append(tmpls,
-				template.NewJSONRPCEndpointConverterTemplate(info),
-				template.NewJSONRPCClientTemplate(info),
-				template.NewJSONRPCServerTemplate(info),
-			)
-		case JSONRPCClientTag:
-			return append(tmpls,
-				template.NewJSONRPCEndpointConverterTemplate(info),
-				template.NewJSONRPCClientTemplate(info),
-			)
-		case JSONRPCServerTag:
-			return append(tmpls,
-				template.NewJSONRPCEndpointConverterTemplate(info),
-				template.NewJSONRPCServerTemplate(info),
-			)*/
 	}
 	return nil
 }
 
 func resolvePackagePath(outPath string) (string, error) {
-	lg.Logger.Logln(3, "try to resolve package")
+	lg.Logger.Logln(3, "Try to resolve path for", outPath, "package...")
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		return "", fmt.Errorf("GOPATH is empty")
@@ -228,12 +211,13 @@ func resolvePackagePath(outPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	lg.Logger.Logln(4, "Resolving path:", absOutPath)
-	gopathSrc := filepath.Join(gopath, "src")
-	if !strings.HasPrefix(absOutPath, gopathSrc) {
-		return "", fmt.Errorf("path not in GOPATH")
-	}
 
-	return absOutPath[len(gopathSrc)+1:], nil
+	for _, path := range strings.Split(gopath, ":") {
+		gopathSrc := filepath.Join(path, "src")
+		if strings.HasPrefix(absOutPath, gopathSrc) {
+			return absOutPath[len(gopathSrc)+1:], nil
+		}
+	}
+	return "", fmt.Errorf("path(%s) not in GOPATH(%s)", absOutPath, gopath)
 }

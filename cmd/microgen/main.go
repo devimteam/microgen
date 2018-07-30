@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
-	"strings"
-
 	"path/filepath"
+	"strings"
 
 	"github.com/devimteam/microgen/generator"
 	mstrings "github.com/devimteam/microgen/generator/strings"
@@ -25,6 +25,7 @@ var (
 	flagOutputDir = flag.String("out", ".", "Output directory")
 	flagHelp      = flag.Bool("help", false, "Show help")
 	flagVerbose   = flag.Int("v", 1, "Verbose log level")
+	flagDebug     = flag.Bool("debug", false, "Equivalent to -v=100")
 )
 
 func init() {
@@ -33,12 +34,16 @@ func init() {
 
 func main() {
 	lg.Logger.Level = *flagVerbose
+	if *flagDebug {
+		lg.Logger.Level = 100
+	}
 	lg.Logger.Logln(1, "@microgen", Version)
 	if *flagHelp || *flagFileName == "" {
 		flag.Usage()
 		os.Exit(0)
 	}
 
+	lg.Logger.Logln(4, "Source file:", *flagFileName)
 	info, err := astra.ParseFile(*flagFileName)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
@@ -48,6 +53,8 @@ func main() {
 	i := findInterface(info)
 	if i == nil {
 		lg.Logger.Logln(0, "fatal: could not find interface with @microgen tag")
+		lg.Logger.Logln(4, "All founded interfaces:")
+		lg.Logger.Logln(4, listInterfaces(info.Interfaces))
 		os.Exit(1)
 	}
 
@@ -80,6 +87,14 @@ func main() {
 		}
 	}
 	lg.Logger.Logln(1, "all files successfully generated")
+}
+
+func listInterfaces(ii []types.Interface) string {
+	var s string
+	for _, i := range ii {
+		s = s + fmt.Sprintf("\t%s(%d methods, %d embedded interfaces)\n", i.Name, len(i.Methods), len(i.Interfaces))
+	}
+	return s
 }
 
 func prepareContext(filename string, iface *types.Interface) (context.Context, error) {
