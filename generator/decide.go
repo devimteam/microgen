@@ -217,17 +217,19 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 }
 
 func resolvePackagePath(outPath string) (string, error) {
-	lg.Logger.Logln(3, "try to resolve current package")
+	lg.Logger.Logln(3, "try to resolve package")
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		return "", fmt.Errorf("GOPATH is empty")
 	}
+	lg.Logger.Logln(4, "GOPATH:", gopath)
 
 	absOutPath, err := filepath.Abs(outPath)
 	if err != nil {
 		return "", err
 	}
 
+	lg.Logger.Logln(4, "Resolving path:", absOutPath)
 	gopathSrc := filepath.Join(gopath, "src")
 	if !strings.HasPrefix(absOutPath, gopathSrc) {
 		return "", fmt.Errorf("path not in GOPATH")
