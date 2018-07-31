@@ -45,7 +45,7 @@ const (
 	HttpMethodPath = template.HttpMethodPath
 )
 
-func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath, sourcePath string, genProto string) (units []*GenerationUnit, err error) {
+func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath, sourcePath string, genProto string, genMain bool) (units []*GenerationUnit, err error) {
 	importPackagePath, err := resolvePackagePath(filepath.Dir(sourcePath))
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 	for _, tag := range genTags {
 		templates := tagToTemplate(tag, info)
 		if templates == nil {
-			lg.Logger.Logf(1, "Warning! unexpected tag %s\n", tag)
+			lg.Logger.Logln(1, "Warning: Unexpected tag", tag)
 			continue
 		}
 		for _, t := range templates {
@@ -102,6 +102,13 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 	}
 	if genProto != "" {
 		u, err := NewGenUnit(ctx, template.NewProtoTemplate(info, genProto), absOutPath)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %v", absOutPath, err)
+		}
+		units = append(units, u)
+	}
+	if genMain {
+		u, err := NewGenUnit(ctx, template.NewMainTemplate(info), absOutPath)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %v", absOutPath, err)
 		}
@@ -166,7 +173,8 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 			template.NewRecoverTemplate(info),
 		)
 	case MainTag:
-		return append(tmpls, template.NewMainTemplate(info))
+		lg.Logger.Logln(1, "Warning: Tag main is deprecated, use flag -main instead.")
+		return nil
 	case ErrorLoggingMiddlewareTag:
 		return append(
 			append(tmpls, tagToTemplate(MiddlewareTag, info)...),

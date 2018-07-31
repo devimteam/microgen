@@ -1,7 +1,6 @@
 package template
 
 import (
-	"os"
 	"path/filepath"
 
 	"context"
@@ -9,7 +8,6 @@ import (
 	. "github.com/dave/jennifer/jen"
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
-	"github.com/devimteam/microgen/logger"
 )
 
 const (
@@ -66,7 +64,8 @@ func (t *mainTemplate) Prepare(ctx context.Context) error {
 }
 
 func (t *mainTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strategy, error) {
-	if err := statFile(t.Info.OutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
+	return write_strategy.NewCreateFileStrategy(t.Info.OutputFilePath, t.DefaultPath()), nil
+	/*if err := statFile(t.Info.OutputFilePath, t.DefaultPath()); os.IsNotExist(err) {
 		t.state = FileStrat
 		return write_strategy.NewCreateFileStrategy(t.Info.OutputFilePath, t.DefaultPath()), nil
 	}
@@ -79,7 +78,7 @@ func (t *mainTemplate) ChooseStrategy(ctx context.Context) (write_strategy.Strat
 		t.rendered = append(t.rendered, f.Name)
 	}
 	t.state = AppendStrat
-	return write_strategy.NewAppendToFileStrategy(t.Info.OutputFilePath, t.DefaultPath()), nil
+	return write_strategy.NewAppendToFileStrategy(t.Info.OutputFilePath, t.DefaultPath()), nil*/
 }
 
 func (t *mainTemplate) interruptHandler() *Statement {

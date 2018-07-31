@@ -27,6 +27,7 @@ var (
 	flagVerbose      = flag.Int("v", 1, "Sets microgen verbose level.")
 	flagDebug        = flag.Bool("debug", false, "Print all microgen messages. Equivalent to -v=100.")
 	flagGenProtofile = flag.String(".proto", "", "Package field in protobuf file. If not empty, service.proto file will be generated.")
+	flagGenMain      = flag.Bool(generator.MainTag, false, "Generate main.go file.")
 )
 
 func init() {
@@ -75,7 +76,7 @@ func main() {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
 	}
-	units, err := generator.ListTemplatesForGen(ctx, i, absOutputDir, *flagFileName, *flagGenProtofile)
+	units, err := generator.ListTemplatesForGen(ctx, i, absOutputDir, *flagFileName, *flagGenProtofile, *flagGenMain)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
