@@ -18,6 +18,8 @@ type StringService interface {
 	// @logs-len comments
 	TestCase(ctx context.Context, comments []*Comment) (tree map[string]int, err error)
 
+	DummyMethod(ctx context.Context) (err error)
+
 	// @microgen -
 	IgnoredMethod()
 	// @microgen -

@@ -45,7 +45,7 @@ const (
 	HttpMethodPath = template.HttpMethodPath
 )
 
-func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath, sourcePath string) (units []*GenerationUnit, err error) {
+func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath, sourcePath string, genProto string) (units []*GenerationUnit, err error) {
 	importPackagePath, err := resolvePackagePath(filepath.Dir(sourcePath))
 	if err != nil {
 		return nil, err
@@ -99,6 +99,13 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 			return nil, fmt.Errorf("%s: %v", absOutPath, err)
 		}
 		units = append(units, unit)
+	}
+	if genProto != "" {
+		u, err := NewGenUnit(ctx, template.NewProtoTemplate(info, genProto), absOutPath)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %v", absOutPath, err)
+		}
+		units = append(units, u)
 	}
 	return units, nil
 }

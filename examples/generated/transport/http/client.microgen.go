@@ -23,6 +23,12 @@ func NewHTTPClient(u *url.URL, opts ...httpkit.ClientOption) transport.Endpoints
 			_Decode_Count_Response,
 			opts...,
 		).Endpoint(),
+		DummyMethodEndpoint: httpkit.NewClient(
+			"POST", u,
+			_Encode_DummyMethod_Request,
+			_Decode_DummyMethod_Response,
+			opts...,
+		).Endpoint(),
 		TestCaseEndpoint: httpkit.NewClient(
 			"POST", u,
 			_Encode_TestCase_Request,
@@ -67,6 +73,10 @@ func sdClientFactory(
 			endpointer := sd.NewEndpointer(instancer, testCaseSDFactory(maker(opts...)), logger)
 			endpoints.TestCaseEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
 		}
+		{
+			endpointer := sd.NewEndpointer(instancer, dummyMethodSDFactory(maker(opts...)), logger)
+			endpoints.DummyMethodEndpoint, _ = lb.NewRoundRobin(endpointer).Endpoint()
+		}
 		return endpoints
 	}
 }
@@ -98,5 +108,11 @@ func testCaseSDFactory(clientMaker func(string) (transport.EndpointsSet, error))
 	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
 		c, err := clientMaker(instance)
 		return c.TestCaseEndpoint, nil, err
+	}
+}
+func dummyMethodSDFactory(clientMaker func(string) (transport.EndpointsSet, error)) sd.Factory {
+	return func(instance string) (endpoint.Endpoint, io.Closer, error) {
+		c, err := clientMaker(instance)
+		return c.DummyMethodEndpoint, nil, err
 	}
 }

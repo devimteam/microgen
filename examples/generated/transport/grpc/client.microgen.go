@@ -8,6 +8,7 @@ import (
 	log "github.com/go-kit/kit/log"
 	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	grpckit "github.com/go-kit/kit/transport/grpc"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	opentracinggo "github.com/opentracing/opentracing-go"
 	grpc "google.golang.org/grpc"
 )
@@ -22,6 +23,13 @@ func NewGRPCClient(conn *grpc.ClientConn, addr string, opts ...grpckit.ClientOpt
 			_Encode_Count_Request,
 			_Decode_Count_Response,
 			pb.CountResponse{},
+			opts...,
+		).Endpoint(),
+		DummyMethodEndpoint: grpckit.NewClient(
+			conn, addr, "DummyMethod",
+			_Encode_DummyMethod_Request,
+			_Decode_DummyMethod_Response,
+			empty.Empty{},
 			opts...,
 		).Endpoint(),
 		TestCaseEndpoint: grpckit.NewClient(

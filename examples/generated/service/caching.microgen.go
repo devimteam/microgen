@@ -51,6 +51,10 @@ func (M cachingMiddleware) TestCase(ctx context.Context, comments []*service.Com
 	return M.next.TestCase(ctx, comments)
 }
 
+func (M cachingMiddleware) DummyMethod(ctx context.Context) (res0 error) {
+	return M.next.DummyMethod(ctx)
+}
+
 func (M cachingMiddleware) IgnoredMethod() {
 	M.next.IgnoredMethod()
 }
@@ -69,3 +73,4 @@ type countResponseCacheEntity struct {
 type testCaseResponseCacheEntity struct {
 	Tree map[string]int
 }
+type dummyMethodResponseCacheEntity struct{}

@@ -8,6 +8,7 @@ import (
 	"errors"
 	transport "github.com/devimteam/microgen/examples/generated/transport"
 	pb "github.com/devimteam/microgen/examples/protobuf"
+	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
 func _Encode_Uppercase_Request(ctx context.Context, request interface{}) (interface{}, error) {
@@ -45,6 +46,10 @@ func _Encode_TestCase_Request(ctx context.Context, request interface{}) (interfa
 	return &pb.TestCaseRequest{Comments: reqComments}, nil
 }
 
+func _Encode_DummyMethod_Request(ctx context.Context, request interface{}) (interface{}, error) {
+	return &empty.Empty{}, nil
+}
+
 func _Encode_Uppercase_Response(ctx context.Context, response interface{}) (interface{}, error) {
 	if response == nil {
 		return nil, errors.New("nil UppercaseResponse")
@@ -78,6 +83,10 @@ func _Encode_TestCase_Response(ctx context.Context, response interface{}) (inter
 		return nil, err
 	}
 	return &pb.TestCaseResponse{Tree: respTree}, nil
+}
+
+func _Encode_DummyMethod_Response(ctx context.Context, response interface{}) (interface{}, error) {
+	return &empty.Empty{}, nil
 }
 
 func _Decode_Uppercase_Request(ctx context.Context, request interface{}) (interface{}, error) {
@@ -115,6 +124,10 @@ func _Decode_TestCase_Request(ctx context.Context, request interface{}) (interfa
 	return &transport.TestCaseRequest{Comments: reqComments}, nil
 }
 
+func _Decode_DummyMethod_Request(ctx context.Context, request interface{}) (interface{}, error) {
+	return &empty.Empty{}, nil
+}
+
 func _Decode_Uppercase_Response(ctx context.Context, response interface{}) (interface{}, error) {
 	if response == nil {
 		return nil, errors.New("nil UppercaseResponse")
@@ -148,4 +161,8 @@ func _Decode_TestCase_Response(ctx context.Context, response interface{}) (inter
 		return nil, err
 	}
 	return &transport.TestCaseResponse{Tree: respTree}, nil
+}
+
+func _Decode_DummyMethod_Response(ctx context.Context, response interface{}) (interface{}, error) {
+	return &empty.Empty{}, nil
 }

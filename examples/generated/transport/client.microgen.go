@@ -15,9 +15,10 @@ import (
 // TraceClientEndpoints is used for tracing endpoints on client side.
 func TraceClientEndpoints(endpoints EndpointsSet, tracer opentracinggo.Tracer) EndpointsSet {
 	return EndpointsSet{
-		CountEndpoint:     opentracing.TraceClient(tracer, "Count")(endpoints.CountEndpoint),
-		TestCaseEndpoint:  opentracing.TraceClient(tracer, "TestCase")(endpoints.TestCaseEndpoint),
-		UppercaseEndpoint: opentracing.TraceClient(tracer, "Uppercase")(endpoints.UppercaseEndpoint),
+		CountEndpoint:       opentracing.TraceClient(tracer, "Count")(endpoints.CountEndpoint),
+		DummyMethodEndpoint: opentracing.TraceClient(tracer, "DummyMethod")(endpoints.DummyMethodEndpoint),
+		TestCaseEndpoint:    opentracing.TraceClient(tracer, "TestCase")(endpoints.TestCaseEndpoint),
+		UppercaseEndpoint:   opentracing.TraceClient(tracer, "Uppercase")(endpoints.UppercaseEndpoint),
 	}
 }
 
@@ -58,6 +59,18 @@ func (set EndpointsSet) TestCase(arg0 context.Context, arg1 []*generated.Comment
 		return
 	}
 	return response.(*TestCaseResponse).Tree, res1
+}
+
+func (set EndpointsSet) DummyMethod(arg0 context.Context) (res0 error) {
+	request := DummyMethodRequest{}
+	_, res0 = set.DummyMethodEndpoint(arg0, &request)
+	if res0 != nil {
+		if e, ok := status.FromError(res0); ok || e.Code() == codes.Internal || e.Code() == codes.Unknown {
+			res0 = errors.New(e.Message())
+		}
+		return
+	}
+	return res0
 }
 
 func (set EndpointsSet) IgnoredMethod() {

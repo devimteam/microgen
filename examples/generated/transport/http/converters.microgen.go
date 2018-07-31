@@ -63,6 +63,12 @@ func _Decode_TestCase_Request(_ context.Context, r *http.Request) (interface{}, 
 	return &req, err
 }
 
+func _Decode_DummyMethod_Request(_ context.Context, r *http.Request) (interface{}, error) {
+	var req transport.DummyMethodRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	return &req, err
+}
+
 func _Decode_Uppercase_Response(_ context.Context, r *http.Response) (interface{}, error) {
 	var resp transport.UppercaseResponse
 	err := json.NewDecoder(r.Body).Decode(&resp)
@@ -77,6 +83,12 @@ func _Decode_Count_Response(_ context.Context, r *http.Response) (interface{}, e
 
 func _Decode_TestCase_Response(_ context.Context, r *http.Response) (interface{}, error) {
 	var resp transport.TestCaseResponse
+	err := json.NewDecoder(r.Body).Decode(&resp)
+	return &resp, err
+}
+
+func _Decode_DummyMethod_Response(_ context.Context, r *http.Response) (interface{}, error) {
+	var resp transport.DummyMethodResponse
 	err := json.NewDecoder(r.Body).Decode(&resp)
 	return &resp, err
 }
@@ -100,6 +112,11 @@ func _Encode_TestCase_Request(ctx context.Context, r *http.Request, request inte
 	return CommonHTTPRequestEncoder(ctx, r, request)
 }
 
+func _Encode_DummyMethod_Request(ctx context.Context, r *http.Request, request interface{}) error {
+	r.URL.Path = path.Join(r.URL.Path, "dummy-method")
+	return CommonHTTPRequestEncoder(ctx, r, request)
+}
+
 func _Encode_Uppercase_Response(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	return CommonHTTPResponseEncoder(ctx, w, response)
 }
@@ -109,5 +126,9 @@ func _Encode_Count_Response(ctx context.Context, w http.ResponseWriter, response
 }
 
 func _Encode_TestCase_Response(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	return CommonHTTPResponseEncoder(ctx, w, response)
+}
+
+func _Encode_DummyMethod_Response(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	return CommonHTTPResponseEncoder(ctx, w, response)
 }

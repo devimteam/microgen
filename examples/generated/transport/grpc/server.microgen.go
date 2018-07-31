@@ -9,14 +9,16 @@ import (
 	log "github.com/go-kit/kit/log"
 	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	grpc "github.com/go-kit/kit/transport/grpc"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	opentracinggo "github.com/opentracing/opentracing-go"
 	context "golang.org/x/net/context"
 )
 
 type stringServiceServer struct {
-	uppercase grpc.Handler
-	count     grpc.Handler
-	testCase  grpc.Handler
+	uppercase   grpc.Handler
+	count       grpc.Handler
+	testCase    grpc.Handler
+	dummyMethod grpc.Handler
 }
 
 func NewGRPCServer(endpoints *transport.EndpointsSet, logger log.Logger, tracer opentracinggo.Tracer, opts ...grpc.ServerOption) pb.StringServiceServer {
@@ -27,6 +29,13 @@ func NewGRPCServer(endpoints *transport.EndpointsSet, logger log.Logger, tracer 
 			_Encode_Count_Response,
 			append(opts, grpc.ServerBefore(
 				opentracing.GRPCToContext(tracer, "Count", logger)))...,
+		),
+		dummyMethod: grpc.NewServer(
+			endpoints.DummyMethodEndpoint,
+			_Decode_DummyMethod_Request,
+			_Encode_DummyMethod_Response,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "DummyMethod", logger)))...,
 		),
 		testCase: grpc.NewServer(
 			endpoints.TestCaseEndpoint,
@@ -67,4 +76,12 @@ func (S *stringServiceServer) TestCase(ctx context.Context, req *pb.TestCaseRequ
 		return nil, err
 	}
 	return resp.(*pb.TestCaseResponse), nil
+}
+
+func (S *stringServiceServer) DummyMethod(ctx context.Context, req *empty.Empty) (*empty.Empty, error) {
+	_, resp, err := S.dummyMethod.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*empty.Empty), nil
 }

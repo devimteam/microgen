@@ -50,6 +50,15 @@ func (M errorLoggingMiddleware) TestCase(ctx context.Context, comments []*servic
 	return M.next.TestCase(ctx, comments)
 }
 
+func (M errorLoggingMiddleware) DummyMethod(ctx context.Context) (err error) {
+	defer func() {
+		if err != nil {
+			M.logger.Log("method", "DummyMethod", "message", err)
+		}
+	}()
+	return M.next.DummyMethod(ctx)
+}
+
 func (M errorLoggingMiddleware) IgnoredMethod() {
 	M.next.IgnoredMethod()
 }

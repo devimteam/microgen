@@ -21,11 +21,12 @@ const (
 )
 
 var (
-	flagFileName  = flag.String("file", "service.go", "Path to input file with interface")
-	flagOutputDir = flag.String("out", ".", "Output directory")
-	flagHelp      = flag.Bool("help", false, "Show help")
-	flagVerbose   = flag.Int("v", 1, "Verbose log level")
-	flagDebug     = flag.Bool("debug", false, "Equivalent to -v=100")
+	flagFileName     = flag.String("file", "service.go", "Path to input file with interface.")
+	flagOutputDir    = flag.String("out", ".", "Output directory.")
+	flagHelp         = flag.Bool("help", false, "Show help.")
+	flagVerbose      = flag.Int("v", 1, "Sets microgen verbose level.")
+	flagDebug        = flag.Bool("debug", false, "Print all microgen messages. Equivalent to -v=100.")
+	flagGenProtofile = flag.String(".proto", "", "Package field in protobuf file. If not empty, service.proto file will be generated.")
 )
 
 func init() {
@@ -74,7 +75,7 @@ func main() {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
 	}
-	units, err := generator.ListTemplatesForGen(ctx, i, absOutputDir, *flagFileName)
+	units, err := generator.ListTemplatesForGen(ctx, i, absOutputDir, *flagFileName, *flagGenProtofile)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)

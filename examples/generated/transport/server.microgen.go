@@ -12,18 +12,20 @@ import (
 
 func Endpoints(svc generated.StringService) EndpointsSet {
 	return EndpointsSet{
-		CountEndpoint:     CountEndpoint(svc),
-		TestCaseEndpoint:  TestCaseEndpoint(svc),
-		UppercaseEndpoint: UppercaseEndpoint(svc),
+		CountEndpoint:       CountEndpoint(svc),
+		DummyMethodEndpoint: DummyMethodEndpoint(svc),
+		TestCaseEndpoint:    TestCaseEndpoint(svc),
+		UppercaseEndpoint:   UppercaseEndpoint(svc),
 	}
 }
 
 // TraceServerEndpoints is used for tracing endpoints on server side.
 func TraceServerEndpoints(endpoints EndpointsSet, tracer opentracinggo.Tracer) EndpointsSet {
 	return EndpointsSet{
-		CountEndpoint:     opentracing.TraceServer(tracer, "Count")(endpoints.CountEndpoint),
-		TestCaseEndpoint:  opentracing.TraceServer(tracer, "TestCase")(endpoints.TestCaseEndpoint),
-		UppercaseEndpoint: opentracing.TraceServer(tracer, "Uppercase")(endpoints.UppercaseEndpoint),
+		CountEndpoint:       opentracing.TraceServer(tracer, "Count")(endpoints.CountEndpoint),
+		DummyMethodEndpoint: opentracing.TraceServer(tracer, "DummyMethod")(endpoints.DummyMethodEndpoint),
+		TestCaseEndpoint:    opentracing.TraceServer(tracer, "TestCase")(endpoints.TestCaseEndpoint),
+		UppercaseEndpoint:   opentracing.TraceServer(tracer, "Uppercase")(endpoints.UppercaseEndpoint),
 	}
 }
 
@@ -51,5 +53,12 @@ func TestCaseEndpoint(svc generated.StringService) endpoint.Endpoint {
 		req := request.(*TestCaseRequest)
 		res0, res1 := svc.TestCase(arg0, req.Comments)
 		return &TestCaseResponse{Tree: res0}, res1
+	}
+}
+
+func DummyMethodEndpoint(svc generated.StringService) endpoint.Endpoint {
+	return func(arg0 context.Context, request interface{}) (interface{}, error) {
+		res0 := svc.DummyMethod(arg0)
+		return &DummyMethodResponse{}, res0
 	}
 }

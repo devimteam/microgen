@@ -67,6 +67,16 @@ func (M loggingMiddleware) TestCase(arg0 context.Context, arg1 []*service.Commen
 	return M.next.TestCase(arg0, arg1)
 }
 
+func (M loggingMiddleware) DummyMethod(arg0 context.Context) (res0 error) {
+	defer func(begin time.Time) {
+		M.logger.Log(
+			"method", "DummyMethod",
+			"err", res0,
+			"took", time.Since(begin))
+	}(time.Now())
+	return M.next.DummyMethod(arg0)
+}
+
 func (M loggingMiddleware) IgnoredMethod() {
 	M.next.IgnoredMethod()
 }

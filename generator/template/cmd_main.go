@@ -51,7 +51,6 @@ func (t *mainTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	}
 
 	file := NewFile("main")
-	file.HeaderComment(t.Info.FileHeader)
 	file.PackageComment(`Microgen appends missed functions.`)
 	file.Add(f)
 

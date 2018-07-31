@@ -14,16 +14,18 @@ import (
 
 // EndpointsSet implements StringService API and used for transport purposes.
 type EndpointsSet struct {
-	UppercaseEndpoint endpoint.Endpoint
-	CountEndpoint     endpoint.Endpoint
-	TestCaseEndpoint  endpoint.Endpoint
+	UppercaseEndpoint   endpoint.Endpoint
+	CountEndpoint       endpoint.Endpoint
+	TestCaseEndpoint    endpoint.Endpoint
+	DummyMethodEndpoint endpoint.Endpoint
 }
 
 func InstrumentingEndpoints(endpoints EndpointsSet, tracer opentracinggo.Tracer) EndpointsSet {
 	return EndpointsSet{
-		CountEndpoint:     opentracing.TraceServer(tracer, "Count")(endpoints.CountEndpoint),
-		TestCaseEndpoint:  opentracing.TraceServer(tracer, "TestCase")(endpoints.TestCaseEndpoint),
-		UppercaseEndpoint: opentracing.TraceServer(tracer, "Uppercase")(endpoints.UppercaseEndpoint),
+		CountEndpoint:       opentracing.TraceServer(tracer, "Count")(endpoints.CountEndpoint),
+		DummyMethodEndpoint: opentracing.TraceServer(tracer, "DummyMethod")(endpoints.DummyMethodEndpoint),
+		TestCaseEndpoint:    opentracing.TraceServer(tracer, "TestCase")(endpoints.TestCaseEndpoint),
+		UppercaseEndpoint:   opentracing.TraceServer(tracer, "Uppercase")(endpoints.UppercaseEndpoint),
 	}
 }
 

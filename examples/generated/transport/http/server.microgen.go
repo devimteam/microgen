@@ -35,5 +35,12 @@ func NewHTTPHandler(endpoints *transport.EndpointsSet, logger log.Logger, tracer
 			_Encode_TestCase_Response,
 			append(opts, http.ServerBefore(
 				opentracing.HTTPToContext(tracer, "TestCase", logger)))...))
+	mux.Methods("POST").Path("/dummy-method").Handler(
+		http.NewServer(
+			endpoints.DummyMethodEndpoint,
+			_Decode_DummyMethod_Request,
+			_Encode_DummyMethod_Response,
+			append(opts, http.ServerBefore(
+				opentracing.HTTPToContext(tracer, "DummyMethod", logger)))...))
 	return mux
 }

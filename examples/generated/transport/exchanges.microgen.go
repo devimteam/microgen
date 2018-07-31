@@ -27,4 +27,9 @@ type (
 	TestCaseResponse struct {
 		Tree map[string]int `json:"tree"`
 	}
+
+	// Formal exchange type, please do not delete.
+	DummyMethodRequest struct{}
+	// Formal exchange type, please do not delete.
+	DummyMethodResponse struct{}
 )
