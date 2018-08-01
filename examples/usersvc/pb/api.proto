@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "github.com/devimteam/microgen/examples/usersvc/pb;pb";
+
+package service.usersvc;
+
+import "google/protobuf/timestamp.proto";
+
+service UserService {
+    rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+    rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+    rpc GetUser(GetUserRequest) returns (GetUserResponse);
+    rpc FindUsers(FindUsersRequest) returns (FindUsersResponse);
+    rpc CreateComment(CreateCommentRequest) returns (CreateCommentResponse);
+    rpc GetComment(GetCommentRequest) returns (GetCommentResponse);
+    rpc GetUserComments(GetUserCommentsRequest) returns (GetUserCommentsResponse);
+}

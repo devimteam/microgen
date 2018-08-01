@@ -27,6 +27,8 @@ const (
 type createFileStrategy struct {
 	absPath string
 	relPath string
+
+	formatOn bool
 }
 
 func (s createFileStrategy) Write(renderer Renderer) error {
@@ -64,10 +66,14 @@ func (s createFileStrategy) Save(f Renderer, filename string) error {
 	if len(buf.Bytes()) == 0 {
 		return nil
 	}
-	formatted, err := format.Source(buf.Bytes())
-	if err != nil {
-		fmt.Println(buf.String())
-		return fmt.Errorf("error when format source: %v", err)
+	var err error
+	formatted := buf.Bytes()
+	if s.formatOn {
+		formatted, err = format.Source(formatted)
+		if err != nil {
+			fmt.Println(buf.String())
+			return fmt.Errorf("error when format source: %v", err)
+		}
 	}
 	if err := ioutil.WriteFile(filename, formatted, 0644); err != nil {
 		return err
@@ -78,8 +84,17 @@ func (s createFileStrategy) Save(f Renderer, filename string) error {
 
 func NewCreateFileStrategy(absPath, relPath string) Strategy {
 	return createFileStrategy{
-		absPath: absPath,
-		relPath: relPath,
+		absPath:  absPath,
+		relPath:  relPath,
+		formatOn: true,
+	}
+}
+
+func NewCreateRawFileStrategy(absPath, relPath string) Strategy {
+	return createFileStrategy{
+		absPath:  absPath,
+		relPath:  relPath,
+		formatOn: false,
 	}
 }
 

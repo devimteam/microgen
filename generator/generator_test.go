@@ -7,10 +7,13 @@ import (
 	"strings"
 	"testing"
 
+	"context"
+
+	strings2 "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/stretchr/testify/assert"
-	"github.com/vetcher/godecl"
-	"github.com/vetcher/godecl/types"
+	"github.com/vetcher/go-astra"
+	"github.com/vetcher/go-astra/types"
 )
 
 func findInterface(file *types.File, ifaceName string) *types.Interface {
@@ -23,7 +26,7 @@ func findInterface(file *types.File, ifaceName string) *types.Interface {
 }
 
 func loadInterface(sourceFile, ifaceName string) (*types.Interface, error) {
-	info, err := godecl.ParseFile(sourceFile)
+	info, err := astra.ParseFile(sourceFile)
 	if err != nil {
 		return nil, err
 	}
@@ -45,16 +48,13 @@ func TestTemplates(t *testing.T) {
 	}
 
 	genInfo := &template.GenerationInfo{
-		ServiceImportPackageName: "stringsvc",
-		ServiceImportPath:        importPackagePath,
-		Force:                    true,
-		Iface:                    iface,
-		AbsOutPath:               outPath,
-		SourceFilePath:           absSourcePath,
-		ProtobufPackage:          fetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
-		GRPCRegAddr:              fetchMetaInfo(TagMark+GRPCRegAddr, iface.Docs),
+		SourcePackageImport:   importPackagePath,
+		Iface:                 iface,
+		OutputFilePath:        outPath,
+		SourceFilePath:        absSourcePath,
+		ProtobufPackageImport: strings2.FetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
 	}
-	t.Log("protobuf pkg", genInfo.ProtobufPackage)
+	t.Log("protobuf pkg", genInfo.ProtobufPackageImport)
 
 	allTemplateTests := []struct {
 		TestName    string
@@ -64,12 +64,12 @@ func TestTemplates(t *testing.T) {
 		{
 			TestName:    "Endpoints",
 			Template:    template.NewEndpointsTemplate(genInfo),
-			OutFilePath: "endpoints.go.txt",
+			OutFilePath: "transport_endpoints.go.txt",
 		},
 		{
 			TestName:    "Exchange",
 			Template:    template.NewExchangeTemplate(genInfo),
-			OutFilePath: "exchanges.go.txt",
+			OutFilePath: "transport_exchanges.go.txt",
 		},
 		{
 			TestName:    "Middleware",
@@ -110,11 +110,11 @@ func TestTemplates(t *testing.T) {
 			}
 
 			absOutPath := "./test_out/"
-			gen, err := NewGenUnit(test.Template, absOutPath)
+			gen, err := NewGenUnit(context.Background(), test.Template, absOutPath)
 			if err != nil {
 				t.Fatalf("NewGenUnit: %v", err)
 			}
-			err = gen.Generate()
+			err = gen.Generate(context.Background())
 			if err != nil {
 				t.Fatalf("unable to generate: %v", err)
 			}

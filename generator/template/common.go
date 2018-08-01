@@ -1,54 +1,63 @@
 package template
 
 import (
+	"context"
+	"fmt"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/util"
-	"github.com/vetcher/godecl/types"
+	mstrings "github.com/devimteam/microgen/generator/strings"
+	"github.com/vetcher/go-astra/types"
 )
 
 const (
-	PackagePathGoKitEndpoint      = "github.com/go-kit/kit/endpoint"
-	PackagePathContext            = "context"
-	PackagePathGoKitLog           = "github.com/go-kit/kit/log"
-	PackagePathTime               = "time"
-	PackagePathGoogleGRPC         = "google.golang.org/grpc"
-	PackagePathGoogleGRPCStatus   = "google.golang.org/grpc/status"
-	PackagePathGoogleGRPCCodes    = "google.golang.org/grpc/codes"
-	PackagePathNetContext         = "golang.org/x/net/context"
-	PackagePathGoKitTransportGRPC = "github.com/go-kit/kit/transport/grpc"
-	PackagePathHttp               = "net/http"
-	PackagePathGoKitTransportHTTP = "github.com/go-kit/kit/transport/http"
-	PackagePathBytes              = "bytes"
-	PackagePathJson               = "encoding/json"
-	PackagePathIOUtil             = "io/ioutil"
-	PackagePathIO                 = "io"
-	PackagePathStrings            = "strings"
-	PackagePathUrl                = "net/url"
-	PackagePathEmptyProtobuf      = "github.com/golang/protobuf/ptypes/empty"
-	PackagePathFmt                = "fmt"
-	PackagePathOs                 = "os"
-	PackagePathOsSignal           = "os/signal"
-	PackagePathSyscall            = "syscall"
-	PackagePathErrors             = "errors"
-	PackagePathNet                = "net"
-	PackagePathGorillaMux         = "github.com/gorilla/mux"
-	PackagePathPath               = "path"
-	PackagePathStrconv            = "strconv"
-	PackagePathOpenTracingGo      = "github.com/opentracing/opentracing-go"
-	PackagePathGoKitTracing       = "github.com/go-kit/kit/tracing/opentracing"
+	PackagePathGoKitEndpoint         = "github.com/go-kit/kit/endpoint"
+	PackagePathContext               = "context"
+	PackagePathGoKitLog              = "github.com/go-kit/kit/log"
+	PackagePathTime                  = "time"
+	PackagePathGoogleGRPC            = "google.golang.org/grpc"
+	PackagePathGoogleGRPCStatus      = "google.golang.org/grpc/status"
+	PackagePathGoogleGRPCCodes       = "google.golang.org/grpc/codes"
+	PackagePathNetContext            = "golang.org/x/net/context"
+	PackagePathGoKitTransportGRPC    = "github.com/go-kit/kit/transport/grpc"
+	PackagePathHttp                  = "net/http"
+	PackagePathGoKitTransportHTTP    = "github.com/go-kit/kit/transport/http"
+	PackagePathBytes                 = "bytes"
+	PackagePathJson                  = "encoding/json"
+	PackagePathIOUtil                = "io/ioutil"
+	PackagePathIO                    = "io"
+	PackagePathStrings               = "strings"
+	PackagePathUrl                   = "net/url"
+	PackagePathEmptyProtobuf         = "github.com/golang/protobuf/ptypes/empty"
+	PackagePathFmt                   = "fmt"
+	PackagePathOs                    = "os"
+	PackagePathOsSignal              = "os/signal"
+	PackagePathSyscall               = "syscall"
+	PackagePathErrors                = "errors"
+	PackagePathNet                   = "net"
+	PackagePathGorillaMux            = "github.com/gorilla/mux"
+	PackagePathPath                  = "path"
+	PackagePathStrconv               = "strconv"
+	PackagePathOpenTracingGo         = "github.com/opentracing/opentracing-go"
+	PackagePathGoKitTracing          = "github.com/go-kit/kit/tracing/opentracing"
+	PackagePathGoKitTransportJSONRPC = "github.com/go-kit/kit/transport/http/jsonrpc"
+	PackagePathGoKitMetrics          = "github.com/go-kit/kit/metrics"
+	PackagePathGoKitSD               = "github.com/go-kit/kit/sd"
+	PackagePathGoKitLB               = "github.com/go-kit/kit/sd/lb"
+	PackagePathSyncErrgroup          = "golang.org/x/sync/errgroup"
 
 	TagMark         = "// @"
 	MicrogenMainTag = "microgen"
-	ForceTag        = "force"
+	serviceAlias    = "service"
 )
 
 const (
 	MiddlewareTag             = "middleware"
 	LoggingMiddlewareTag      = "logging"
-	RecoverMiddlewareTag      = "recover"
+	RecoveringMiddlewareTag   = "recovering"
 	HttpTag                   = "http"
 	HttpServerTag             = "http-server"
 	HttpClientTag             = "http-client"
@@ -57,8 +66,23 @@ const (
 	GrpcClientTag             = "grpc-client"
 	MainTag                   = "main"
 	ErrorLoggingMiddlewareTag = "error-logging"
-	TracingTag                = "tracing"
-	CacheTag                  = "cache"
+	TracingMiddlewareTag      = "tracing"
+	CachingMiddlewareTag      = "caching"
+	JSONRPCTag                = "json-rpc"
+	JSONRPCServerTag          = "json-rpc-server"
+	JSONRPCClientTag          = "json-rpc-client"
+	Transport                 = "transport"
+	TransportClient           = "transport-client"
+	TransportServer           = "transport-server"
+	MetricsMiddlewareTag      = "metrics"
+	ServiceDiscoveryTag       = "service-discovery"
+)
+
+const (
+	MicrogenExt    = ".microgen.go"
+	PathService    = "service"
+	PathTransport  = "transport"
+	PathExecutable = "cmd"
 )
 
 type WriteStrategyState int
@@ -69,35 +93,49 @@ const (
 )
 
 type GenerationInfo struct {
-	ServiceImportPackageName string
-	Iface                    *types.Interface
-	ServiceImportPath        string
-	Force                    bool
-	AbsOutPath               string
-	SourceFilePath           string
-	FileHeader               string
+	Iface               *types.Interface
+	SourcePackageImport string
+	SourceFilePath      string
+	OutputPackageImport string
+	OutputFilePath      string
+	FileHeader          string
 
-	ProtobufPackage string
-	GRPCRegAddr     string
+	ProtobufPackageImport string
+	ProtobufClientAddr    string
+	AllowedMethods        map[string]bool
 }
 
-func (info GenerationInfo) Copy() *GenerationInfo {
-	return &GenerationInfo{
-		Iface: info.Iface,
-		Force: info.Force,
-		ServiceImportPackageName: info.ServiceImportPackageName,
-		ServiceImportPath:        info.ServiceImportPath,
-		AbsOutPath:               info.AbsOutPath,
-		SourceFilePath:           info.SourceFilePath,
+func (i GenerationInfo) String() string {
+	var ss []string
+	ss = append(ss,
+		fmt.Sprint(),
+		fmt.Sprint("SourcePackageImport: ", i.SourcePackageImport),
+		fmt.Sprint("SourceFilePath: ", i.SourceFilePath),
+		fmt.Sprint("OutputPackageImport: ", i.OutputPackageImport),
+		fmt.Sprint("OutputFilePath: ", i.OutputFilePath),
+		fmt.Sprint("FileHeader: ", i.FileHeader),
+		fmt.Sprint(),
+		fmt.Sprint("ProtobufPackageImport: ", i.ProtobufPackageImport),
+		fmt.Sprint("ProtobufClientAddr: ", i.ProtobufClientAddr),
+		fmt.Sprint("AllowedMethods: ", listKeysOfMap(i.AllowedMethods)),
+		fmt.Sprint(),
+	)
+	return strings.Join(ss, "\n\t")
+}
 
-		GRPCRegAddr:     info.GRPCRegAddr,
-		ProtobufPackage: info.ProtobufPackage,
-		FileHeader:      info.FileHeader,
+func listKeysOfMap(m map[string]bool) string {
+	var keys = make([]string, len(m))
+	i := 0
+	for k := range m {
+		keys[i] = k
+		i++
 	}
+	sort.Strings(keys) // to keep order
+	return strings.Join(keys, ", ")
 }
 
 func structFieldName(field *types.Variable) *Statement {
-	return Id(util.ToUpperFirst(field.Name))
+	return Id(mstrings.ToUpperFirst(field.Name))
 }
 
 // Remove from function fields context if it is first in slice
@@ -149,10 +187,10 @@ func nameOfLastResultError(fn *types.Function) string {
 //
 //  	Visit *entity.Visit `json:"visit"`
 //
-func structField(field *types.Variable) *Statement {
+func structField(ctx context.Context, field *types.Variable) *Statement {
 	s := structFieldName(field)
-	s.Add(fieldType(field.Type, false))
-	s.Tag(map[string]string{"json": util.ToSnakeCase(field.Name)})
+	s.Add(fieldType(ctx, field.Type, false))
+	s.Tag(map[string]string{"json": mstrings.ToSnakeCase(field.Name)})
 	if types.IsEllipsis(field.Type) {
 		s.Comment("This field was defined with ellipsis (...).")
 	}
@@ -163,11 +201,11 @@ func structField(field *types.Variable) *Statement {
 //
 //  	visit *entity.Visit, err error
 //
-func funcDefinitionParams(fields []types.Variable) *Statement {
+func funcDefinitionParams(ctx context.Context, fields []types.Variable) *Statement {
 	c := &Statement{}
 	c.ListFunc(func(g *Group) {
 		for _, field := range fields {
-			g.Id(util.ToLowerFirst(field.Name)).Add(fieldType(field.Type, true))
+			g.Id(mstrings.ToLowerFirst(field.Name)).Add(fieldType(ctx, field.Type, true))
 		}
 	})
 	return c
@@ -177,17 +215,23 @@ func funcDefinitionParams(fields []types.Variable) *Statement {
 //
 //  	*repository.Visit
 //
-func fieldType(field types.Type, useEllipsis bool) *Statement {
+func fieldType(ctx context.Context, field types.Type, allowEllipsis bool) *Statement {
 	c := &Statement{}
+	imported := false
 	for field != nil {
 		switch f := field.(type) {
 		case types.TImport:
 			if f.Import != nil {
 				c.Qual(f.Import.Package, "")
+				imported = true
 			}
 			field = f.Next
 		case types.TName:
-			c.Id(f.TypeName)
+			if !imported && !types.IsBuiltin(f) {
+				c.Qual(SourcePackageImport(ctx), f.TypeName)
+			} else {
+				c.Id(f.TypeName)
+			}
 			field = nil
 		case types.TArray:
 			if f.IsSlice {
@@ -197,15 +241,15 @@ func fieldType(field types.Type, useEllipsis bool) *Statement {
 			}
 			field = f.Next
 		case types.TMap:
-			return c.Map(fieldType(f.Key, false)).Add(fieldType(f.Value, false))
+			return c.Map(fieldType(ctx, f.Key, false)).Add(fieldType(ctx, f.Value, false))
 		case types.TPointer:
 			c.Op(strings.Repeat("*", f.NumberOfPointers))
 			field = f.Next
 		case types.TInterface:
-			mhds := interfaceType(f.Interface)
+			mhds := interfaceType(ctx, f.Interface)
 			return c.Interface(mhds...)
 		case types.TEllipsis:
-			if useEllipsis {
+			if allowEllipsis {
 				c.Op("...")
 			} else {
 				c.Index()
@@ -218,9 +262,9 @@ func fieldType(field types.Type, useEllipsis bool) *Statement {
 	return c
 }
 
-func interfaceType(p *types.Interface) (code []Code) {
+func interfaceType(ctx context.Context, p *types.Interface) (code []Code) {
 	for _, x := range p.Methods {
-		code = append(code, functionDefinition(x))
+		code = append(code, functionDefinition(ctx, x))
 	}
 	return
 }
@@ -233,7 +277,7 @@ func interfaceType(p *types.Interface) (code []Code) {
 func dictByVariables(fields []types.Variable) Dict {
 	return DictFunc(func(d Dict) {
 		for _, field := range fields {
-			d[structFieldName(&field)] = Id(util.ToLowerFirst(field.Name))
+			d[structFieldName(&field)] = Id(mstrings.ToLowerFirst(field.Name))
 		}
 	})
 }
@@ -245,7 +289,7 @@ func dictByVariables(fields []types.Variable) Dict {
 func paramNames(fields []types.Variable) *Statement {
 	var list []Code
 	for _, field := range fields {
-		v := Id(util.ToLowerFirst(field.Name))
+		v := Id(mstrings.ToLowerFirst(field.Name))
 		if types.IsEllipsis(field.Type) {
 			v.Op("...")
 		}
@@ -258,36 +302,49 @@ func paramNames(fields []types.Variable) *Statement {
 //
 //		func (e *Endpoints) Count(ctx context.Context, text string, symbol string) (count int)
 //
-func methodDefinition(obj string, signature *types.Function) *Statement {
+func methodDefinition(ctx context.Context, obj string, signature *types.Function) *Statement {
 	return Func().
-		Params(Id(util.LastUpperOrFirst(obj)).Op("*").Id(obj)).
-		Add(functionDefinition(signature))
+		Params(Id(rec(obj)). /*.Op("*")*/ Id(obj)).
+		Add(functionDefinition(ctx, signature))
+}
+
+func methodDefinitionFull(ctx context.Context, obj string, signature *types.Function) *Statement {
+	return Func().
+		Params(Id(mstrings.LastWordFromName(obj)).Id(obj)).
+		Add(functionDefinition(ctx, signature))
 }
 
 // Render full method definition with receiver, method name, args and results.
 //
 //		func Count(ctx context.Context, text string, symbol string) (count int)
 //
-func functionDefinition(signature *types.Function) *Statement {
+func functionDefinition(ctx context.Context, signature *types.Function) *Statement {
 	return Id(signature.Name).
-		Params(funcDefinitionParams(signature.Args)).
-		Params(funcDefinitionParams(signature.Results))
-}
-
-func defaultNameFormer(f *types.Function) string {
-	return f.Name
+		Params(funcDefinitionParams(ctx, signature.Args)).
+		Params(funcDefinitionParams(ctx, signature.Results))
 }
 
 // Remove from generating functions that already in existing.
 func removeAlreadyExistingFunctions(existing []types.Function, generating *[]*types.Function, nameFormer func(*types.Function) string) {
 	x := (*generating)[:0]
 	for _, fn := range *generating {
-		if f := util.FindFunctionByName(existing, nameFormer(fn)); f == nil {
+		if f := findFunctionByName(existing, nameFormer(fn)); f == nil {
 			x = append(x, fn)
 		}
 	}
 	*generating = x
 }
+
+func findFunctionByName(fns []types.Function, name string) *types.Function {
+	for i := range fns {
+		if fns[i].Name == name {
+			return &fns[i]
+		}
+	}
+	return nil
+}
+
+var ctx_contextContext = Id(_ctx_).Qual(PackagePathContext, "Context")
 
 type normalizedFunction struct {
 	types.Function
@@ -338,9 +395,13 @@ func dictByNormalVariables(fields []types.Variable, normals []types.Variable) Di
 	}
 	return DictFunc(func(d Dict) {
 		for i, field := range fields {
-			d[structFieldName(&field)] = Id(util.ToLowerFirst(normals[i].Name))
+			d[structFieldName(&field)] = Id(mstrings.ToLowerFirst(normals[i].Name))
 		}
 	})
+}
+
+func rec(name string) string {
+	return mstrings.LastUpperOrFirst(name)
 }
 
 type Rendered struct {
@@ -352,13 +413,14 @@ func (r *Rendered) Add(s string) {
 }
 
 func (r *Rendered) Contain(s string) bool {
-	return util.IsInStringSlice(s, r.slice)
+	return mstrings.IsInStringSlice(s, r.slice)
 }
 
 func (r *Rendered) NotContain(s string) bool {
 	return !r.Contain(s)
 }
 
-// Hard
-// Soft
-// Nop?
+func filenameBuilder(ss ...string) string {
+	ss[len(ss)-1] = ss[len(ss)-1] + MicrogenExt
+	return filepath.Join(ss...)
+}

@@ -1,0 +1,1 @@
+gen: ; microgen -file=./addsvc/api.go -out=. -main

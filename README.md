@@ -18,15 +18,75 @@ microgen tool search in file first `type * interface` with docs, that contains `
 
 generation parameters provides through ["tags"](#tags) in interface docs after general `// @microgen` tag (space before @ __required__).
 
+#### Recommended project layout
+Microgen uses [standard-like](https://github.com/golang-standards/project-layout) layout for generating boilerplate.
+Default layout of project:
+```
+├── cmd
+│   └── user_service
+│       └── main.go
+├── pb
+│   └── api.proto
+├── service
+│   ├── caching.go
+│   ├── caching.microgen.go
+│   ├── error_logging.microgen.go
+│   ├── logging.microgen.go
+│   ├── middleware.microgen.go
+│   └── recovering.microgen.go
+├── transport                  // And may be some others in future, NATS or AMQP for example
+│   ├── grpc
+│   │   ├── client.microgen.go
+│   │   ├── protobuf_endpoint_converters.microgen.go
+│   │   ├── protobuf_type_converters.microgen.go
+│   │   └── server.microgen.go
+│   ├── http
+│   │   ├── client.microgen.go
+│   │   ├── converters.microgen.go
+│   │   └── server.microgen.go
+│   ├── client.microgen.go
+│   ├── endpoints.microgen.go
+│   ├── exchanges.microgen.go
+│   └── server.microgen.go
+├── usersvc
+│   ├── api.go
+│   └── user.go
+├── vendor/
+├── Dockerfile
+├── Gopkg.lock
+├── Gopkg.toml
+├── Makefile
+└── README.md
+```
+##### root directory
+Contains other dirs and top-level project files, like `Dockerfile, Makefile, Readme.md`, etc.
+##### cmd
+Contains applications.
+##### transport
+Contains all transport specific code for all transports: http, grpc, amqp, udp, and so on.
+##### service
+Middleware in past. Should contain service realisations and closures (middlewares).<br/>
+If you need new implementation of service, just add directory `/v2/` or something else.
+##### \<project name\>
+Contains domain-specific types.
+##### and others
+Contains everything you want, just separate them by purposes.
+
+Q: How microgen generates for this layout?<br/>
+A: `cd <project name>; microgen -out=./..`<br/>
+
+To find more, check examples folder.
+
 ### Options
 
 | Name   | Default    | Description                                                                   |
 |:------ |:-----------|:------------------------------------------------------------------------------|
 | -file  | service.go | Relative path to source file with service interface                           |
 | -out   | .          | Relative or absolute path to directory, where you want to see generated files |
-| -force | false      | With flag generate stub methods.                                              |
-| -v     | 1          | Log verbose level. 0 - print only errors, 3 - print everything.               |
+| -v     | 1          | Sets microgen verbose level. 0 - print only errors.                           |
 | -help  | false      | Print usage information                                                       |
+| -debug | false      | Print all microgen messages. Equivalent to -v=100.                            |
+| -.proto|            | Package field in protobuf file. If not empty, service.proto file will be generated. |
 
 \* __Required option__
 
@@ -54,24 +114,36 @@ type StringService interface {
     ServiceMethod(ctx context.Context) (err error)
 }
 ```
-`@protobuf` tag is optional, but required for `grpc`, `grpc-server`, `grpc-client` generation.  
+`@protobuf` tag is optional, but required for `grpc`, `grpc-server`, `grpc-client` generation.
+
 #### @grpc-addr
-gRPC address tag is used for gRPC go-kit-based client generation.
+This tag allows to add construction for default grpc server addr in generated grpc client.
+```go
+if addr == "" {
+    addr = "service.string.StringService"
+}
+```
 Example:
 ```go
-// @microgen grpc
-// @protobuf github.com/user/repo/path/to/protobuf
-// @grpc-addr some.service.address
+// @microgen grpc-client
+// @grpc-addr service.string.StringService
 type StringService interface {
     ServiceMethod(ctx context.Context) (err error)
 }
 ```
-`@grpc-addr` tag is optional, but required for `grpc-client` generation.
-#### @force
-Use force command for provided tags anyway. Useful, when you want to generate again after changing service methods.
-Used by default for `middleware` and `logging`.
 
 ### Method's tags
+#### @microgen -
+Microgen will ignore method with this tag everywere it can.
+
+```go
+// @microgen main, logging
+type StringService interface {
+    // @microgen -
+    Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error)
+}
+```
+
 #### @logs-ignore
 This tag is used for logging middleware, when some arguments or results should not be logged, e.g. passwords or files.  
 If `context.Context` is first argument, it ignored by default.
@@ -108,6 +180,18 @@ type StringService interface {
 }
 ```
 
+#### cache-key
+This tag is used for caching middleware and allows user to write expression that should be used as key for cache instance.<br/>
+Key may be any string: it will directly writes to generated code.
+
+```go
+// @microgen caching
+type StringService interface {
+    // @cache-key strings.ToLower(text)
+    Count(ctx context.Context, text string, symbol string) (count int, positions []int, err error)
+}
+```
+
 ### Tags
 All allowed tags for customize generation provided here.
 
@@ -116,8 +200,8 @@ All allowed tags for customize generation provided here.
 | middleware  | General application middleware interface. Generates every time.                                                               |
 | logging     | Middleware that writes to logger all request/response information with handled time. Generates every time.                    |
 | error-logging | Middleware that writes to logger errors of method calls, if error is not nil.                                               |
-| recover     | Middleware that recovers panics and writes errors to logger. Generates every time.                                            |
-| cache       | Middleware that caches responses of service. Adds missed functions.                                                           |
+| recovering  | Middleware that recovers panics and writes errors to logger. Generates every time.                                            |
+| caching     | Middleware that caches responses of service. Adds missed functions.                                                           |
 | grpc-client | Generates client for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | grpc-server | Generates server for grpc transport with request/response encoders/decoders. Do not generates again if file exist.            |
 | grpc        | Generates client and server for grpc transport with request/response encoders/decoders. Do not generates again if file exist. |
@@ -126,22 +210,10 @@ All allowed tags for customize generation provided here.
 | http        | Generates client and server for http transport with request/response encoders/decoders. Do not generates again if file exist. |
 | main        | Generates basic `package main` for starting service. Uses other tags for minimal user changes.                                |
 | tracing     | Generates options and params for opentracing.                                                                                 |
-
-### Files
-
-| Name  | Default path |  Generation logic |
-|---|----|------------------|
-| Service interface |./service.go | Adds service entity, constructor and methods if they were missed. Checks function names to understand it. |
-| Exchanges     | ./exchanges.go     |  Overwrites old file every time.|
-| Endpoints     |  ./endpoints.go    |  Overwrites old file every time.|
-| Middleware     | ./middleware/middleware.go     |  Overwrites old file every time.|
-| Logging middleware     |  ./middleware/logging.go    |  Overwrites old file every time.|
-| Recovering middleware  | ./middleware/recovering.go  |  Overwrites old file every time.|
-| Error-logging middleware  | ./middleware/error-logging.go  |  Overwrites old file every time.|
-| Cache middleware  | ./middleware/cache.go  |  Adds methods if they were missed. Checks function names to understand it.|
+| metrics     | Generates transport endpoints middlewares for common tracing purposes.                                                                                 |
 
 ## Example
-You may find examples in `example` directory, where `svc` contains all, what you need for successful generation, and `generated` contains what you will get after `microgen`.  
+You may find examples in `examples` directory, where `svc` contains all, what you need for successful generation, and `generated` contains what you will get after `microgen`.
 
 Follow this short guide to try microgen tool.
 
@@ -155,8 +227,7 @@ import (
 	"github.com/devimteam/microgen/example/svc/entity"
 )
 
-// @microgen middleware, logging, grpc, http, recover, main
-// @grpc-addr service.string
+// @microgen middleware, logging, grpc, http, recovering, main
 // @protobuf github.com/devimteam/microgen/example/protobuf
 type StringService interface {
 	// @logs-ignore ans, err
