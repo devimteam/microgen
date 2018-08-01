@@ -1,1 +1,1 @@
-gen: ; microgen -file=./addsvc/api.go -out=.
+gen: ; microgen -file=./addsvc/api.go -out=. -main

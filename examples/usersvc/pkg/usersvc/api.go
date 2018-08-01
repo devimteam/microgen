@@ -2,7 +2,7 @@ package usersvc
 
 import "context"
 
-// @microgen middleware, logging, grpc, http, recovering, main, error-logging, tracing, caching, metrics
+// @microgen middleware, logging, grpc, http, recovering, error-logging, tracing, caching, metrics
 // @protobuf github.com/devimteam/microgen/examples/protobuf
 type UserService interface {
 	CreateUser(ctx context.Context, user User) (id string, err error)
