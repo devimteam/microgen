@@ -59,19 +59,6 @@ func IsInStringSlice(what string, where []string) bool {
 	return false
 }
 
-func FetchTags(strs []string, prefix string) (tags []string) {
-	for _, comment := range strs {
-		if strings.HasPrefix(comment, prefix) {
-			tags = append(tags, strings.Split(strings.Replace(comment[len(prefix):], " ", "", -1), ",")...)
-		}
-	}
-	return
-}
-
-func HasTag(strs []string, prefix string) bool {
-	return ContainTag(strs, prefix)
-}
-
 func ToLower(str string) string {
 	if len(str) > 0 && unicode.IsLower(rune(str[0])) {
 		return str

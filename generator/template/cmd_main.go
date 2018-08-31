@@ -3,6 +3,8 @@ package template
 import (
 	"path/filepath"
 
+	"github.com/devimteam/microgen/internal"
+
 	"context"
 
 	. "github.com/dave/jennifer/jen"
@@ -111,7 +113,7 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 	return Func().Id(nameMain).Call().BlockFunc(func(main *Group) {
 		main.Id(_logger_).Op(":=").
 			Qual(PackagePathGoKitLog, "With").Call(Id(nameInitLogger).Call(Qual(PackagePathOs, "Stdout")), Lit("level"), Lit("info"))
-		if Tags(ctx).Has(RecoveringMiddlewareTag) {
+		if internal.Tags(ctx).Has(RecoveringMiddlewareTag) {
 			main.Id("errorLogger").Op(":=").
 				Qual(PackagePathGoKitLog, "With").Call(Id(nameInitLogger).Call(Qual(PackagePathOs, "Stderr")), Lit("level"), Lit("error"))
 		}
@@ -132,29 +134,29 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 		//		Qual(filepath.Join(t.Info.SourcePackageImport, PathService), CachingMiddlewareName).Call(Id("errorLogger")).Call(Id(_service_)).
 		//		Comment(`Setup service caching.`)
 		//}
-		if Tags(ctx).Has(LoggingMiddlewareTag) {
+		if internal.Tags(ctx).Has(LoggingMiddlewareTag) {
 			main.Id(_service_).Op("=").
 				Qual(filepath.Join(t.Info.OutputPackageImport, PathService), ServiceLoggingMiddlewareName).Call(Id(_logger_)).Call(Id(_service_)).
 				Comment(`Setup service logging.`)
 		}
-		if Tags(ctx).Has(ErrorLoggingMiddlewareTag) {
+		if internal.Tags(ctx).Has(ErrorLoggingMiddlewareTag) {
 			main.Id(_service_).Op("=").
 				Qual(filepath.Join(t.Info.OutputPackageImport, PathService), ServiceErrorLoggingMiddlewareName).Call(Id(_logger_)).Call(Id(_service_)).
 				Comment(`Setup error logging.`)
 		}
-		if Tags(ctx).Has(RecoveringMiddlewareTag) {
+		if internal.Tags(ctx).Has(RecoveringMiddlewareTag) {
 			main.Id(_service_).Op("=").
 				Qual(filepath.Join(t.Info.OutputPackageImport, PathService), ServiceRecoveringMiddlewareName).Call(Id("errorLogger")).Call(Id(_service_)).
 				Comment(`Setup service recovering.`)
 		}
 		main.Line().Id("endpoints").Op(":=").Qual(t.Info.OutputPackageImport+"/transport", "Endpoints").Call(t.endpointsParams(ctx))
-		if Tags(ctx).HasAny(TracingMiddlewareTag) {
+		if internal.Tags(ctx).HasAny(TracingMiddlewareTag) {
 			main.Id("endpoints").Op("=").Qual(t.Info.OutputPackageImport+"/transport", "TraceServerEndpoints").Call(
 				Id("endpoints"),
 				Qual(PackagePathOpenTracingGo, "NoopTracer{}"),
 			).Comment("TODO: Add tracer")
 		}
-		if Tags(ctx).HasAny(GrpcTag, GrpcServerTag) {
+		if internal.Tags(ctx).HasAny(GrpcTag, GrpcServerTag) {
 			main.Line()
 			main.Id("grpcAddr").Op(":=").Lit(":8081").Comment("TODO: use normal address")
 			main.Comment(`Start grpc server.`)
@@ -169,7 +171,7 @@ func (t *mainTemplate) mainFunc(ctx context.Context) *Statement {
 				),
 			)
 		}
-		if Tags(ctx).HasAny(HttpTag, HttpServerTag) {
+		if internal.Tags(ctx).HasAny(HttpTag, HttpServerTag) {
 			main.Line()
 			main.Id("httpAddr").Op(":=").Lit(":8080").Comment("TODO: use normal address")
 			main.Comment(`Start http server.`)
@@ -228,7 +230,7 @@ func (t *mainTemplate) initLogger() *Statement {
 // 			errCh <- grpcs.Serve(listener)
 // 		}
 func (t *mainTemplate) serveGrpc(ctx context.Context) *Statement {
-	if !Tags(ctx).HasAny(GrpcTag, GrpcServerTag) || mstrings.IsInStringSlice(nameServeGRPC, t.rendered) {
+	if !internal.Tags(ctx).HasAny(GrpcTag, GrpcServerTag) || mstrings.IsInStringSlice(nameServeGRPC, t.rendered) {
 		return nil
 	}
 	return Comment(nameServeGRPC+` starts new GRPC server on address and sends first error to channel.`).Line().
@@ -264,7 +266,7 @@ func (t *mainTemplate) serveGrpc(ctx context.Context) *Statement {
 }
 
 func (t *mainTemplate) serveHTTP(ctx context.Context) *Statement {
-	if !Tags(ctx).HasAny(HttpTag, HttpServerTag) || mstrings.IsInStringSlice(nameServeHTTP, t.rendered) {
+	if !internal.Tags(ctx).HasAny(HttpTag, HttpServerTag) || mstrings.IsInStringSlice(nameServeHTTP, t.rendered) {
 		return nil
 	}
 	return Comment(nameServeHTTP+` starts new HTTP server on address and sends first error to channel.`).Line().
@@ -310,10 +312,10 @@ func (t *mainTemplate) endpointsParams(ctx context.Context) *Statement {
 func (t *mainTemplate) newServerParams(ctx context.Context) *Statement {
 	s := &Statement{}
 	s.Id("endpoints")
-	if Tags(ctx).HasAny(TracingMiddlewareTag) {
+	if internal.Tags(ctx).HasAny(TracingMiddlewareTag) {
 		s.Op(",").Line().Id(_logger_)
 	}
-	if Tags(ctx).HasAny(TracingMiddlewareTag) {
+	if internal.Tags(ctx).HasAny(TracingMiddlewareTag) {
 		s.Op(",").Line().Qual(PackagePathOpenTracingGo, "NoopTracer{}").Op(",").Comment("TODO: Add tracer").Line()
 	}
 	return s

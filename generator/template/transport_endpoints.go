@@ -3,6 +3,8 @@ package template
 import (
 	"context"
 
+	"github.com/devimteam/microgen/internal"
+
 	"fmt"
 
 	. "github.com/dave/jennifer/jen"
@@ -72,7 +74,7 @@ func (t *endpointsTemplate) ChooseStrategy(ctx context.Context) (write_strategy.
 
 func (t *endpointsTemplate) serverMetrics(ctx context.Context) *Statement {
 	s := &Statement{}
-	if !Tags(ctx).Has(MetricsMiddlewareTag) {
+	if !internal.Tags(ctx).Has(MetricsMiddlewareTag) {
 		return s
 	}
 	const _name_ = "methodName"

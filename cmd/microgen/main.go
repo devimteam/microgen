@@ -9,8 +9,6 @@ import (
 	"strings"
 
 	"github.com/devimteam/microgen/generator"
-	mstrings "github.com/devimteam/microgen/generator/strings"
-	"github.com/devimteam/microgen/generator/template"
 	lg "github.com/devimteam/microgen/logger"
 	"github.com/vetcher/go-astra"
 	"github.com/vetcher/go-astra/types"
@@ -37,17 +35,20 @@ func init() {
 }
 
 func main() {
+	if *flagVerbose < 0 {
+		*flagVerbose = 0
+	}
 	lg.Logger.Level = *flagVerbose
 	if *flagDebug {
 		lg.Logger.Level = 100
 	}
-	lg.Logger.Logln(1, "@microgen", Version)
+	lg.Logger.Logln(1, "microgen", Version)
 	if *flagHelp || *flagSource == "" {
 		flag.Usage()
 		os.Exit(0)
 	}
 
-	lg.Logger.Logln(4, "Source file:", *flagSource)
+	lg.Logger.Logln(4, "Source package:", *flagSource)
 	info, err := astra.GetPackage(*flagSource)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
@@ -69,7 +70,7 @@ func main() {
 		}
 	}
 
-	ctx, err := prepareContext(*flagSource, ii)
+	ctx, err := prepareContext(*flagSource, ii[0])
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
@@ -80,7 +81,7 @@ func main() {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
 	}
-	units, err := generator.ListTemplatesForGen(ctx, ii, absOutputDir, *flagSource, *flagGenProtofile, *flagGenMain)
+	units, err := generator.ListTemplatesForGen(ctx, ii[0], absOutputDir, *flagSource, *flagGenProtofile, *flagGenMain)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
@@ -105,18 +106,18 @@ func listInterfaces(ii []types.Interface) string {
 
 func prepareContext(filename string, iface *types.Interface) (context.Context, error) {
 	ctx := context.Background()
-	p, err := astra.ResolvePackagePath(filename)
+	/*p, err := astra.ResolvePackagePath(filename)
 	if err != nil {
 		return nil, err
 	}
-	ctx = template.WithSourcePackageImport(ctx, p)
+	ctx = internal.WithSourcePackageImport(ctx, p)
 
-	set := template.TagsSet{}
+	set := internal.TagsSet{}
 	genTags := mstrings.FetchTags(iface.Docs, generator.TagMark+generator.MicrogenMainTag)
 	for _, tag := range genTags {
 		set.Add(tag)
 	}
-	ctx = template.WithTags(ctx, set)
+	ctx = internal.WithTags(ctx, set)*/
 	return ctx, nil
 }
 

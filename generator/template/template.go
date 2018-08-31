@@ -24,6 +24,6 @@ type EmptyTemplate struct{}
 func (EmptyTemplate) Prepare(context.Context) error { return nil }
 func (EmptyTemplate) DefaultPath() string           { return "" }
 func (EmptyTemplate) ChooseStrategy(context.Context) (write_strategy.Strategy, error) {
-	return write_strategy.NewNopStrategy("", ""), nil
+	return write_strategy.NewNopStrategy(), nil
 }
 func (EmptyTemplate) Render(context.Context) write_strategy.Renderer { return nil }

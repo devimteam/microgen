@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/devimteam/microgen/internal"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/vetcher/go-astra/types"
@@ -86,7 +88,7 @@ func (t *gRPCClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 			}))
 		})
 
-	if Tags(ctx).Has(TracingMiddlewareTag) {
+	if internal.Tags(ctx).Has(TracingMiddlewareTag) {
 		f.Line().Func().Id("TracingGRPCClientOptions").Params(
 			Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer"),
 			Id("logger").Qual(PackagePathGoKitLog, "Logger"),

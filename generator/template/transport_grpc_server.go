@@ -3,6 +3,8 @@ package template
 import (
 	"context"
 
+	"github.com/devimteam/microgen/internal"
+
 	. "github.com/dave/jennifer/jen"
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
@@ -81,10 +83,10 @@ func (t *gRPCServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 	f.Func().Id("NewGRPCServer").
 		ParamsFunc(func(p *Group) {
 			p.Id("endpoints").Op("*").Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName)
-			if Tags(ctx).Has(TracingMiddlewareTag) {
+			if internal.Tags(ctx).Has(TracingMiddlewareTag) {
 				p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 			}
-			if Tags(ctx).Has(TracingMiddlewareTag) {
+			if internal.Tags(ctx).Has(TracingMiddlewareTag) {
 				p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
 			}
 			p.Id("opts").Op("...").Qual(PackagePathGoKitTransportGRPC, "ServerOption")
@@ -216,12 +218,12 @@ func (t *gRPCServerTemplate) grpcServerFuncBody(signature *types.Function, i *ty
 
 func (t *gRPCServerTemplate) serverOpts(ctx context.Context, fn *types.Function) *Statement {
 	s := &Statement{}
-	if Tags(ctx).Has(TracingMiddlewareTag) {
+	if internal.Tags(ctx).Has(TracingMiddlewareTag) {
 		s.Op("append(")
 		defer s.Op(")")
 	}
 	s.Id("opts")
-	if Tags(ctx).Has(TracingMiddlewareTag) {
+	if internal.Tags(ctx).Has(TracingMiddlewareTag) {
 		s.Op(",").Qual(PackagePathGoKitTransportGRPC, "ServerBefore").Call(
 			Line().Qual(PackagePathGoKitTracing, "GRPCToContext").Call(Id("tracer"), Lit(fn.Name), Id("logger")),
 		)

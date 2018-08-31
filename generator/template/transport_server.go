@@ -3,6 +3,8 @@ package template
 import (
 	"context"
 
+	"github.com/devimteam/microgen/internal"
+
 	. "github.com/dave/jennifer/jen"
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
@@ -46,7 +48,7 @@ func (t *endpointsServerTemplate) Render(ctx context.Context) write_strategy.Ren
 	f.HeaderComment(t.info.FileHeader)
 
 	f.Add(t.allEndpoints()).Line()
-	if Tags(ctx).HasAny(TracingMiddlewareTag) {
+	if internal.Tags(ctx).HasAny(TracingMiddlewareTag) {
 		f.Comment("TraceServerEndpoints is used for tracing endpoints on server side.")
 		f.Add(t.serverTracingMiddleware()).Line()
 	}

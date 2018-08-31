@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/devimteam/microgen/internal"
+
 	. "github.com/dave/jennifer/jen"
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
@@ -50,7 +52,7 @@ func (t *httpServerTemplate) Prepare(ctx context.Context) error {
 }
 
 func FetchHttpMethodTag(rawString []string) string {
-	tags := mstrings.FetchTags(rawString, TagMark+HttpMethodTag)
+	tags := internal.FetchList(rawString, TagMark+HttpMethodTag)
 	if len(tags) == 1 {
 		return strings.ToTitle(tags[0])
 	}
@@ -58,7 +60,7 @@ func FetchHttpMethodTag(rawString []string) string {
 }
 
 func buildMethodPath(fn *types.Function) string {
-	url := strings.Replace(mstrings.FetchMetaInfo(TagMark+HttpMethodPath, fn.Docs), " ", "", -1)
+	url := strings.Replace(internal.FetchList(fn.Docs, TagMark+HttpMethodPath)[0], " ", "", -1)
 	if url == "" {
 		return buildDefaultMethodPath(fn)
 	}
@@ -120,10 +122,10 @@ func (t *httpServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 
 	f.Func().Id("NewHTTPHandler").ParamsFunc(func(p *Group) {
 		p.Id("endpoints").Op("*").Qual(t.info.OutputPackageImport+"/transport", EndpointsSetName)
-		if Tags(ctx).Has(TracingMiddlewareTag) {
+		if internal.Tags(ctx).Has(TracingMiddlewareTag) {
 			p.Id("logger").Qual(PackagePathGoKitLog, "Logger")
 		}
-		if Tags(ctx).Has(TracingMiddlewareTag) {
+		if internal.Tags(ctx).Has(TracingMiddlewareTag) {
 			p.Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer")
 		}
 		p.Id("opts").Op("...").Qual(PackagePathGoKitTransportHTTP, "ServerOption")
@@ -152,12 +154,12 @@ func (t *httpServerTemplate) Render(ctx context.Context) write_strategy.Renderer
 
 func (t *httpServerTemplate) serverOpts(ctx context.Context, fn *types.Function) *Statement {
 	s := &Statement{}
-	if Tags(ctx).Has(TracingMiddlewareTag) {
+	if internal.Tags(ctx).Has(TracingMiddlewareTag) {
 		s.Op("append(")
 		defer s.Op(")")
 	}
 	s.Id("opts")
-	if Tags(ctx).Has(TracingMiddlewareTag) {
+	if internal.Tags(ctx).Has(TracingMiddlewareTag) {
 		s.Op(",").Qual(PackagePathGoKitTransportHTTP, "ServerBefore").Call(
 			Line().Qual(PackagePathGoKitTracing, "HTTPToContext").Call(Id("tracer"), Lit(fn.Name), Id("logger")),
 		)

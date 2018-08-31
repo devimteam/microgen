@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/devimteam/microgen/internal"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
@@ -93,7 +95,7 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 		t.clientBody(ctx),
 	)
 
-	if Tags(ctx).Has(TracingMiddlewareTag) {
+	if internal.Tags(ctx).Has(TracingMiddlewareTag) {
 		src.Line().Func().Id("TracingHTTPClientOptions").Params(
 			Id("tracer").Qual(PackagePathOpenTracingGo, "Tracer"),
 			Id("logger").Qual(PackagePathGoKitLog, "Logger"),
@@ -107,7 +109,7 @@ func (t *httpClientTemplate) Render(ctx context.Context) write_strategy.Renderer
 			),
 		)
 	}
-	if Tags(ctx).Has(ServiceDiscoveryTag) {
+	if internal.Tags(ctx).Has(ServiceDiscoveryTag) {
 		src.Comment(fmt.Sprintf("NewHTTPClientSD is a http client for %s and uses service discovery inside.", t.info.Iface.Name)).
 			Line().Var().Id("NewHTTPClientSD").Op("=").Id("sdClientFactory").Call(Id("httpClientFactoryMaker"))
 		src.Comment("sdClientFactory is a factory to create constructors for HTTPClientSD").

@@ -179,7 +179,7 @@ func (t *stubGRPCTypeConverterTemplate) ChooseStrategy(ctx context.Context) (wri
 	file, err := parsePackage(filepath.Join(t.info.OutputFilePath, t.DefaultPath()))
 	if err != nil {
 		logger.Logger.Log(0, "can't parse", t.DefaultPath(), ":", err)
-		return write_strategy.NewNopStrategy("", ""), nil
+		return write_strategy.NewNopStrategy(), nil
 	}
 
 	for i := range file.Functions {

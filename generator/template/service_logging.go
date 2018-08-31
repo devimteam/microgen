@@ -3,6 +3,8 @@ package template
 import (
 	"context"
 
+	"github.com/devimteam/microgen/internal"
+
 	. "github.com/dave/jennifer/jen"
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
@@ -119,8 +121,8 @@ func (t *loggingTemplate) Prepare(ctx context.Context) error {
 	t.ignoreParams = make(map[string][]string)
 	t.lenParams = make(map[string][]string)
 	for _, fn := range t.info.Iface.Methods {
-		t.ignoreParams[fn.Name] = mstrings.FetchTags(fn.Docs, TagMark+logIgnoreTag)
-		t.lenParams[fn.Name] = mstrings.FetchTags(fn.Docs, TagMark+lenTag)
+		t.ignoreParams[fn.Name] = internal.FetchList(fn.Docs, TagMark+MicrogenMainTag+logIgnoreTag)
+		t.lenParams[fn.Name] = internal.FetchList(fn.Docs, TagMark+lenTag)
 	}
 	return nil
 }

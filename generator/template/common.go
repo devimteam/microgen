@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/devimteam/microgen/internal"
+
 	. "github.com/dave/jennifer/jen"
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/vetcher/go-astra/types"
@@ -50,7 +52,7 @@ const (
 	PackagePathSyncErrgroup          = "golang.org/x/sync/errgroup"
 
 	TagMark         = "//"
-	MicrogenMainTag = "microgen"
+	MicrogenMainTag = "microgen:"
 	serviceAlias    = "service"
 )
 
@@ -228,7 +230,7 @@ func fieldType(ctx context.Context, field types.Type, allowEllipsis bool) *State
 			field = f.Next
 		case types.TName:
 			if !imported && !types.IsBuiltin(f) {
-				c.Qual(SourcePackageImport(ctx), f.TypeName)
+				c.Qual(internal.SourcePackageImport(ctx), f.TypeName)
 			} else {
 				c.Id(f.TypeName)
 			}

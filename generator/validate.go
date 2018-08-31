@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/devimteam/microgen/internal"
+
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/vetcher/go-astra/types"
@@ -25,8 +27,8 @@ func ValidateInterface(iface *types.Interface) error {
 // * Last result is error.
 // * All params have names.
 func validateFunction(fn *types.Function) (errs []error) {
-	// don't validate when `@microgen -` provided
-	if mstrings.ContainTag(mstrings.FetchTags(fn.Docs, TagMark+MicrogenMainTag), "-") {
+	// don't validate when `microgen -` provided
+	if internal.FetchTags(fn.Docs, TagMark+MicrogenMainTag).Has("-") {
 		return
 	}
 	if !template.IsContextFirst(fn.Args) {

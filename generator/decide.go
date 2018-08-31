@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	mstrings "github.com/devimteam/microgen/generator/strings"
+	"github.com/devimteam/microgen/internal"
+
 	"github.com/devimteam/microgen/generator/template"
 	lg "github.com/devimteam/microgen/logger"
 	"github.com/vetcher/go-astra/types"
@@ -60,7 +61,7 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 	}
 	m := make(map[string]bool, len(iface.Methods))
 	for _, fn := range iface.Methods {
-		m[fn.Name] = !mstrings.ContainTag(mstrings.FetchTags(fn.Docs, TagMark+MicrogenMainTag), "-")
+		m[fn.Name] = !internal.FetchTags(fn.Docs, TagMark+MicrogenMainTag).Has("-")
 	}
 	info := &template.GenerationInfo{
 		SourcePackageImport:   importPackagePath,
@@ -68,10 +69,10 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 		Iface:                 iface,
 		OutputPackageImport:   outImportPath,
 		OutputFilePath:        absOutPath,
-		ProtobufPackageImport: mstrings.FetchMetaInfo(TagMark+ProtobufTag, iface.Docs),
+		ProtobufPackageImport: TagMark + ProtobufTag,
 		FileHeader:            defaultFileHeader,
 		AllowedMethods:        m,
-		ProtobufClientAddr:    mstrings.FetchMetaInfo(TagMark+GRPCClientAddr, iface.Docs),
+		ProtobufClientAddr:    TagMark + GRPCClientAddr,
 	}
 	lg.Logger.Logln(3, "\nGeneration Info:", info.String())
 	/*stubSvc, err := NewGenUnit(ctx, template.NewStubInterfaceTemplate(info), absOutPath)
@@ -80,10 +81,10 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 	}
 	units = append(units, stubSvc)*/
 
-	genTags := mstrings.FetchTags(iface.Docs, TagMark+MicrogenMainTag)
-	lg.Logger.Logln(2, "Tags:", strings.Join(genTags, ", "))
+	genTags := internal.FetchTags(iface.Docs, TagMark+MicrogenMainTag)
+	lg.Logger.Logln(2, "Tags:\n", genTags)
 	uniqueTemplate := make(map[string]template.Template)
-	for _, tag := range genTags {
+	for tag, _ := range genTags {
 		templates := tagToTemplate(tag, info)
 		if templates == nil {
 			lg.Logger.Logln(1, "Warning: Unexpected tag", tag)
@@ -220,16 +221,18 @@ func resolvePackagePath(outPath string) (string, error) {
 	if gopath == "" {
 		return "", fmt.Errorf("GOPATH is empty")
 	}
-	lg.Logger.Logln(4, "GOPATH:", gopath)
+	lg.Logger.Logln(4, "\tGOPATH:", gopath)
 
 	absOutPath, err := filepath.Abs(outPath)
 	if err != nil {
 		return "", err
 	}
-	lg.Logger.Logln(4, "Resolving path:", absOutPath)
+	lg.Logger.Logln(4, "\tResolving path:", absOutPath)
 
-	for _, path := range strings.Split(gopath, ":") {
+	lg.Logger.Logln(5, "\tSearch in paths:")
+	for _, path := range splitPaths(gopath) {
 		gopathSrc := filepath.Join(path, "src")
+		lg.Logger.Logln(5, "\t\t", gopathSrc)
 		if strings.HasPrefix(absOutPath, gopathSrc) {
 			return absOutPath[len(gopathSrc)+1:], nil
 		}

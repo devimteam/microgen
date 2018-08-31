@@ -3,6 +3,8 @@ package template
 import (
 	"context"
 
+	"github.com/devimteam/microgen/internal"
+
 	. "github.com/dave/jennifer/jen"
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
@@ -77,12 +79,14 @@ func (t *cacheMiddlewareTemplate) Prepare(ctx context.Context) error {
 	t.cacheKeys = make(map[string]string)
 	t.caching = make(map[string]bool)
 	for _, method := range t.info.Iface.Methods {
-		if mstrings.HasTag(method.Docs, TagMark+CachingMiddlewareTag) {
-			t.caching[method.Name] = true
-			t.cacheKeys[method.Name] = `"` + method.Name + `"`
-		}
-		if s := mstrings.FetchTags(method.Docs, TagMark+cacheKeyTag); len(s) > 0 {
-			t.cacheKeys[method.Name] = s[0]
+		// TODO: understand this and then fix
+		//
+		//	if internal.FetchTags(method.Docs, TagMark+CachingMiddlewareTag) {
+		//		t.caching[method.Name] = true
+		//		t.cacheKeys[method.Name] = `"` + method.Name + `"`
+		//	}
+		if s := internal.FetchTags(method.Docs, TagMark+MicrogenMainTag+cacheKeyTag); len(s) > 0 {
+			t.cacheKeys[method.Name] = s.Get(cacheKeyTag)[0]
 			t.caching[method.Name] = true
 		}
 	}

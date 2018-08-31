@@ -3,6 +3,8 @@ package template
 import (
 	"context"
 
+	"github.com/devimteam/microgen/internal"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/generator/strings"
 	mstrings "github.com/devimteam/microgen/generator/strings"
@@ -61,7 +63,7 @@ func NewEndpointsClientTemplate(info *GenerationInfo) Template {
 func (t *endpointsClientTemplate) Render(ctx context.Context) write_strategy.Renderer {
 	f := NewFile("transport")
 	f.HeaderComment(t.info.FileHeader)
-	if Tags(ctx).HasAny(TracingMiddlewareTag) {
+	if internal.Tags(ctx).HasAny(TracingMiddlewareTag) {
 		f.Comment("TraceClientEndpoints is used for tracing endpoints on client side.")
 		f.Add(t.clientTracingMiddleware()).Line()
 	}
@@ -126,7 +128,7 @@ func (t *endpointsClientTemplate) serviceEndpointMethodBody(ctx context.Context,
 		g.Id(reqName).Op(":=").Id(requestStructName(fn)).Values(dictByNormalVariables(RemoveContextIfFirst(fn.Args), RemoveContextIfFirst(normal.Args)))
 		g.Add(endpointResponse(respName, normal)).Id(strings.LastWordFromName(EndpointsSetName)).Dot(endpointsStructFieldName(fn.Name)).Call(Id(firstArgName(normal)), Op("&").Id(reqName))
 		g.If(Id(nameOfLastResultError(normal)).Op("!=").Nil().BlockFunc(func(ifg *Group) {
-			if Tags(ctx).HasAny(GrpcTag, GrpcClientTag, GrpcServerTag) {
+			if internal.Tags(ctx).HasAny(GrpcTag, GrpcClientTag, GrpcServerTag) {
 				ifg.Add(checkGRPCError(normal))
 			}
 			ifg.Return()
