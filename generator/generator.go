@@ -3,6 +3,7 @@ package generator
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 
 	"github.com/devimteam/microgen/generator/template"
@@ -18,6 +19,8 @@ var (
 	EmptyTemplateError = errors.New("empty template")
 	EmptyStrategyError = errors.New("empty strategy")
 )
+
+var flagDry = flag.Bool("dry", false, "Run microgen in dry mode: do everything, except creating files.")
 
 type Generator interface {
 	Generate() error
@@ -54,8 +57,10 @@ func (g *GenerationUnit) Generate(ctx context.Context) error {
 		return EmptyStrategyError
 	}
 	code := g.template.Render(ctx)
-	err := g.writeStrategy.Write(code)
-	if err != nil {
+	if *flagDry {
+		return nil
+	}
+	if err := g.writeStrategy.Write(code); err != nil {
 		return fmt.Errorf("write error: %v", err)
 	}
 	return nil

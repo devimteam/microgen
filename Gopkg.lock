@@ -125,15 +125,15 @@
   revision = "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f"
 
 [[projects]]
-  digest = "1:72ead56998c79f69d77a9c79a90dce7e759e6e7a0cfa73e34ae24a888de016a0"
+  digest = "1:95e721b0e0d4d7d61e59675427b5ce05ee0bbbd4b432c40078dcc1c1619f3603"
   name = "github.com/vetcher/go-astra"
   packages = [
     ".",
     "types",
   ]
   pruneopts = ""
-  revision = "16c21480f51c6f769e9c82ac3c6d67c50fe4d58c"
-  version = "v1.1.2"
+  revision = "33d87e6fff592ef451fa3eb086bf99b086b6742c"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"

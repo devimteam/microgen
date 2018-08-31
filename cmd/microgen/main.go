@@ -21,7 +21,7 @@ const (
 )
 
 var (
-	flagFileName     = flag.String("file", "service.go", "Path to input file with interface.")
+	flagSource       = flag.String("src", ".", "Path to input package with interfaces.")
 	flagOutputDir    = flag.String("out", ".", "Output directory.")
 	flagHelp         = flag.Bool("help", false, "Show help.")
 	flagVerbose      = flag.Int("v", 1, "Sets microgen verbose level.")
@@ -31,7 +31,9 @@ var (
 )
 
 func init() {
-	flag.Parse()
+	if !flag.Parsed() {
+		flag.Parse()
+	}
 }
 
 func main() {
@@ -40,32 +42,34 @@ func main() {
 		lg.Logger.Level = 100
 	}
 	lg.Logger.Logln(1, "@microgen", Version)
-	if *flagHelp || *flagFileName == "" {
+	if *flagHelp || *flagSource == "" {
 		flag.Usage()
 		os.Exit(0)
 	}
 
-	lg.Logger.Logln(4, "Source file:", *flagFileName)
-	info, err := astra.ParseFile(*flagFileName)
+	lg.Logger.Logln(4, "Source file:", *flagSource)
+	info, err := astra.GetPackage(*flagSource)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
 	}
 
-	i := findInterface(info)
-	if i == nil {
-		lg.Logger.Logln(0, "fatal: could not find interface with @microgen tag")
+	ii := findInterfaces(info)
+	if len(ii) == 0 {
+		lg.Logger.Logln(0, "fatal: could not find any interface with microgen tag")
 		lg.Logger.Logln(4, "All founded interfaces:")
 		lg.Logger.Logln(4, listInterfaces(info.Interfaces))
 		os.Exit(1)
 	}
 
-	if err := generator.ValidateInterface(i); err != nil {
-		lg.Logger.Logln(0, "validation:", err)
-		os.Exit(1)
+	for _, i := range ii {
+		if err := generator.ValidateInterface(i); err != nil {
+			lg.Logger.Logln(0, i.Name, "validation:", err)
+			os.Exit(1)
+		}
 	}
 
-	ctx, err := prepareContext(*flagFileName, i)
+	ctx, err := prepareContext(*flagSource, ii)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
@@ -76,7 +80,7 @@ func main() {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
 	}
-	units, err := generator.ListTemplatesForGen(ctx, i, absOutputDir, *flagFileName, *flagGenProtofile, *flagGenMain)
+	units, err := generator.ListTemplatesForGen(ctx, ii, absOutputDir, *flagSource, *flagGenProtofile, *flagGenMain)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
@@ -116,13 +120,14 @@ func prepareContext(filename string, iface *types.Interface) (context.Context, e
 	return ctx, nil
 }
 
-func findInterface(file *types.File) *types.Interface {
+func findInterfaces(file *types.File) []*types.Interface {
+	var ifaces []*types.Interface
 	for i := range file.Interfaces {
 		if docsContainMicrogenTag(file.Interfaces[i].Docs) {
-			return &file.Interfaces[i]
+			ifaces = append(ifaces, &file.Interfaces[i])
 		}
 	}
-	return nil
+	return ifaces
 }
 
 func docsContainMicrogenTag(strs []string) bool {

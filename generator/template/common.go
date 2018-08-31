@@ -49,7 +49,7 @@ const (
 	PackagePathGoKitLB               = "github.com/go-kit/kit/sd/lb"
 	PackagePathSyncErrgroup          = "golang.org/x/sync/errgroup"
 
-	TagMark         = "// @"
+	TagMark         = "//"
 	MicrogenMainTag = "microgen"
 	serviceAlias    = "service"
 )
