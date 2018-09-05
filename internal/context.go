@@ -56,7 +56,7 @@ func (s TagsSet) String() string {
 		x[i] = k + ": " + strings.Join(v, " ")
 		i++
 	}
-	return strings.Join(x, "\n")
+	return strings.Join(x, "\n\t ")
 }
 
 func AllowEllipsis(ctx context.Context) bool {

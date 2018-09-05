@@ -3,13 +3,10 @@ package generator
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
-	"strings"
-
-	"github.com/devimteam/microgen/internal"
 
 	"github.com/devimteam/microgen/generator/template"
+	"github.com/devimteam/microgen/internal"
 	lg "github.com/devimteam/microgen/logger"
 	"github.com/vetcher/go-astra/types"
 )
@@ -47,7 +44,7 @@ const (
 )
 
 func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath, sourcePath string, genProto string, genMain bool) (units []*GenerationUnit, err error) {
-	importPackagePath, err := resolvePackagePath(filepath.Dir(sourcePath))
+	importPackagePath, err := internal.ResolvePackagePath(filepath.Dir(sourcePath))
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +52,7 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 	if err != nil {
 		return nil, err
 	}
-	outImportPath, err := resolvePackagePath(absOutPath)
+	outImportPath, err := internal.ResolvePackagePath(absOutPath)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +79,7 @@ func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath
 	units = append(units, stubSvc)*/
 
 	genTags := internal.FetchTags(iface.Docs, TagMark+MicrogenMainTag)
-	lg.Logger.Logln(2, "Tags:\n", genTags)
+	lg.Logger.Logln(3, "Tags:\n\t", genTags)
 	uniqueTemplate := make(map[string]template.Template)
 	for tag, _ := range genTags {
 		templates := tagToTemplate(tag, info)
@@ -213,29 +210,4 @@ func tagToTemplate(tag string, info *template.GenerationInfo) (tmpls []template.
 		)
 	}
 	return nil
-}
-
-func resolvePackagePath(outPath string) (string, error) {
-	lg.Logger.Logln(3, "Try to resolve path for", outPath, "package...")
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		return "", fmt.Errorf("GOPATH is empty")
-	}
-	lg.Logger.Logln(4, "\tGOPATH:", gopath)
-
-	absOutPath, err := filepath.Abs(outPath)
-	if err != nil {
-		return "", err
-	}
-	lg.Logger.Logln(4, "\tResolving path:", absOutPath)
-
-	lg.Logger.Logln(5, "\tSearch in paths:")
-	for _, path := range splitPaths(gopath) {
-		gopathSrc := filepath.Join(path, "src")
-		lg.Logger.Logln(5, "\t\t", gopathSrc)
-		if strings.HasPrefix(absOutPath, gopathSrc) {
-			return absOutPath[len(gopathSrc)+1:], nil
-		}
-	}
-	return "", fmt.Errorf("path(%s) not in GOPATH(%s)", absOutPath, gopath)
 }

@@ -7,6 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/devimteam/microgen/internal"
 
 	"github.com/devimteam/microgen/generator"
 	lg "github.com/devimteam/microgen/logger"
@@ -35,6 +38,8 @@ func init() {
 }
 
 func main() {
+	begin := time.Now()
+	defer func() { lg.Logger.Logln(1, "Full:", time.Since(begin)) }()
 	if *flagVerbose < 0 {
 		*flagVerbose = 0
 	}
@@ -86,6 +91,7 @@ func main() {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
 	}
+	lg.Logger.Logln(3, "Preparing:", time.Since(begin))
 	for _, unit := range units {
 		err := unit.Generate(ctx)
 		if err != nil && err != generator.EmptyStrategyError {
@@ -106,18 +112,14 @@ func listInterfaces(ii []types.Interface) string {
 
 func prepareContext(filename string, iface *types.Interface) (context.Context, error) {
 	ctx := context.Background()
-	/*p, err := astra.ResolvePackagePath(filename)
+	p, err := internal.ResolvePackagePath(filename)
 	if err != nil {
 		return nil, err
 	}
 	ctx = internal.WithSourcePackageImport(ctx, p)
 
-	set := internal.TagsSet{}
-	genTags := mstrings.FetchTags(iface.Docs, generator.TagMark+generator.MicrogenMainTag)
-	for _, tag := range genTags {
-		set.Add(tag)
-	}
-	ctx = internal.WithTags(ctx, set)*/
+	genTags := internal.FetchTags(iface.Docs, generator.TagMark+generator.MicrogenMainTag)
+	ctx = internal.WithTags(ctx, genTags)
 	return ctx, nil
 }
 
