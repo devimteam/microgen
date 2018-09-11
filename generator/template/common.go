@@ -95,12 +95,8 @@ const (
 )
 
 type GenerationInfo struct {
-	Iface               *types.Interface
-	SourcePackageImport string
-	SourceFilePath      string
-	OutputPackageImport string
-	OutputFilePath      string
-	FileHeader          string
+	Iface      *types.Interface
+	FileHeader string
 
 	ProtobufPackageImport string
 	ProtobufClientAddr    string
@@ -111,10 +107,6 @@ func (i GenerationInfo) String() string {
 	var ss []string
 	ss = append(ss,
 		fmt.Sprint(),
-		fmt.Sprint("SourcePackageImport: ", i.SourcePackageImport),
-		fmt.Sprint("SourceFilePath: ", i.SourceFilePath),
-		fmt.Sprint("OutputPackageImport: ", i.OutputPackageImport),
-		fmt.Sprint("OutputFilePath: ", i.OutputFilePath),
 		fmt.Sprint("FileHeader: ", i.FileHeader),
 		fmt.Sprint(),
 		fmt.Sprint("ProtobufPackageImport: ", i.ProtobufPackageImport),

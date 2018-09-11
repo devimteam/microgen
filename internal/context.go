@@ -7,25 +7,31 @@ import (
 
 const (
 	spi                = "SourcePackageImport"
-	ael                = "AllowEllipsis"
+	sp                 = "SourcePackage"
+	dpi                = "DestinyPackageImport"
+	alel               = "AllowEllipsis"
+	dst                = "DestinyPath"
 	mainTagsContextKey = "MainTags"
 )
 
 func WithSourcePackageImport(parent context.Context, val string) context.Context {
 	return context.WithValue(parent, spi, val)
 }
-
-func SourcePackageImport(ctx context.Context) string {
-	return ctx.Value(spi).(string)
+func SourcePackageImport(ctx context.Context) string { return ctx.Value(spi).(string) }
+func WithSource(parent context.Context, val string) context.Context {
+	return context.WithValue(parent, sp, val)
 }
-
+func Source(ctx context.Context) string { return ctx.Value(sp).(string) }
+func WithDstPkgImport(ctx context.Context, val string) context.Context {
+	return context.WithValue(ctx, dpi, val)
+}
+func DstPkgImport(ctx context.Context) string                 { return ctx.Value(dpi).(string) }
+func WithDst(ctx context.Context, val string) context.Context { return context.WithValue(ctx, dst, val) }
+func Dst(ctx context.Context) string                          { return ctx.Value(dst).(string) }
 func WithTags(parent context.Context, tt TagsSet) context.Context {
 	return context.WithValue(parent, mainTagsContextKey, tt)
 }
-
-func Tags(ctx context.Context) TagsSet {
-	return ctx.Value(mainTagsContextKey).(TagsSet)
-}
+func Tags(ctx context.Context) TagsSet { return ctx.Value(mainTagsContextKey).(TagsSet) }
 
 type TagsSet map[string][]string
 
@@ -60,7 +66,7 @@ func (s TagsSet) String() string {
 }
 
 func AllowEllipsis(ctx context.Context) bool {
-	v, ok := ctx.Value(ael).(bool)
+	v, ok := ctx.Value(alel).(bool)
 	return ok && v
 }
 

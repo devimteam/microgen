@@ -3,7 +3,6 @@ package generator
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/devimteam/microgen/generator/template"
 	"github.com/devimteam/microgen/internal"
@@ -30,9 +29,6 @@ const (
 	ErrorLoggingMiddlewareTag = template.ErrorLoggingMiddlewareTag
 	TracingMiddlewareTag      = template.TracingMiddlewareTag
 	CachingMiddlewareTag      = template.CachingMiddlewareTag
-	JSONRPCTag                = template.JSONRPCTag
-	JSONRPCServerTag          = template.JSONRPCServerTag
-	JSONRPCClientTag          = template.JSONRPCClientTag
 	Transport                 = template.Transport
 	TransportClient           = template.TransportClient
 	TransportServer           = template.TransportServer
@@ -43,29 +39,13 @@ const (
 	HttpMethodPath = template.HttpMethodPath
 )
 
-func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath, sourcePath string, genProto string, genMain bool) (units []*GenerationUnit, err error) {
-	importPackagePath, err := internal.ResolvePackagePath(filepath.Dir(sourcePath))
-	if err != nil {
-		return nil, err
-	}
-	absSourcePath, err := filepath.Abs(sourcePath)
-	if err != nil {
-		return nil, err
-	}
-	outImportPath, err := internal.ResolvePackagePath(absOutPath)
-	if err != nil {
-		return nil, err
-	}
+func ListTemplatesForGen(ctx context.Context, iface *types.Interface, absOutPath, genProto string, genMain bool) (units []*GenerationUnit, err error) {
 	m := make(map[string]bool, len(iface.Methods))
 	for _, fn := range iface.Methods {
 		m[fn.Name] = !internal.FetchTags(fn.Docs, TagMark+MicrogenMainTag).Has("-")
 	}
 	info := &template.GenerationInfo{
-		SourcePackageImport:   importPackagePath,
-		SourceFilePath:        absSourcePath,
-		Iface:                 iface,
-		OutputPackageImport:   outImportPath,
-		OutputFilePath:        absOutPath,
+		Iface: iface,
 		ProtobufPackageImport: TagMark + ProtobufTag,
 		FileHeader:            defaultFileHeader,
 		AllowedMethods:        m,
