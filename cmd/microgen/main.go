@@ -80,7 +80,7 @@ func main() {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
 	}
-	units, err := generator.ListTemplatesForGen(ctx, iface, absOutputDir, *flagSource, *flagGenProtofile, *flagGenMain)
+	units, err := generator.ListTemplatesForGen(ctx, iface, absOutputDir, *flagGenProtofile, *flagGenMain)
 	if err != nil {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
