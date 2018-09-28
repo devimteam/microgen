@@ -7,13 +7,22 @@ import (
 )
 
 var (
-	pluginsRegistry map[string]Plugin
-	regLock         sync.Mutex
+	// holds all plugins by their names.
+	pluginsRepository map[string]Plugin
+	// makes RegisterPlugin calls concurrency safe (just for fun and because can).
+	regLock sync.Mutex
 )
 
+// RegisterPlugin registers plugin to global repository of plugins.
+// When generation process begins, microgen takes plugins from this repository and executes them.
+// Plugin with empty name will be ignored and not added to repository.
+// Already registered plugins can be overwritten.
 func RegisterPlugin(name string, plugin Plugin) {
+	if name == "" {
+		return
+	}
 	regLock.Lock()
-	pluginsRegistry[name] = plugin
-	lg.Logger.Logln(4, "register plugin", name)
+	pluginsRepository[name] = plugin
+	lg.Logger.Logln(detail, "register plugin", name)
 	regLock.Unlock()
 }

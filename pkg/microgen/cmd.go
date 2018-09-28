@@ -5,12 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"plugin"
 	"strings"
 	"time"
 
 	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
-
 	"github.com/vetcher/go-astra"
 	"github.com/vetcher/go-astra/types"
 
@@ -19,11 +19,11 @@ import (
 )
 
 var (
-	flagSource    = flag.String("src", ".", "Path to input package with interfaces.")
-	flagDstDir    = flag.String("dst", ".", "Destiny path.")
-	flagVerbose   = flag.Int("v", 1, "Sets microgen verbose level.")
-	flagDebug     = flag.Bool("debug", false, "Print all microgen messages. Equivalent to -v=100.")
-	flagInterface = flag.String("interface", "", "Name of the target interface. If package contains one interface with microgen tags, arg may be omitted.")
+	flagDstDir  = flag.String("dst", ".", "Destiny path.")
+	flagVerbose = flag.Int("v", common, "Sets microgen verbose level.")
+	flagDebug   = flag.Bool("debug", false, "Print all microgen messages. Equivalent to -v=100.")
+	flagConfig  = flag.String("cfg", "microgen.toml", "")
+	flagDry     = flag.Bool("dry", false, "Do everything except writing files.")
 )
 
 func init() {
@@ -33,21 +33,38 @@ func init() {
 }
 
 func Exec() {
+	var err error
+	defer func() {
+		if err != nil {
+			lg.Logger.Logln(critical, "fatal:", err)
+			os.Exit(1)
+		}
+		if err := recover(); err != nil {
+			lg.Logger.Logln(critical, "panic:", err)
+			os.Exit(1)
+		}
+	}()
 	begin := time.Now()
-	defer func() { lg.Logger.Logln(1, "Full:", time.Since(begin)) }()
-	if *flagVerbose < 0 {
-		*flagVerbose = 0
+	defer func() {
+		lg.Logger.Logln(info, "Done")
+		lg.Logger.Logln(info, "Duration:", time.Since(begin))
+	}()
+	if *flagVerbose < critical {
+		*flagVerbose = critical
 	}
 	lg.Logger.Level = *flagVerbose
 	if *flagDebug {
-		lg.Logger.Level = 100
+		lg.Logger.Level = debug
 	}
-	lg.Logger.Logln(1, "microgen", "1.0.0")
+	lg.Logger.Logln(common, "microgen", "1.0.0")
 
-	processConfig()
+	lg.Logger.Logln(detail, "Config:", *flagConfig)
+	cfg, err := processConfig(*flagConfig)
+	if err != nil {
+		return
+	}
 
-	lg.Logger.Logln(4, "Source package:", *flagSource)
-	info, err := astra.GetPackage(*flagSource, astra.AllowAnyImportAliases,
+	pkg, err := astra.GetPackage(".", astra.AllowAnyImportAliases,
 		astra.IgnoreStructs, astra.IgnoreFunctions, astra.IgnoreConstants,
 		astra.IgnoreMethods, astra.IgnoreTypes, astra.IgnoreVariables,
 	)
@@ -55,15 +72,77 @@ func Exec() {
 		lg.Logger.Logln(0, "fatal:", err)
 		os.Exit(1)
 	}
-	ii := findInterfaces(info)
-	iface, err := selectInterface(ii)
+	ii := findInterfaces(pkg)
+	iface, err := selectInterface(ii, cfg.Interface)
 	if err != nil {
-		lg.Logger.Logln(0, "fatal:", err)
-		lg.Logger.Logln(4, "All founded interfaces:")
-		lg.Logger.Logln(4, listInterfaces(info.Interfaces))
-		os.Exit(1)
+		lg.Logger.Logln(detail, "All founded interfaces:")
+		lg.Logger.Logln(detail, listInterfaces(pkg.Interfaces))
+		return
 	}
 
+	err = initPlugins(cfg.Plugins)
+	if err != nil {
+		return
+	}
+
+	source, err := os.Getwd()
+	if err != nil {
+		return
+	}
+	sourcePackage, err := getPkgPath(".", true)
+	if err != nil {
+		return
+	}
+
+	lg.Logger.Logln(debug, "Start generation")
+	ctx := Context{
+		Interface:           iface,
+		Source:              source,
+		SourcePackageImport: sourcePackage,
+		Files:               nil,
+	}
+	lg.Logger.Logln(debug, "Exec plugins")
+	for _, pcfg := range cfg.Generate {
+		err = func() error {
+			defer func() {
+				if err := recover(); err != nil {
+					err = errors.Errorf("recover panic from %s plugin. Message: %v", pcfg.Name, err)
+				}
+			}()
+			p, ok := pluginsRepository[pcfg.Name]
+			if !ok {
+				return errors.Errorf("plugin %s not registered")
+			}
+			lg.Logger.Logln(debug, "run", pcfg.Name, "plugin with args:", pcfg.Args)
+			ctx, err = p.Generate(ctx)
+			if err != nil {
+				return errors.Wrapf(err, "%s plugin returns an error", pcfg.Name)
+			}
+			return nil
+		}()
+		if err != nil {
+			return
+		}
+	}
+	if *flagDry {
+		lg.Logger.Logln(debug, "dry execution: do not create files")
+		return
+	}
+	lg.Logger.Logln(debug, "Write files")
+	for _, f := range ctx.Files {
+		lg.Logger.Logln(debug, "create", f.Path)
+		tgtFile, err := os.Create(f.Path)
+		if err != nil {
+			err = errors.Wrapf(err, "plugin %s: during creating %s file", f.Name, f.Path)
+			return
+		}
+		lg.Logger.Logln(debug, "write", f.Path)
+		_, err = tgtFile.Write(f.Content)
+		if err != nil {
+			err = errors.Wrapf(err, "plugin %s: during creating %s file", f.Name, f.Path)
+			return
+		}
+	}
 }
 
 func findInterfaces(file *types.File) []*types.Interface {
@@ -84,19 +163,19 @@ func listInterfaces(ii []types.Interface) string {
 	return s
 }
 
-func selectInterface(ii []*types.Interface) (*types.Interface, error) {
+func selectInterface(ii []*types.Interface, name string) (*types.Interface, error) {
 	if len(ii) == 0 {
 		return ii[0], nil
 	}
-	if *flagInterface == "" {
-		return nil, fmt.Errorf("%d interfaces founded, but -interface is empty. Please, provide an interface name", len(ii))
+	if name == "" {
+		return nil, fmt.Errorf("%d interfaces founded, but 'interface' config parameter is empty. Add \"interface = InterfaceName\" to config file", len(ii))
 	}
 	for i := range ii {
-		if ii[i].Name == *flagInterface {
+		if ii[i].Name == name {
 			return ii[i], nil
 		}
 	}
-	return nil, fmt.Errorf("%s interface not found, but %d others are available", *flagInterface, len(ii))
+	return nil, fmt.Errorf("%s interface not found, but %d others are available", name, len(ii))
 }
 
 func docsContainMicrogenTag(strs []string) bool {
@@ -108,8 +187,8 @@ func docsContainMicrogenTag(strs []string) bool {
 	return false
 }
 
-func processConfig() ([]byte, error) {
-	file, err := os.Open("microgen.toml")
+func processConfig(pathToConfig string) (*config, error) {
+	file, err := os.Open(pathToConfig)
 	if err != nil {
 		return nil, errors.WithMessage(err, "open file")
 	}
@@ -119,9 +198,27 @@ func processConfig() ([]byte, error) {
 		return nil, errors.WithMessage(err, "read from config")
 	}
 	var cfg config
-	err = toml.Unmarshal(rawToml.Bytes(), &cfg)
+	err = toml.NewDecoder(&rawToml).Decode(&cfg)
 	if err != nil {
 		return nil, errors.WithMessage(err, "unmarshal config")
 	}
-
+	return &cfg, nil
 }
+
+func initPlugins(plugins []string) error {
+	for i := range plugins {
+		_, err := plugin.Open(plugins[i])
+		if err != nil {
+			return errors.Wrapf(err, "open plugin %s", plugins[i])
+		}
+	}
+	return nil
+}
+
+const (
+	critical = iota
+	common
+	info
+	detail
+	debug = 100
+)

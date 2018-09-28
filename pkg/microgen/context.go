@@ -6,14 +6,12 @@ type Context struct {
 	Interface           *types.Interface
 	Source              string
 	SourcePackageImport string
-	Dst                 string
-	DstPackageImport    string
 	Files               []File
 }
 
 type File struct {
 	Content []byte
 	Path    string
-
-	sources []string
+	// Unique name of file, that other plugins can easily find it
+	Name string
 }

@@ -1,6 +1,8 @@
 module microgen
 
 require (
+	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/dave/jennifer v0.19.0
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/devimteam/microgen v0.9.0
@@ -8,6 +10,7 @@ require (
 	github.com/go-kit/kit v0.7.0
 	github.com/go-logfmt/logfmt v0.3.0 // indirect
 	github.com/go-stack/stack v1.7.0 // indirect
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/protobuf v1.0.0
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f // indirect
 	github.com/gorilla/mux v1.6.1
@@ -23,4 +26,5 @@ require (
 	golang.org/x/text v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20180316064809-f8c870359523 // indirect
 	google.golang.org/grpc v1.10.0
+	gopkg.in/yaml.v2 v2.2.1 // indirect
 )
