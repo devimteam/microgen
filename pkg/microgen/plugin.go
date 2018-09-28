@@ -1,5 +1,5 @@
 package microgen
 
 type Plugin interface {
-	Generate(ctx Context) (Context, error)
+	Generate(ctx Context, args ...string) (Context, error)
 }

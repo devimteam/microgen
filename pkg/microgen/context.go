@@ -1,11 +1,15 @@
 package microgen
 
-import "github.com/vetcher/go-astra/types"
+import (
+	"github.com/vetcher/go-astra/types"
+)
 
 type Context struct {
 	Interface           *types.Interface
 	Source              string
+	SourcePackageName   string
 	SourcePackageImport string
+	FileHeader          []byte
 	Files               []File
 }
 

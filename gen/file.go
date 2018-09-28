@@ -30,6 +30,23 @@ func (f *File) W(ss ...interface{}) *File {
 	return f
 }
 
+func (f *File) Wln(ss ...interface{}) *File {
+	for i := range ss {
+		switch s := ss[i].(type) {
+		case string:
+			f.b.WriteString(s)
+		case func() string:
+			f.b.WriteString(s())
+		case []byte:
+			f.b.Write(s)
+		case byte:
+			f.b.WriteByte(s)
+		}
+	}
+	f.b.WriteByte('\n')
+	return f
+}
+
 // Write formatted
 func (f *File) Wf(format string, ss ...interface{}) *File {
 	prepared := make([]interface{}, len(ss))
