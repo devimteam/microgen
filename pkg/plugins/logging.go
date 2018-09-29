@@ -33,10 +33,13 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args ...string)
 	f.Wln()
 	f.Wln(`package `, ctx.SourcePackageName)
 	f.Wln()
+	f.Wln(`import (
+	log "github.com/go-kit/kit/log"
+	)`)
 	f.Wln(`func `, p.Name, `(logger`)
 
 	outfile.Name = loggingPlugin
-	outfile.Path = "logging_microgen.go"
+	outfile.Path = "./service/logging_microgen.go"
 	outfile.Content = f.Bytes()
 	return ctx, nil
 }

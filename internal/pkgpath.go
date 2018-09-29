@@ -1,7 +1,7 @@
-package microgen
+package internal
 
-// Copied from https://github.com/mailru/easyjson/pull/185
-// Thanks to @zelenin
+// Copied from https://github.com/mailru/easyjson/pull/185 with some changes.
+// Thanks to @zelenin for original realization.
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-func getPkgPath(fname string, isDir bool) (string, error) {
+func GetPkgPath(fname string, isDir bool) (string, error) {
 	if !filepath.IsAbs(fname) {
 		pwd, err := os.Getwd()
 		if err != nil {
@@ -77,6 +77,7 @@ func getPkgPathFromGoMod(fname string, isDir bool, goModPath string) (string, er
 var (
 	modulePrefix          = []byte("\nmodule ")
 	pkgPathFromGoModCache = make(map[string]string)
+	gopathCache           = ""
 )
 
 func getModulePath(goModPath string) string {
@@ -122,16 +123,52 @@ func getModulePath(goModPath string) string {
 	return pkgPath
 }
 
-func getPkgPathFromGOPATH(fname string, isDir bool) (string, error) {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		var err error
-		gopath, err = getDefaultGoPath()
-		if err != nil {
-			return "", fmt.Errorf("cannot determine GOPATH: %s", err)
+func GetRelatedFilePath(pkg string) (string, error) {
+	if gopathCache == "" {
+		gopath := os.Getenv("GOPATH")
+		if gopath == "" {
+			var err error
+			gopath, err = getDefaultGoPath()
+			if err != nil {
+				return "", fmt.Errorf("cannot determine GOPATH: %s", err)
+			}
+		}
+		gopathCache = gopath
+	}
+	paths := allPaths(filepath.SplitList(gopathCache))
+	for _, p := range paths {
+		checkingPath := filepath.Join(p, pkg)
+		if info, err := os.Stat(checkingPath); err == nil && info.IsDir() {
+			return checkingPath, nil
 		}
 	}
-	for _, p := range strings.Split(gopath, string(filepath.ListSeparator)) {
+	return "", fmt.Errorf("file '%v' is not in GOROOT or GOPATH. Checked paths:\n%s", pkg, strings.Join(paths, "\n"))
+}
+
+func allPaths(gopaths []string) []string {
+	const _2 = 2
+	res := make([]string, len(gopaths)+_2)
+	res[0] = filepath.Join(build.Default.GOROOT, "src")
+	res[1] = "vendor"
+	for i := range res[_2:] {
+		res[i+_2] = filepath.Join(gopaths[i], "src")
+	}
+	return res
+}
+
+func getPkgPathFromGOPATH(fname string, isDir bool) (string, error) {
+	if gopathCache == "" {
+		gopath := os.Getenv("GOPATH")
+		if gopath == "" {
+			var err error
+			gopath, err = getDefaultGoPath()
+			if err != nil {
+				return "", fmt.Errorf("cannot determine GOPATH: %s", err)
+			}
+		}
+		gopathCache = gopath
+	}
+	for _, p := range filepath.SplitList(gopathCache) {
 		prefix := filepath.Join(p, "src") + string(filepath.Separator)
 		if rel := strings.TrimPrefix(fname, prefix); rel != fname {
 			if !isDir {
