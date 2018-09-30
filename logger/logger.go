@@ -25,3 +25,11 @@ func (l *LevelLogger) Logln(lvl int, a ...interface{}) {
 		fmt.Println(a...)
 	}
 }
+
+const (
+	Critical = iota
+	Common
+	Info
+	Detail
+	Debug = 100
+)

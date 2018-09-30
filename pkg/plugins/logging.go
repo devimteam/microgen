@@ -4,6 +4,7 @@ import (
 	"flag"
 	"microgen/gen"
 	"microgen/pkg/microgen"
+	"path/filepath"
 
 	mstrings "github.com/devimteam/microgen/generator/strings"
 )
@@ -29,17 +30,18 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args ...string)
 	p.Name = mstrings.ToUpperFirst(p.Name)
 
 	f := gen.NewFile()
-	f.Wln(ctx.FileHeader)
-	f.Wln()
+	//f.Wln(ctx.FileHeader)
+	//f.Wln()
 	f.Wln(`package `, ctx.SourcePackageName)
 	f.Wln()
 	f.Wln(`import (
 	log "github.com/go-kit/kit/log"
 	)`)
-	f.Wln(`func `, p.Name, `(logger`)
+	f.Wln(`func `, p.Name, `(logger `, gen.Imp("github.com/go-kit/kit/log"), ".Logger) {}")
 
 	outfile.Name = loggingPlugin
-	outfile.Path = "./service/logging_microgen.go"
+	outfile.Path = filepath.Join("service", "logging_microgen.go")
 	outfile.Content = f.Bytes()
+	ctx.Files = append(ctx.Files, outfile)
 	return ctx, nil
 }

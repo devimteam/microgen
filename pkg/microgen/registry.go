@@ -1,6 +1,7 @@
 package microgen
 
 import (
+	"microgen/logger"
 	"sync"
 
 	lg "github.com/devimteam/microgen/logger"
@@ -8,7 +9,7 @@ import (
 
 var (
 	// holds all plugins by their names.
-	pluginsRepository map[string]Plugin
+	pluginsRepository = make(map[string]Plugin)
 	// makes RegisterPlugin calls concurrency safe (just for fun and because can).
 	regLock sync.Mutex
 )
@@ -23,6 +24,6 @@ func RegisterPlugin(name string, plugin Plugin) {
 	}
 	regLock.Lock()
 	pluginsRepository[name] = plugin
-	lg.Logger.Logln(detail, "register plugin", name)
+	lg.Logger.Logln(logger.Detail, "register plugin", name)
 	regLock.Unlock()
 }

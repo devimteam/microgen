@@ -1,7 +1,4 @@
-plugins = [
-    "",
-]
+interface = "UserService"
 
 [[generate]]
-    name = ["arg1", "arg2", "arg3"]
-    path = ""
+    name = "logging"

@@ -2,6 +2,7 @@ package usersvc
 
 import "context"
 
+//microgen
 // @microgen middleware, logging, grpc, http, recovering, error-logging, tracing, caching, metrics
 // @protobuf github.com/devimteam/microgen/examples/protobuf
 type UserService interface {

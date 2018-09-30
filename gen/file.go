@@ -3,27 +3,29 @@ package gen
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"io"
+	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/devimteam/microgen/internal"
-	lg "github.com/devimteam/microgen/logger"
+	lg "microgen/logger"
 )
 
-var importsCache map[string]string
+var importsCache = make(map[string]string)
 
 type File struct {
-	usedImports map[string]bool
+	usedImports map[string]string
 	b           *bytes.Buffer
 }
 
 func NewFile() *File {
-	return &File{b: &bytes.Buffer{}, usedImports: make(map[string]bool)}
+	return &File{b: &bytes.Buffer{}, usedImports: make(map[string]string)}
 }
 
 // Write
@@ -33,7 +35,7 @@ func (f *File) W(ss ...interface{}) *File {
 		case []interface{}:
 			f.W(s...)
 		case Imp:
-			f.writeImport(string(s))
+			f.writeImport(string(s), "")
 		case string:
 			f.b.WriteString(s)
 		case int:
@@ -49,11 +51,14 @@ func (f *File) W(ss ...interface{}) *File {
 
 func (f *File) Wln(ss ...interface{}) *File {
 	for i := range ss {
+		lg.Logger.Logf(lg.Debug, "arg %d: type %T\n", i, ss[i])
 		switch s := ss[i].(type) {
 		case []interface{}:
 			f.W(s...)
+		case imp:
+			f.writeImport(s.pkg, s.decl)
 		case Imp:
-			f.writeImport(string(s))
+			f.writeImport(string(s), "")
 		case string:
 			f.b.WriteString(s)
 		case func() string:
@@ -89,36 +94,59 @@ func (f *File) wf(format string, a ...interface{}) *File {
 	return f
 }
 
-func (f *File) writeImport(i string) {
-	alias, ok := importsCache[i]
+func (f *File) writeImport(path string, decl string) {
+	lg.Logger.Logln(lg.Debug, "write import", path)
+	alias, ok := importsCache[path]
 	if ok {
+		lg.Logger.Logln(lg.Debug, "take import", path, "from cache, alias:", alias)
 		f.b.WriteString(alias)
-		f.usedImports[i] = true
+		f.usedImports[path] = alias
 		return
 	}
 	defer func() {
-		importsCache[i] = alias
+		lg.Logger.Logln(lg.Debug, "save import", path, "to cache, alias:", alias)
+		importsCache[path] = alias
 	}()
-	path, err := internal.GetRelatedFilePath(i)
+	lg.Logger.Logln(lg.Debug, "try to find import", path)
+	path, err := GetRelatedFilePath(path)
 	if err != nil {
-		lg.Logger.Logln(2, "resolve import alias", i, "get related package path", "error", err)
-		alias = constructFullPackageAlias(i)
+		lg.Logger.Logln(2, "resolve import alias", path, "get related package path", "error", err)
+		alias = constructFullPackageAlias(path)
 		return
 	}
+	lg.Logger.Logln(lg.Debug, "parse", path, "to find import", path)
 	// 100% match way: parse directory and take one of the package names from.
-	pkgs, err := parser.ParseDir(token.NewFileSet(), path, nil, parser.PackageClauseOnly)
+	pkgs, err := parser.ParseDir(token.NewFileSet(), path, nonTestFilter, parser.PackageClauseOnly)
 	if err != nil {
-		lg.Logger.Logln(2, "resolve import alias", i, "parse package", path, "error", err)
-		alias = constructFullPackageAlias(i)
+		lg.Logger.Logln(2, "resolve import alias", path, "parse package", path, "error", err)
+		alias = constructFullPackageAlias(path)
 		return
 	}
-	for k := range pkgs {
-		if k != "" {
+	for k, pkg := range pkgs {
+		lg.Logger.Logln(lg.Debug, path, "has package", k)
+		// Name of type was not provided
+		if decl == "" {
+			alias = k
+			break
+		}
+		if !ast.PackageExports(pkg) {
+			continue
+		}
+		if ast.FilterPackage(pkg, func(name string) bool { return name == decl }) {
+			// filter returns true if package has declaration
+			// make it to be sure, that we choose right alias
 			alias = k
 			break
 		}
 	}
+	f.b.WriteString(alias)
+	f.usedImports[path] = alias
 	return
+}
+
+// filters all files with tests
+func nonTestFilter(info os.FileInfo) bool {
+	return !strings.HasSuffix(info.Name(), "_test.go")
 }
 
 func (f *File) writeError(err error) {
@@ -146,7 +174,23 @@ func (f *File) String() string {
 }
 
 func (f *File) Bytes() []byte {
+	imports := makeSlice(f.usedImports)
+
 	return f.b.Bytes()
+}
+
+func makeSlice(m map[string]string) []string {
+	imports := make([]string, len(m))
+	i := 0
+	for k := range m {
+		imports[i] = k
+		i++
+	}
+	sort.Strings(imports)
+	for i := range imports {
+		imports[i] = m[imports[i]] + " " + imports[i]
+	}
+	return imports
 }
 
 func (f *File) Render(w io.Writer) error {
@@ -156,7 +200,15 @@ func (f *File) Render(w io.Writer) error {
 
 type (
 	Imp string
+	imp struct {
+		pkg  string
+		decl string
+	}
 )
+
+func Qual(Package, Type string) imp {
+	return imp{pkg: Package, decl: Type}
+}
 
 func Dot(ss ...interface{}) []interface{} {
 	return ss
