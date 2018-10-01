@@ -1,9 +1,9 @@
 package microgen
 
 import (
-	"microgen/logger"
 	"sync"
 
+	"github.com/devimteam/microgen/logger"
 	lg "github.com/devimteam/microgen/logger"
 )
 

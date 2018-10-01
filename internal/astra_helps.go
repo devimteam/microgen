@@ -1,9 +1,9 @@
 package internal
 
 import (
-	"microgen/gen"
 	"strings"
 
+	"github.com/devimteam/microgen/gen"
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/vetcher/go-astra/types"
 )

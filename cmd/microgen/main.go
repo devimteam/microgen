@@ -1,8 +1,8 @@
 package main
 
 import (
-	"microgen/pkg/microgen"
-	_ "microgen/pkg/plugins"
+	"github.com/devimteam/microgen/pkg/microgen"
+	_ "github.com/devimteam/microgen/pkg/plugins"
 )
 
 func main() {

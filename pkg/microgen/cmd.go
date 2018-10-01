@@ -5,19 +5,18 @@ import (
 	"flag"
 	"fmt"
 	"go/format"
-	"microgen/gen"
-	"microgen/logger"
 	"os"
 	"plugin"
 	"strings"
 	"time"
 
+	"github.com/devimteam/microgen/gen"
+	"github.com/devimteam/microgen/logger"
+	lg "github.com/devimteam/microgen/logger"
 	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 	"github.com/vetcher/go-astra"
 	"github.com/vetcher/go-astra/types"
-
-	lg "microgen/logger"
 )
 
 var (

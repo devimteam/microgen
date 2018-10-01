@@ -1,11 +1,10 @@
-module microgen
+module github.com/devimteam/microgen
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/dave/jennifer v0.19.0
 	github.com/davecgh/go-spew v1.1.0 // indirect
-	github.com/devimteam/microgen v0.9.0
 	github.com/fatih/structtag v0.1.0 // indirect
 	github.com/go-kit/kit v0.7.0
 	github.com/go-logfmt/logfmt v0.3.0 // indirect

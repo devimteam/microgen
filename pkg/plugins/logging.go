@@ -2,11 +2,11 @@ package plugins
 
 import (
 	"flag"
-	"microgen/gen"
-	"microgen/pkg/microgen"
 	"path/filepath"
 
+	"github.com/devimteam/microgen/gen"
 	mstrings "github.com/devimteam/microgen/generator/strings"
+	"github.com/devimteam/microgen/pkg/microgen"
 )
 
 const loggingPlugin = "logging"

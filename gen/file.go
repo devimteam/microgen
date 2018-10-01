@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	lg "microgen/logger"
+	lg "github.com/devimteam/microgen/logger"
 )
 
 var importsCache = make(map[string]string)
@@ -174,7 +174,7 @@ func (f *File) String() string {
 }
 
 func (f *File) Bytes() []byte {
-	imports := makeSlice(f.usedImports)
+	//imports := makeSlice(f.usedImports)
 
 	return f.b.Bytes()
 }
