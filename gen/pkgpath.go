@@ -6,7 +6,10 @@ package gen
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
 	"go/build"
+	"go/parser"
+	"go/token"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -14,6 +17,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	lg "github.com/devimteam/microgen/logger"
 )
 
 func GetPkgPath(fname string, isDir bool) (string, error) {
@@ -191,4 +196,30 @@ func getDefaultGoPath() (string, error) {
 	}
 	output, err := exec.Command("go", "env", "GOPATH").Output()
 	return string(bytes.TrimSpace(output)), err
+}
+
+func PackageName(path string, decl string) (string, error) {
+	pkgs, err := parser.ParseDir(token.NewFileSet(), path, nonTestFilter, parser.PackageClauseOnly)
+	if err != nil {
+		return "", err
+	}
+	var alias string
+	for k, pkg := range pkgs {
+		lg.Logger.Logln(lg.Debug, path, "has package", k)
+		// Name of type was not provided
+		if decl == "" {
+			alias = k
+			break
+		}
+		if !ast.PackageExports(pkg) {
+			continue
+		}
+		if ast.FilterPackage(pkg, func(name string) bool { return name == decl }) {
+			// filter returns true if package has declaration
+			// make it to be sure, that we choose right alias
+			alias = k
+			break
+		}
+	}
+	return alias, nil
 }

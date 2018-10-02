@@ -1,11 +1,17 @@
 package plugins
 
 import (
-	"flag"
-	"path/filepath"
+	"bytes"
+	"encoding/json"
 
-	"github.com/devimteam/microgen/gen"
-	mstrings "github.com/devimteam/microgen/generator/strings"
+	"github.com/vetcher/go-astra/types"
+
+	"github.com/devimteam/microgen/internal"
+
+	"github.com/devimteam/microgen/pkg/plugins/pkg"
+
+	. "github.com/dave/jennifer/jen"
+	ms "github.com/devimteam/microgen/generator/strings"
 	"github.com/devimteam/microgen/pkg/microgen"
 )
 
@@ -15,33 +21,99 @@ type loggingMiddlewarePlugin struct {
 	Name string
 }
 
-func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args ...string) (microgen.Context, error) {
-	// parse args
-	flags := flag.NewFlagSet(loggingPlugin, flag.ExitOnError)
-	flags.StringVar(&p.Name, "name", "LoggingMiddleware", "")
-	err := flags.Parse(args)
+type loggingConfig struct {
+	Path   string
+	Name   string
+	Inline bool `json:",omitempty"`
+}
+
+func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMessage) (microgen.Context, error) {
+	cfg := loggingConfig{}
+	err := json.Unmarshal(args, &cfg)
 	if err != nil {
 		return ctx, err
 	}
-
+	if cfg.Name == "" {
+		cfg.Name = "LoggingMiddleware"
+	}
+	if cfg.Path == "" {
+		cfg.Path = "logging.go"
+	}
 	outfile := microgen.File{}
 
-	// normalize args
-	p.Name = mstrings.ToUpperFirst(p.Name)
+	calcParamAmount := func(name string, params []types.Variable) int {
+		ignore := t.ignoreParams[name]
+		lenParams := t.lenParams[name]
+		paramAmount := len(params)
+		for _, field := range params {
+			if ms.IsInStringSlice(field.Name, ignore) {
+				paramAmount -= 1
+			}
+			if ms.IsInStringSlice(field.Name, lenParams) {
+				paramAmount += 1
+			}
+		}
+		return paramAmount
+	}
+	requestStructName := func(signature *types.Function) string {
+		return cfg.Name + signature.Name + "Request"
+	}
 
-	f := gen.NewFile()
-	//f.Wln(ctx.FileHeader)
-	//f.Wln()
-	f.Wln(`package `, ctx.SourcePackageName)
-	f.Wln()
-	f.Wln(`import (
-	log "github.com/go-kit/kit/log"
-	)`)
-	f.Wln(`func `, p.Name, `(logger `, gen.Imp("github.com/go-kit/kit/log"), ".Logger) {}")
+	ImportAliasFromSources = true
+	f := NewFilePathName(ctx.SourcePackageImport, ctx.SourcePackageName)
+	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
+	f.HeaderComment(ctx.FileHeader)
+
+	Line().Func().Id(ms.ToUpperFirst(cfg.Name)).
+		Params(Id(_logger_).Qual(pkg.GoKitLog, "Logger")).
+		Params(Func().Params(Id(ctx.Interface.Name)).Params(Id(ctx.Interface.Name))).
+		Block(
+			Return(Func().Params(
+				Id(_next_).Qual(ctx.SourcePackageImport, ctx.Interface.Name),
+			).Params(Qual(ctx.SourcePackageImport, ctx.Interface.Name)).
+				Block(
+					Return(Op("&").Id(ms.ToLowerFirst(cfg.Name)).Values(
+						Dict{Id(_logger_): Id(_logger_), Id(_next_): Id(_next_)},
+					)),
+				),
+			),
+		)
+
+	f.Line().Type().Id(ms.ToLowerFirst(cfg.Name)).Struct(
+		Id(_logger_).Qual(pkg.GoKitLog, "Logger"),
+		Id(_next_).Qual(ctx.SourcePackageImport, ctx.Interface.Name),
+	)
+
+	for _, fn := range ctx.Interface.Methods {
+		_ = fn
+		f.Line()
+	}
+
+	if !cfg.Inline {
+		if len(ctx.Interface.Methods) > 0 {
+			f.Type().Op("(")
+		}
+		for _, signature := range ctx.Interface.Methods {
+			if params := internal.RemoveContextIfFirst(signature.Args); calcParamAmount(signature.Name, params) > 0 {
+				f.Add(t.loggingEntity(ctx, "log"+requestStructName(signature), signature, params))
+			}
+			if params := internal.RemoveErrorIfLast(signature.Results); calcParamAmount(signature.Name, params) > 0 {
+				f.Add(t.loggingEntity(ctx, "log"+responseStructName(signature), signature, params))
+			}
+		}
+		if len(ctx.Interface.Methods) > 0 {
+			f.Op(")")
+		}
+	}
 
 	outfile.Name = loggingPlugin
-	outfile.Path = filepath.Join("service", "logging_microgen.go")
-	outfile.Content = f.Bytes()
+	outfile.Path = cfg.Path
+	var b bytes.Buffer
+	err = f.Render(&b)
+	if err != nil {
+		return ctx, err
+	}
+	outfile.Content = b.Bytes()
 	ctx.Files = append(ctx.Files, outfile)
 	return ctx, nil
 }

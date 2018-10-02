@@ -1,5 +1,7 @@
 module github.com/devimteam/microgen
 
+replace github.com/dave/jennifer => github.com/devimteam/jennifer v1.2.0
+
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/VividCortex/gohistogram v1.0.0 // indirect

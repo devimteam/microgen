@@ -9,7 +9,7 @@ type Context struct {
 	Source              string
 	SourcePackageName   string
 	SourcePackageImport string
-	FileHeader          []byte
+	FileHeader          string
 	Files               []File
 }
 

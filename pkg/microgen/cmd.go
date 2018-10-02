@@ -108,7 +108,7 @@ func Exec() {
 		Source:              source,
 		SourcePackageName:   pkg.Name,
 		SourcePackageImport: sourcePackage,
-		FileHeader:          []byte(DefaultFileHeader),
+		FileHeader:          DefaultFileHeader,
 		Files:               nil,
 	}
 	lg.Logger.Logln(logger.Debug, "Exec plugins")

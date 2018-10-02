@@ -1,13 +1,14 @@
 package microgen
 
+import "encoding/json"
+
 type config struct {
-	Plugins   []string       `toml:"plugins"`
-	Interface string         `toml:"interface"`
-	Generate  []PluginConfig `toml:"generate"`
+	Plugins   []string       `json:"plugins"`
+	Interface string         `json:"interface"`
+	Generate  []PluginConfig `json:"generate"`
 }
 
 type PluginConfig struct {
-	Name string   `toml:"name"`
-	Args []string `toml:"args"`
-	//Path string   `toml:"path"`
+	Name string          `json:"name"`
+	Args json.RawMessage `json:"args"`
 }
