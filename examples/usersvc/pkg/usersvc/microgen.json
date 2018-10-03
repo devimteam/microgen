@@ -1,0 +1,22 @@
+{
+  "interface": "UserService",
+  "generate": [
+    {
+      "name": "logging",
+      "args": {
+        "path": "service/logging.go",
+        "easyjson": true,
+        "took": true
+      }
+    },
+    {
+      "name": "logging",
+      "args": {
+        "path": "service/debug_logging.go",
+        "name": "debugMiddleware",
+        "easyjson": true,
+        "inline": true
+      }
+    }
+  ]
+}

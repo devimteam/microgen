@@ -201,6 +201,9 @@ func getDefaultGoPath() (string, error) {
 func PackageName(path string, decl string) (string, error) {
 	pkgs, err := parser.ParseDir(token.NewFileSet(), path, nonTestFilter, parser.PackageClauseOnly)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return filepath.Base(path), nil
+		}
 		return "", err
 	}
 	var alias string

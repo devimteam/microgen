@@ -12,4 +12,6 @@ const (
 	_logger_     = "logger"
 	_ctx_        = "ctx"
 	_next_       = "next"
+	_Request_    = "Request"
+	_Response_   = "Response"
 )

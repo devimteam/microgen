@@ -1,9 +1,13 @@
 package internal
 
 import (
+	"strconv"
 	"strings"
 
-	"github.com/devimteam/microgen/gen"
+	"github.com/devimteam/microgen/pkg/microgen"
+
+	"github.com/dave/jennifer/jen"
+
 	mstrings "github.com/devimteam/microgen/generator/strings"
 	"github.com/vetcher/go-astra/types"
 )
@@ -49,79 +53,159 @@ func IsErrorLast(fields []types.Variable) bool {
 		*name == "error"
 }
 
-func FuncFields(fields []types.Variable, pkg string, ellipsis bool) []interface{} {
-	res := make([]interface{}, len(fields))
-	for i, field := range fields {
-		res[i] = gen.Dot(mstrings.ToLowerFirst(field.Name), " ", varType(fields[i].Type, pkg, ellipsis), ",")
-	}
-	return res
-}
-
-func varType(t types.Type, pkg string, ellipsis bool) (res []interface{}) {
+func VarType(ctx microgen.Context, field types.Type, allowEllipsis bool) *jen.Statement {
+	c := &jen.Statement{}
 	imported := false
-	for t != nil {
-		switch f := t.(type) {
+	for field != nil {
+		switch f := field.(type) {
 		case types.TImport:
 			if f.Import != nil {
-				res = append(res, gen.Imp(f.Import.Package), ".")
+				c.Qual(f.Import.Package, "")
 				imported = true
 			}
-			t = f.Next
+			field = f.Next
 		case types.TName:
-			if !imported && !types.IsBuiltin(t) {
-				res = append(res, gen.Imp(pkg), ".")
+			if !imported && !types.IsBuiltin(f) {
+				c.Qual(ctx.SourcePackageImport, f.TypeName)
+			} else {
+				c.Id(f.TypeName)
 			}
-			res = append(res, f.TypeName)
+			field = nil
 		case types.TArray:
 			if f.IsSlice {
-				res = append(res, "[]")
-			} else {
-				res = append(res, "[", f.ArrayLen, "]")
+				c.Index()
+			} else if f.ArrayLen > 0 {
+				c.Index(jen.Lit(f.ArrayLen))
 			}
+			field = f.Next
 		case types.TMap:
-			return append(res, "map[", varType(f.Key, pkg, false), "]", varType(f.Value, pkg, false))
+			return c.Map(VarType(ctx, f.Key, false)).Add(VarType(ctx, f.Value, false))
 		case types.TPointer:
-			res = append(res, strings.Repeat("*", f.NumberOfPointers))
-			t = f.Next
+			c.Op(strings.Repeat("*", f.NumberOfPointers))
+			field = f.Next
 		case types.TInterface:
-			return append(res, "interface{", interfaceMethods(f.Interface, pkg, true), "}")
+			mhds := interfaceType(ctx, f.Interface)
+			return c.Interface(mhds...)
 		case types.TEllipsis:
-			if ellipsis {
-				res = append(res, "...")
+			if allowEllipsis {
+				c.Op("...")
 			} else {
-				res = append(res, "[]")
+				c.Index()
 			}
-			t = f.Next
+			field = f.Next
 		case types.TChan:
 			if f.Direction == types.ChanDirRecv {
-				res = append(res, "<-")
+				c.Op("<-")
 			}
-			res = append(res, "chan")
+			c.Chan()
 			if f.Direction == types.ChanDirSend {
-				res = append(res, "<-")
+				c.Op("<-")
 			}
-			t = f.Next
+			field = f.Next
 		default:
-			res = append(res, f.String())
-			t = nil
+			c.Id(f.String())
+			field = nil
 		}
 	}
-	return res
+	return c
 }
 
-func interfaceMethods(iface *types.Interface, pkg string, ellipsis bool) []interface{} {
-	lm := len(iface.Methods)
-	res := make([]interface{}, lm+len(iface.Interfaces))
-	for i, m := range iface.Methods {
-		res[i] = append(FuncDefinition(m, pkg), '\n')
-	}
-	for i, emb := range iface.Interfaces {
-		res[i+lm] = varType(emb.Type, pkg, ellipsis)
-	}
-	return res
+// Render full method definition with receiver, method name, args and results.
+//
+//		func Count(ctx context.Context, text string, symbol string) (count int)
+//
+func functionDefinition(ctx microgen.Context, signature *types.Function) *jen.Statement {
+	return jen.Id(signature.Name).
+		Params(funcDefinitionParams(ctx, signature.Args)).
+		Params(funcDefinitionParams(ctx, signature.Results))
 }
 
-func FuncDefinition(fn *types.Function, pkg string) []interface{} {
-	return gen.Dot(fn.Name, "(", FuncFields(fn.Args, pkg, true), ") (",
-		FuncFields(fn.Args, pkg, false), ")")
+func interfaceType(ctx microgen.Context, p *types.Interface) (code []jen.Code) {
+	for _, x := range p.Methods {
+		code = append(code, functionDefinition(ctx, x))
+	}
+	return
+}
+
+// Renders func params for definition.
+//
+//  	visit *entity.Visit, err error
+//
+func funcDefinitionParams(ctx microgen.Context, fields []types.Variable) *jen.Statement {
+	c := &jen.Statement{}
+	c.ListFunc(func(g *jen.Group) {
+		for _, field := range fields {
+			g.Id(mstrings.ToLowerFirst(field.Name)).Add(VarType(ctx, field.Type, true))
+		}
+	})
+	return c
+}
+
+// Render full method definition with receiver, method name, args and results.
+//
+//		func (e Endpoints) Count(ctx context.Context, text string, symbol string) (count int)
+//
+func MethodDefinition(ctx microgen.Context, obj string, signature *types.Function) *jen.Statement {
+	return jen.Func().
+		Params(jen.Id(Rec(obj)).Id(obj)).
+		Add(functionDefinition(ctx, signature))
+}
+
+func Rec(name string) string {
+	return mstrings.LastUpperOrFirst(name)
+}
+
+// Render list of function receivers by signature.Result.
+//
+//		Ans1, ans2, AnS3 -> ans1, ans2, anS3
+//
+func ParamNames(fields []types.Variable) *jen.Statement {
+	var list []jen.Code
+	for _, field := range fields {
+		v := jen.Id(mstrings.ToLowerFirst(field.Name))
+		if types.IsEllipsis(field.Type) {
+			v.Op("...")
+		}
+		list = append(list, v)
+	}
+	return jen.List(list...)
+}
+
+type NormalizedFunction struct {
+	types.Function
+	Parent *types.Function
+}
+
+const (
+	normalArgPrefix    = "arg_"
+	normalResultPrefix = "res_"
+)
+
+func NormalizeFunction(signature *types.Function) *NormalizedFunction {
+	newFunc := &NormalizedFunction{Parent: signature}
+	newFunc.Name = signature.Name
+	newFunc.Args = NormalizeVariables(signature.Args, normalArgPrefix)
+	newFunc.Results = NormalizeVariables(signature.Results, normalResultPrefix)
+	return newFunc
+}
+
+func NormalizeVariables(old []types.Variable, prefix string) (new []types.Variable) {
+	for i := range old {
+		v := old[i]
+		v.Name = prefix + strconv.Itoa(i)
+		new = append(new, v)
+	}
+	return
+}
+
+// Return name of error, if error is last result, else return `err`
+func NameOfLastResultError(fn *types.Function) string {
+	if IsErrorLast(fn.Results) {
+		return fn.Results[len(fn.Results)-1].Name
+	}
+	return "err"
+}
+
+func XImplementInterface(x string, ifaceName string) *jen.Statement {
+	return jen.Var().Id("_").Id(ifaceName).Op("=&").Id(x).Block()
 }

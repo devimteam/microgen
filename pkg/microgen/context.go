@@ -10,6 +10,7 @@ type Context struct {
 	SourcePackageName   string
 	SourcePackageImport string
 	FileHeader          string
+	AllowedMethods      map[string]bool
 	Files               []File
 }
 
