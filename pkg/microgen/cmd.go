@@ -119,17 +119,17 @@ func Exec() {
 		fnErr := func() error {
 			defer func() {
 				if e := recover(); e != nil {
-					err = errors.Errorf("recover panic from %s plugin. Message: %v", pcfg.Name, e)
+					err = errors.Errorf("recover panic from '%s' plugin. Message: %v", pcfg.Name, e)
 				}
 			}()
 			p, ok := pluginsRepository[pcfg.Name]
 			if !ok {
-				return errors.Errorf("plugin %s not registered")
+				return errors.Errorf("plugin '%s' not registered", pcfg.Name)
 			}
-			lg.Logger.Logln(logger.Debug, "run", pcfg.Name, "plugin with args:", pcfg.Args)
+			lg.Logger.Logln(logger.Debug, "run", "'"+pcfg.Name+"'", "plugin with args:", string(pcfg.Args))
 			ctx, err = p.Generate(ctx, pcfg.Args)
 			if err != nil {
-				return errors.Wrapf(err, "%s plugin returns an error", pcfg.Name)
+				return errors.Wrapf(err, "plugin '%s' returns an error", pcfg.Name)
 			}
 			return nil
 		}()
@@ -147,14 +147,14 @@ func Exec() {
 		lg.Logger.Logln(logger.Debug, "create", f.Path)
 		tgtFile, e := makeDirsAndCreateFile(f.Path)
 		if e != nil {
-			err = errors.Wrapf(e, "plugin %s: during creating %s file", f.Name, f.Path)
+			err = errors.Wrapf(e, "plugin '%s': during creating '%s' file", f.Name, f.Path)
 			return
 		}
 		defer tgtFile.Close()
 		lg.Logger.Logln(logger.Debug, "write", f.Path)
 		_, e = tgtFile.Write(f.Content)
 		if e != nil {
-			err = errors.Wrapf(e, "plugin %s: during writing %s file", f.Name, f.Path)
+			err = errors.Wrapf(e, "plugin '%s': during writing '%s' file", f.Name, f.Path)
 			return
 		}
 	}
@@ -173,7 +173,7 @@ func makeDirsAndCreateFile(p string) (*os.File, error) {
 	if os.IsNotExist(err) {
 		err = os.MkdirAll(dir, MkdirPermissions)
 		if err != nil {
-			return nil, errors.Wrapf(err, "unable to create directory %s", outpath)
+			return nil, errors.Wrapf(err, "unable to create directory '%s'", outpath)
 		}
 	} else if err != nil {
 		return nil, errors.WithMessage(err, "could not stat file")
@@ -221,7 +221,7 @@ func selectInterface(ii []*types.Interface, name string) (*types.Interface, erro
 			return ii[i], nil
 		}
 	}
-	return nil, fmt.Errorf("%s interface not found, but %d others are available", name, len(ii))
+	return nil, fmt.Errorf("'%s' interface not found, but %d others are available", name, len(ii))
 }
 
 func docsContainMicrogenTag(strs []string) bool {
@@ -255,7 +255,7 @@ func initPlugins(plugins []string) error {
 	for i := range plugins {
 		_, err := plugin.Open(plugins[i])
 		if err != nil {
-			return errors.Wrapf(err, "open plugin %s", plugins[i])
+			return errors.Wrapf(err, "open plugin '%s'", plugins[i])
 		}
 	}
 	return nil

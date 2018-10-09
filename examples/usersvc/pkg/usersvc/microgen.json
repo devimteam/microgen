@@ -17,6 +17,12 @@
         "easyjson": true,
         "inline": true
       }
+    },
+    {
+      "name": "recovering",
+      "args": {
+        "stack": true
+      }
     }
   ]
 }

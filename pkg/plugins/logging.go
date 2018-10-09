@@ -5,33 +5,33 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/devimteam/microgen/gen"
-
-	"github.com/vetcher/go-astra/types"
-
-	"github.com/devimteam/microgen/internal"
-
-	"github.com/devimteam/microgen/pkg/plugins/pkg"
-
 	. "github.com/dave/jennifer/jen"
+	"github.com/devimteam/microgen/gen"
 	ms "github.com/devimteam/microgen/generator/strings"
+	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/pkg/microgen"
+	"github.com/devimteam/microgen/pkg/plugins/pkg"
+	"github.com/vetcher/go-astra/types"
 )
 
 const loggingPlugin = "logging"
 
-type loggingMiddlewarePlugin struct {
-	Name string
-}
+type loggingMiddlewarePlugin struct{}
 
 type loggingConfig struct {
-	Path     string
-	Name     string
-	Inline   bool
-	Ignore   map[string][]string
-	Len      map[string][]string
+	// Path to the desired file. By default './logging.go'.
+	Path string
+	// Name of middleware: structure, constructor and types prefixes.
+	Name string
+	// When true, all arguments and results will be on the same level,
+	// instead of inside 'request' and 'response' fields. Also, special types will be omitted.
+	Inline bool
+	Ignore map[string][]string
+	Len    map[string][]string
+	// When true, comment '//easyjson:json' above types will be generated
 	Easyjson bool
-	Took     bool
+	// When true, additional field 'took' will be generated in response
+	Took bool
 }
 
 func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMessage) (microgen.Context, error) {
@@ -44,7 +44,7 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMe
 		cfg.Name = "LoggingMiddleware"
 	}
 	if cfg.Path == "" {
-		cfg.Path = "logging.go"
+		cfg.Path = "logging.microgen.go"
 	}
 	if cfg.Ignore == nil {
 		cfg.Ignore = make(map[string][]string)
