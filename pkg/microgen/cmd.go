@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"plugin"
+	"runtime"
 	"strings"
 	"time"
 
@@ -48,10 +49,13 @@ func Exec() {
 			lg.Logger.Logln(logger.Critical, "fatal:", err)
 			os.Exit(1)
 		}
-		/*if err := recover(); err != nil {
-			lg.Logger.Logln(Critical, "panic:", err)
+		if err := recover(); err != nil {
+			const size = 64 << 10
+			buf := make([]byte, size)
+			buf = buf[:runtime.Stack(buf, false)]
+			lg.Logger.Logln(logger.Critical, "panic:", err, "\n", string(buf))
 			os.Exit(1)
-		}*/
+		}
 	}()
 	begin := time.Now()
 	defer func() {
@@ -87,6 +91,9 @@ func Exec() {
 	if err != nil {
 		lg.Logger.Logln(logger.Detail, "All founded interfaces:")
 		lg.Logger.Logln(logger.Detail, listInterfaces(pkg.Interfaces))
+		return
+	}
+	if err = validateInterface(iface); err != nil {
 		return
 	}
 
@@ -256,6 +263,32 @@ func initPlugins(plugins []string) error {
 		_, err := plugin.Open(plugins[i])
 		if err != nil {
 			return errors.Wrapf(err, "open plugin '%s'", plugins[i])
+		}
+	}
+	return nil
+}
+
+func validateInterface(iface *types.Interface) error {
+	var errs []error
+	if len(iface.Methods) == 0 {
+		errs = append(errs, fmt.Errorf("%s does not have any methods", iface.Name))
+	}
+	return composeErrors(errs...)
+}
+
+func composeErrors(errs ...error) error {
+	if len(errs) > 0 {
+		var strs []string
+		for _, err := range errs {
+			if err != nil {
+				strs = append(strs, err.Error())
+			}
+		}
+		if len(strs) == 1 {
+			return fmt.Errorf(strs[0])
+		}
+		if len(strs) > 0 {
+			return fmt.Errorf("many errors:\n%v", strings.Join(strs, "\n"))
 		}
 	}
 	return nil
