@@ -3,6 +3,7 @@ package plugins
 import (
 	"bytes"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
@@ -52,7 +53,6 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMe
 	if cfg.Len == nil {
 		cfg.Len = make(map[string][]string)
 	}
-	outfile := microgen.File{}
 
 	ImportAliasFromSources = true
 	pluginPackagePath, err := gen.GetPkgPath(cfg.Path, false)
@@ -66,6 +66,11 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMe
 	f := NewFilePathName(pluginPackagePath, pkgName)
 	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
 	f.HeaderComment(ctx.FileHeader)
+
+	filename := filepath.Base(cfg.Path)
+	if cfg.Easyjson {
+		f.Id("//go:generate easyjson -all " + filename).Line()
+	}
 
 	f.Var().Id("_").Qual(ctx.SourcePackageImport, ctx.Interface.Name).Op("=&").Id(ms.ToLowerFirst(cfg.Name)).Block()
 
@@ -102,10 +107,10 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMe
 		}
 		for _, fn := range ctx.Interface.Methods {
 			if params := internal.RemoveContextIfFirst(fn.Args); calcParamAmount(fn.Name, params, cfg) > 0 {
-				f.Add(p.loggingEntity(ctx, internalStructName("log", cfg.Name, fn.Name, _Request_), fn.Name, params, cfg))
+				f.Add(p.loggingEntity(ctx, join_("log", cfg.Name, fn.Name, _Request_), fn.Name, params, cfg))
 			}
 			if params := internal.RemoveErrorIfLast(fn.Results); calcParamAmount(fn.Name, params, cfg) > 0 {
-				f.Add(p.loggingEntity(ctx, internalStructName("log", cfg.Name, fn.Name, _Response_), fn.Name, params, cfg))
+				f.Add(p.loggingEntity(ctx, join_("log", cfg.Name, fn.Name, _Response_), fn.Name, params, cfg))
 			}
 		}
 		if len(ctx.Interface.Methods) > 0 {
@@ -113,8 +118,10 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMe
 		}
 	}
 
-	outfile.Name = loggingPlugin
-	outfile.Path = cfg.Path
+	outfile := microgen.File{
+		Name: loggingPlugin,
+		Path: cfg.Path,
+	}
 	var b bytes.Buffer
 	err = f.Render(&b)
 	if err != nil {
@@ -202,19 +209,19 @@ func (p *loggingMiddlewarePlugin) loggingFuncBody(ctx microgen.Context, cfg logg
 					if calcParamAmount(fn.Name, internal.RemoveContextIfFirst(fn.Args), cfg) > 0 {
 						g.Line().List(
 							Lit("request"),
-							Id(internalStructName("log", cfg.Name, fn.Name, _Request_)).Add(
+							Id(join_("log", cfg.Name, fn.Name, _Request_)).Add(
 								p.fillMap(cfg,
 									normal.Parent,
 									internal.RemoveContextIfFirst(normal.Parent.Args),
 									internal.RemoveContextIfFirst(fn.Args),
 								),
 							),
-						) //p.loggerLogContent(cfg, normal, _Request_))
+						)
 					}
 					if calcParamAmount(fn.Name, internal.RemoveErrorIfLast(fn.Results), cfg) > 0 {
 						g.Line().List(
 							Lit("response"),
-							Id(internalStructName("log", cfg.Name, fn.Name, _Response_)).Add(
+							Id(join_("log", cfg.Name, fn.Name, _Response_)).Add(
 								p.fillMap(cfg,
 									normal.Parent,
 									internal.RemoveErrorIfLast(normal.Parent.Results),
@@ -222,7 +229,6 @@ func (p *loggingMiddlewarePlugin) loggingFuncBody(ctx microgen.Context, cfg logg
 								),
 							),
 						)
-						//g.Line().List(Lit("response"), p.loggerLogContent(cfg, normal, _Response_))
 					}
 				}
 				if !ms.IsInStringSlice(internal.NameOfLastResultError(fn), cfg.Ignore[fn.Name]) {
@@ -242,7 +248,7 @@ func (p *loggingMiddlewarePlugin) loggerLogContent(
 	fn *internal.NormalizedFunction,
 	suff string,
 ) *Statement {
-	return Id(internalStructName("log", cfg.Name, fn.Name, suff)).Add(
+	return Id(join_("log", cfg.Name, fn.Name, suff)).Add(
 		p.fillMap(cfg, fn.Parent, internal.RemoveContextIfFirst(fn.Parent.Args), internal.RemoveContextIfFirst(fn.Args)),
 	)
 }
@@ -298,14 +304,6 @@ func calcParamAmount(name string, params []types.Variable, cfg loggingConfig) in
 	return paramAmount
 }
 
-func internalStructName(ss ...string) string {
+func join_(ss ...string) string {
 	return strings.Join(ss, "_")
 }
-
-//
-//func requestStructName(prefix string, name string, signature *types.Function, suffix string) string {
-//	return fmt.Sprintf("_%s_%s_%s", name, signature.Name, "Request")
-//}
-//func responseStructName(name string, signature *types.Function) string {
-//	return fmt.Sprintf("_%s_%s_%s", name, signature.Name, "Response")
-//}

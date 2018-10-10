@@ -4,11 +4,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devimteam/microgen/pkg/microgen"
-
 	"github.com/dave/jennifer/jen"
-
 	mstrings "github.com/devimteam/microgen/generator/strings"
+	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -51,6 +49,10 @@ func IsErrorLast(fields []types.Variable) bool {
 	return name != nil &&
 		types.TypeImport(fields[len(fields)-1].Type) == nil &&
 		*name == "error"
+}
+
+func Var(ctx microgen.Context, v types.Variable) *jen.Statement {
+	return jen.Id(v.Name).Add(VarType(ctx, v.Type, true))
 }
 
 func VarType(ctx microgen.Context, field types.Type, allowEllipsis bool) *jen.Statement {

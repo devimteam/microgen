@@ -23,6 +23,18 @@
       "args": {
         "stack": true
       }
+    },
+    {
+      "name": "go-kit-transport",
+      "args": {
+        "exchanges": {
+          "easyjson":true,
+          "style":"camel"
+        },
+        "endpoints": {
+          "latency": true
+        }
+      }
     }
   ]
 }
