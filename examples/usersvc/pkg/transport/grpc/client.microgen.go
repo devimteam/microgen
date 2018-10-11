@@ -26,7 +26,7 @@ func NewGRPCClient(conn *grpc.ClientConn, addr string, opts ...grpckit.ClientOpt
 			conn, addr, "CreateUser",
 			_Encode_CreateUser_Request,
 			_Decode_CreateUser_Response,
-			pb.CreateUserResponse{},
+			*(*string)(nil),
 			opts...,
 		).Endpoint(),
 		FindUsersEndpoint: grpckit.NewClient(

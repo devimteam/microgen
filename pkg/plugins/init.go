@@ -6,6 +6,7 @@ func init() {
 	microgen.RegisterPlugin(loggingPlugin, &loggingMiddlewarePlugin{})
 	microgen.RegisterPlugin(recoveringPlugin, &recoveringMiddlewarePlugin{})
 	microgen.RegisterPlugin(transportKitPlugin, &transportGokitPlugin{})
+	microgen.RegisterPlugin(grpcKitPlugin, &grpcGokitPlugin{})
 }
 
 const (

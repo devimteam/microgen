@@ -42,6 +42,16 @@
           "trace": true
         }
       }
+    },
+    {
+      "name":"go-kit-grpc",
+      "args": {
+        "protobuf":"github.com/devimteam/microgen/examples/usersvc/pb",
+        "transportpkg": "transport",
+        "client": {
+          "trace":true
+        }
+      }
     }
   ]
 }

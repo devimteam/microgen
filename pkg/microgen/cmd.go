@@ -59,7 +59,6 @@ func Exec() {
 	}()
 	begin := time.Now()
 	defer func() {
-		lg.Logger.Logln(logger.Info, "Done")
 		lg.Logger.Logln(logger.Info, "Duration:", time.Since(begin))
 	}()
 	if *flagVerbose < logger.Critical {
@@ -165,6 +164,7 @@ func Exec() {
 			return
 		}
 	}
+	lg.Logger.Logln(logger.Info, "Done")
 }
 
 const MkdirPermissions = 0777
