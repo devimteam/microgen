@@ -121,7 +121,7 @@ func Exec() {
 		AllowedMethods:      makeAllowedMethods(iface),
 	}
 	lg.Logger.Logln(logger.Debug, "Exec plugins")
-	for _, pcfg := range cfg.Generate {
+	for i, pcfg := range cfg.Generate {
 		fnErr := func() error {
 			defer func() {
 				if e := recover(); e != nil {
@@ -132,7 +132,7 @@ func Exec() {
 			if !ok {
 				return errors.Errorf("plugin '%s' not registered", pcfg.Name)
 			}
-			lg.Logger.Logln(logger.Debug, "run", "'"+pcfg.Name+"'", "plugin with args:", string(pcfg.Args))
+			lg.Logger.Logln(logger.Debug, "\t", i+1, "\texec plugin", "'"+pcfg.Name+"'", "with args:", string(pcfg.Args))
 			ctx, err = p.Generate(ctx, pcfg.Args)
 			if err != nil {
 				return errors.Wrapf(err, "plugin '%s' returns an error", pcfg.Name)
@@ -149,15 +149,15 @@ func Exec() {
 		return
 	}
 	lg.Logger.Logln(logger.Debug, "Write files")
-	for _, f := range ctx.Files {
-		lg.Logger.Logln(logger.Debug, "create", f.Path)
+	for i, f := range ctx.Files {
+		lg.Logger.Logln(logger.Debug, "\t", i+1, "\tcreate\t", f.Path)
 		tgtFile, e := makeDirsAndCreateFile(f.Path)
 		if e != nil {
 			err = errors.Wrapf(e, "plugin '%s': during creating '%s' file", f.Name, f.Path)
 			return
 		}
 		defer tgtFile.Close()
-		lg.Logger.Logln(logger.Debug, "write", f.Path)
+		lg.Logger.Logln(logger.Debug, "\t", i+1, "\twrite\t", f.Path)
 		_, e = tgtFile.Write(f.Content)
 		if e != nil {
 			err = errors.Wrapf(e, "plugin '%s': during writing '%s' file", f.Name, f.Path)
