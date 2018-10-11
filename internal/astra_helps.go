@@ -208,6 +208,18 @@ func NameOfLastResultError(fn *types.Function) string {
 	return "err"
 }
 
-func XImplementInterface(x string, ifaceName string) *jen.Statement {
-	return jen.Var().Id("_").Id(ifaceName).Op("=&").Id(x).Block()
+func DictByNormalVariables(fields []types.Variable, normals []types.Variable) jen.Dict {
+	if len(fields) != len(normals) {
+		panic("len of fields and normals not the same")
+	}
+	return jen.DictFunc(func(d jen.Dict) {
+		for i, field := range fields {
+			d[jen.Id(mstrings.ToUpperFirst(field.Name))] = jen.Id(mstrings.ToLowerFirst(normals[i].Name))
+		}
+	})
+}
+
+// For custom ctx in service interface (e.g. context or ctxxx).
+func FirstArgName(signature *types.Function) string {
+	return mstrings.ToLowerFirst(signature.Args[0].Name)
 }

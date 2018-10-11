@@ -37,6 +37,12 @@ type transportGokitConfig struct {
 		Chain   bool
 		Latency bool
 	}
+	Client struct {
+		Trace bool
+	}
+	Server struct {
+		Trace bool
+	}
 }
 
 func (p *transportGokitPlugin) Generate(ctx microgen.Context, args json.RawMessage) (microgen.Context, error) {
@@ -59,6 +65,14 @@ func (p *transportGokitPlugin) Generate(ctx microgen.Context, args json.RawMessa
 	if err != nil {
 		return ctx, err
 	}
+	ctx, err = p.client(ctx, cfg)
+	if err != nil {
+		return ctx, err
+	}
+	ctx, err = p.server(ctx, cfg)
+	if err != nil {
+		return ctx, err
+	}
 	return ctx, nil
 }
 
@@ -77,6 +91,8 @@ func (p *transportGokitPlugin) endpoints(ctx microgen.Context, cfg transportGoki
 	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
 	f.HeaderComment(ctx.FileHeader)
 
+	f.Var().Id("_").Qual(ctx.SourcePackageImport, ctx.Interface.Name).Op("=&").Id(_Endpoints_).Block()
+
 	f.Type().Id(_Endpoints_).StructFunc(func(g *Group) {
 		for _, signature := range ctx.Interface.Methods {
 			if !ctx.AllowedMethods[signature.Name] {
@@ -86,22 +102,18 @@ func (p *transportGokitPlugin) endpoints(ctx microgen.Context, cfg transportGoki
 		}
 	}).Line()
 
+	for _, fn := range ctx.Interface.Methods {
+		f.Add(p.serviceEndpointMethod(ctx, cfg, fn))
+	}
+
 	if cfg.Endpoints.Chain {
-		//      func EndpointsChain(fns ...func(Endpoints) Endpoints) func(Endpoints) Endpoints {
-		//      	n := len(fns)
-		//      	return func(endpoints Endpoints) Endpoints {
-		//      		for i := 0; i < n; i++ {
-		//      			endpoints = fns[i](endpoints)
-		//      		}
-		//      		return endpoints
-		//      	}
-		//      }
 		f.Id(fmt.Sprintf(`
 func %[1]sChain(fns ...func(%[1]s) %[1]s) func(%[1]s) %[1]s {
 	n := len(fns)
 	return func(endpoints %[1]s) %[1]s {
 		for i := 0; i < n; i++ {
-			endpoints = fns[i](endpoints)
+			// reverse order
+			endpoints = fns[n-i-1](endpoints)
 		}
 		return endpoints
 	}
@@ -119,6 +131,7 @@ func %[1]sChain(fns ...func(%[1]s) %[1]s) func(%[1]s) %[1]s {
 					body.Return(Id(_Endpoints_).Values(DictFunc(func(d Dict) {
 						for _, signature := range ctx.Interface.Methods {
 							if ctx.AllowedMethods[signature.Name] {
+								// Produce code:
 								// CreateComment_Endpoint:   latency(dur, "CreateComment")(endpoints.CreateComment_Endpoint),
 								d[Id(join_(signature.Name, "Endpoint"))] = Id("latency").Call(Id("dur"),
 									Lit(signature.Name)).Call(Id("endpoints").Dot(join_(signature.Name, "Endpoint")))
@@ -144,7 +157,7 @@ func %[1]sChain(fns ...func(%[1]s) %[1]s) func(%[1]s) %[1]s {
 		).Params(
 			Qual(pkg.GoKitEndpoint, "Middleware"),
 		).Block(
-			Id("dur").Op(":=").Id("dur").Dot("With").Call(Id("method"), Id("methodName")),
+			Id("dur").Op(":=").Id("dur").Dot("With").Call(Lit("method"), Id("methodName")),
 			Return().Func().Params(Id(_next_).Qual(pkg.GoKitEndpoint, "Endpoint")).Params(Qual(pkg.GoKitEndpoint, "Endpoint")).Block(
 				Return().Func().Params(
 					Id(_ctx_).Qual(pkg.Context, "Context"), Id("request interface{}"),
@@ -173,6 +186,12 @@ func %[1]sChain(fns ...func(%[1]s) %[1]s) func(%[1]s) %[1]s {
 	outfile.Content = b.Bytes()
 	ctx.Files = append(ctx.Files, outfile)
 	return ctx, nil
+}
+
+func (p *transportGokitPlugin) serviceEndpointMethod(ctx microgen.Context, cfg transportGokitConfig, fn *types.Function) *Statement {
+	normal := internal.NormalizeFunction(fn)
+	return internal.MethodDefinition(ctx, _Endpoints_, &normal.Function).
+		BlockFunc(p.serviceEndpointMethodBody(ctx, cfg, fn, &normal.Function))
 }
 
 func (p *transportGokitPlugin) exchanges(ctx microgen.Context, cfg transportGokitConfig) (microgen.Context, error) {
@@ -207,6 +226,141 @@ func (p *transportGokitPlugin) exchanges(ctx microgen.Context, cfg transportGoki
 		}
 		responseName := join_(fn.Name, _Response_)
 		f.Add(exchange(ctx, cfg, responseName, internal.RemoveErrorIfLast(fn.Results))).Line()
+	}
+
+	outfile := microgen.File{
+		Name: transportKitPlugin,
+		Path: filepath.Join(cfg.Path, filename),
+	}
+	var b bytes.Buffer
+	err = f.Render(&b)
+	if err != nil {
+		return ctx, err
+	}
+	outfile.Content = b.Bytes()
+	ctx.Files = append(ctx.Files, outfile)
+	return ctx, nil
+}
+
+func (p *transportGokitPlugin) serviceEndpointMethodBody(ctx microgen.Context, cfg transportGokitConfig, fn *types.Function, normal *types.Function) func(g *Group) {
+	reqName := "request"
+	respName := "response"
+	return func(g *Group) {
+		if !ctx.AllowedMethods[fn.Name] {
+			g.Return()
+			return
+		}
+		requestName := join_(fn.Name, _Request_)
+		responseName := join_(fn.Name, _Response_)
+		endpointsStructFieldName := join_(fn.Name, "Endpoint")
+		g.Id(reqName).Op(":=").Id(requestName).Values(internal.DictByNormalVariables(internal.RemoveContextIfFirst(fn.Args), internal.RemoveContextIfFirst(normal.Args)))
+		g.Add(endpointResponse(respName, normal)).Id(internal.Rec(_Endpoints_)).Dot(endpointsStructFieldName).Call(Id(internal.FirstArgName(normal)), Op("&").Id(reqName))
+		/*g.If(Id(nameOfLastResultError(normal)).Op("!=").Nil().BlockFunc(func(ifg *Group) {
+			if internal.Tags(ctx).HasAny(GrpcTag, GrpcClientTag, GrpcServerTag) {
+				ifg.Add(checkGRPCError(normal))
+			}
+			ifg.Return()
+		}))*/
+		g.ReturnFunc(func(group *Group) {
+			for _, field := range internal.RemoveErrorIfLast(fn.Results) {
+				group.Id(respName).Assert(Op("*").Id(responseName)).Dot(mstrings.ToUpperFirst(field.Name))
+			}
+			group.Id(internal.NameOfLastResultError(normal))
+		})
+	}
+}
+
+func endpointResponse(respName string, fn *types.Function) *Statement {
+	if len(internal.RemoveErrorIfLast(fn.Results)) > 0 {
+		return List(Id(respName), Id(internal.NameOfLastResultError(fn))).Op(":=")
+	}
+	return List(Id("_"), Id(internal.NameOfLastResultError(fn))).Op("=")
+}
+
+func (p *transportGokitPlugin) client(ctx microgen.Context, cfg transportGokitConfig) (microgen.Context, error) {
+	const filename = "client.microgen.go"
+	ImportAliasFromSources = true
+	pluginPackagePath, err := gen.GetPkgPath(filepath.Join(cfg.Path, filename), false)
+	if err != nil {
+		return ctx, err
+	}
+	pkgName, err := gen.PackageName(pluginPackagePath, "")
+	if err != nil {
+		return ctx, err
+	}
+	f := NewFilePathName(pluginPackagePath, pkgName)
+	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
+	f.HeaderComment(ctx.FileHeader)
+
+	if cfg.Client.Trace {
+		f.Func().Id("TraceClient").Params(
+			Id("tracer").Qual(pkg.OpenTracing, "Tracer"),
+		).Params(
+			Func().Params(Id("endpoints").Id(_Endpoints_)).Params(Id(_Endpoints_)),
+		).Block(
+			Return().Func().Params(Id("endpoints").Id(_Endpoints_)).Params(Id(_Endpoints_)).
+				BlockFunc(func(body *Group) {
+					body.Return(Id(_Endpoints_).Values(DictFunc(func(d Dict) {
+						for _, signature := range ctx.Interface.Methods {
+							if ctx.AllowedMethods[signature.Name] {
+								// CreateComment_Endpoint:   latency(dur, "CreateComment")(endpoints.CreateComment_Endpoint),
+								d[Id(join_(signature.Name, "Endpoint"))] = Qual(pkg.GoKitOpenTracing, "TraceClient").Call(Id("tracer"),
+									Lit(signature.Name)).Call(Id("endpoints").Dot(join_(signature.Name, "Endpoint")))
+							}
+						}
+					})))
+				}),
+		)
+	}
+
+	outfile := microgen.File{
+		Name: transportKitPlugin,
+		Path: filepath.Join(cfg.Path, filename),
+	}
+	var b bytes.Buffer
+	err = f.Render(&b)
+	if err != nil {
+		return ctx, err
+	}
+	outfile.Content = b.Bytes()
+	ctx.Files = append(ctx.Files, outfile)
+	return ctx, nil
+}
+
+func (p *transportGokitPlugin) server(ctx microgen.Context, cfg transportGokitConfig) (microgen.Context, error) {
+	const filename = "server.microgen.go"
+	ImportAliasFromSources = true
+	pluginPackagePath, err := gen.GetPkgPath(filepath.Join(cfg.Path, filename), false)
+	if err != nil {
+		return ctx, err
+	}
+	pkgName, err := gen.PackageName(pluginPackagePath, "")
+	if err != nil {
+		return ctx, err
+	}
+	f := NewFilePathName(pluginPackagePath, pkgName)
+	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
+	f.HeaderComment(ctx.FileHeader)
+
+	if cfg.Server.Trace {
+		f.Func().Id("TraceServer").Params(
+			Id("tracer").Qual(pkg.OpenTracing, "Tracer"),
+		).Params(
+			Func().Params(Id("endpoints").Id(_Endpoints_)).Params(Id(_Endpoints_)),
+		).Block(
+			Return().Func().Params(Id("endpoints").Id(_Endpoints_)).Params(Id(_Endpoints_)).
+				BlockFunc(func(body *Group) {
+					body.Return(Id(_Endpoints_).Values(DictFunc(func(d Dict) {
+						for _, signature := range ctx.Interface.Methods {
+							if ctx.AllowedMethods[signature.Name] {
+								// CreateComment_Endpoint:   latency(dur, "CreateComment")(endpoints.CreateComment_Endpoint),
+								d[Id(join_(signature.Name, "Endpoint"))] = Qual(pkg.GoKitOpenTracing, "TraceServer").Call(Id("tracer"),
+									Lit(signature.Name)).Call(Id("endpoints").Dot(join_(signature.Name, "Endpoint")))
+							}
+						}
+					})))
+				}),
+		)
 	}
 
 	outfile := microgen.File{

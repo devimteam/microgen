@@ -4,7 +4,7 @@
     {
       "name": "logging",
       "args": {
-        "path": "service/logging.go",
+        "path": "service/logging.microgen.go",
         "easyjson": true,
         "took": true
       }
@@ -12,7 +12,7 @@
     {
       "name": "logging",
       "args": {
-        "path": "service/debug_logging.go",
+        "path": "service/debug_logging.microgen.go",
         "name": "debugMiddleware",
         "easyjson": true,
         "inline": true
@@ -21,6 +21,7 @@
     {
       "name": "recovering",
       "args": {
+        "path": "service/recovering.microgen.go",
         "stack": true
       }
     },
@@ -33,6 +34,12 @@
         },
         "endpoints": {
           "latency": true
+        },
+        "client": {
+          "trace": true
+        },
+        "server": {
+          "trace": true
         }
       }
     }
