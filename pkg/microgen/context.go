@@ -1,6 +1,8 @@
 package microgen
 
 import (
+	"reflect"
+
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -19,4 +21,9 @@ type File struct {
 	Path    string
 	// Unique name of file, that other plugins can easily find it
 	Name string
+}
+
+type Interface struct {
+	Comments []string
+	Value    reflect.Value
 }

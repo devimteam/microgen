@@ -2,7 +2,6 @@ package microgen
 
 import (
 	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/devimteam/microgen/gen"
 	"github.com/devimteam/microgen/logger"
@@ -251,7 +252,7 @@ func processConfig(pathToConfig string) (*config, error) {
 		return nil, errors.WithMessage(err, "read from config")
 	}
 	var cfg config
-	err = json.NewDecoder(&rawToml).Decode(&cfg)
+	err = yaml.NewDecoder(&rawToml).Decode(&cfg)
 	if err != nil {
 		return nil, errors.WithMessage(err, "unmarshal config")
 	}
@@ -292,4 +293,13 @@ func composeErrors(errs ...error) error {
 		}
 	}
 	return nil
+}
+
+func Run() {
+	for k, v := range pluginsRepository {
+		fmt.Println(k, v)
+	}
+	for i := range interfacesRepository {
+		fmt.Println(interfacesRepository[i].name)
+	}
 }
