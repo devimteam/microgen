@@ -1,0 +1,8 @@
+plugins:
+  - github.com/devimteam/microgen/pkg/plugins
+interfaces:
+  UserService:
+    - name: x
+      args:
+    - name: y
+      args:
