@@ -42,7 +42,9 @@ func specialTypeConverter(p types.Type) *Statement {
 	}
 	// time.Time -> timestamp.Timestamp
 	if name != nil && *name == "Time" && imp != nil && imp.Package == "time" {
-		return Op("*").Qual(GolangProtobufPtypesTimestamp, "Timestamp")
+		if types.TypeArray(p) == nil { // ignore []time.Time case
+			return Op("*").Qual(GolangProtobufPtypesTimestamp, "Timestamp")
+		}
 	}
 	// jsonb.JSONB -> string
 	if name != nil && *name == "JSONB" && imp != nil && imp.Package == JsonbPackage {
@@ -53,6 +55,13 @@ func specialTypeConverter(p types.Type) *Statement {
 		_, ok := p.(types.TPointer)
 		if ok {
 			return Op("*").Qual(GolangProtobufWrappers, "StringValue")
+		}
+	}
+	// *float64 -> *wrappers.DoubleValue
+	if name != nil && *name == "float64" && imp == nil {
+		ptr, ok := p.(types.TPointer)
+		if ok && ptr.NumberOfPointers == 1 {
+			return (&Statement{}).Qual(GolangProtobufWrappers, "DoubleValue").Values()
 		}
 	}
 	return nil

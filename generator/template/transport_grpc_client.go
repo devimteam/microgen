@@ -130,6 +130,13 @@ func specialReplyType(p types.Type) *Statement {
 			return (&Statement{}).Qual(GolangProtobufWrappers, "StringValue").Values()
 		}
 	}
+	// *float64 -> *wrappers.DoubleValue
+	if name != nil && *name == "float64" && imp == nil {
+		ptr, ok := p.(types.TPointer)
+		if ok && ptr.NumberOfPointers == 1 {
+			return (&Statement{}).Qual(GolangProtobufWrappers, "DoubleValue").Values()
+		}
+	}
 	return nil
 }
 
