@@ -61,7 +61,7 @@ func specialTypeConverter(p types.Type) *Statement {
 	if name != nil && *name == "float64" && imp == nil {
 		ptr, ok := p.(types.TPointer)
 		if ok && ptr.NumberOfPointers == 1 {
-			return (&Statement{}).Qual(GolangProtobufWrappers, "DoubleValue").Values()
+			return Op("*").Qual(GolangProtobufWrappers, "DoubleValue")
 		}
 	}
 	return nil
