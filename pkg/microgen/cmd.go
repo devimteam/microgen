@@ -246,13 +246,13 @@ func processConfig(pathToConfig string) (*config, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "open file")
 	}
-	var rawToml bytes.Buffer
-	_, err = rawToml.ReadFrom(file)
+	var rawYaml bytes.Buffer
+	_, err = rawYaml.ReadFrom(file)
 	if err != nil {
 		return nil, errors.WithMessage(err, "read from config")
 	}
 	var cfg config
-	err = yaml.NewDecoder(&rawToml).Decode(&cfg)
+	err = yaml.NewDecoder(&rawYaml).Decode(&cfg)
 	if err != nil {
 		return nil, errors.WithMessage(err, "unmarshal config")
 	}
@@ -295,11 +295,9 @@ func composeErrors(errs ...error) error {
 	return nil
 }
 
-func Run() {
+func Run(name string, iface interface{}) {
 	for k, v := range pluginsRepository {
 		fmt.Println(k, v)
 	}
-	for i := range interfacesRepository {
-		fmt.Println(interfacesRepository[i].name)
-	}
+	fmt.Printf("%s %T", name, iface)
 }

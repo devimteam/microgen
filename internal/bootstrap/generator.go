@@ -51,7 +51,7 @@ var prefix = []byte(`// +build microgen-ignore
 package main
 `)
 
-func mainFunc(plugins, interfaces []string, pkg string) ([]byte, error) {
+func mainFunc(plugins []string, iface string, pkg string) ([]byte, error) {
 	var b lnBuilder
 	b.L(0, "import (")
 	if len(plugins) > 0 {
@@ -67,10 +67,7 @@ func mainFunc(plugins, interfaces []string, pkg string) ([]byte, error) {
 	b.L(1, `microgen "github.com/devimteam/microgen/pkg/microgen"`)
 	b.L(0, ")")
 	b.L(0, "func main() {")
-	for i := range interfaces {
-		b.L(1, fmt.Sprintf(`microgen.RegisterInterface("%s", pkg.%s(nil))`, interfaces[i], interfaces[i]))
-	}
-	b.L(1, "microgen.Run()")
+	b.L(1, fmt.Sprintf(`microgen.Run("%s", pkg.%s(nil))`, iface, iface))
 	b.L(0, "}")
 	return b.Bytes(), nil
 }
