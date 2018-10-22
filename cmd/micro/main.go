@@ -3,6 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"strings"
 
@@ -13,19 +16,25 @@ import (
 )
 
 func main() {
-	// todo: check package for containing each of interfaces
-	/*
-		pkgs, err := parser.ParseDir(token.NewFileSet(), ".", nonTestFilter, 0)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
+	if len(os.Args) == 1 {
+		fmt.Fprintln(os.Stderr, "interface name is required. Example: '$ microgen UserService'")
+		os.Exit(1)
+	}
+	ifaceArg := os.Args[len(os.Args)-1]
+	pkgs, err := parser.ParseDir(token.NewFileSet(), ".", nonTestFilter, 0)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	for _, pkg := range pkgs {
+		// Remove all unexported declarations
+		if !ast.PackageExports(pkg) {
+			continue
 		}
-		for _, pkg := range pkgs {
-			// Remove all unexported declarations
-			if !ast.PackageExports(pkg) {
-				continue
-			}
-		}*/
+		if ast.FilterPackage(pkg, func(name string) bool { return name == ifaceArg }) {
+			break // found
+		}
+	}
 	cfg, err := processConfig("micro.yaml")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -36,12 +45,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	err = bootstrap.Run(trim(cfg.Plugins), cfg.interfaces(), currentPkg)
+	err = bootstrap.Run(trim(cfg.Plugins), ifaceArg, currentPkg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	fmt.Println("DONE")
+	fmt.Println("Done")
 }
 
 func nonTestFilter(info os.FileInfo) bool {
@@ -74,16 +83,5 @@ func processConfig(pathToConfig string) (*config, error) {
 }
 
 type config struct {
-	Plugins    []string
-	Interfaces []yaml.MapItem
-}
-
-func (c config) interfaces() []string {
-	var ss []string
-	for i := range c.Interfaces {
-		if s, ok := c.Interfaces[i].Key.(string); ok {
-			ss = append(ss, s)
-		}
-	}
-	return ss
+	Plugins []string
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Run(plugins, interfaces []string, pkg string) error {
+func Run(plugins []string, iface string, pkg string) error {
 	f, err := ioutil.TempFile(".", "microgen-bootstrap-*.go")
 	if err != nil {
 		return errors.Wrap(err, "can't create bootstrap file")
@@ -24,7 +24,7 @@ func Run(plugins, interfaces []string, pkg string) error {
 		return errors.New("prefix content was loosed")
 	}
 
-	mainContent, err := mainFunc(plugins, interfaces, pkg)
+	mainContent, err := mainFunc(plugins, iface, pkg)
 	if err != nil {
 		return err
 	}

@@ -24,6 +24,9 @@ type File struct {
 }
 
 type Interface struct {
-	Comments []string
+	Name     string
 	Value    reflect.Value
+	Comments []string
+	Args     []string
+	Results  []string
 }
