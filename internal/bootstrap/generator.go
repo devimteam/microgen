@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Run(plugins []string, iface string, pkg string) error {
+func Run(plugins []string, iface string, pkg string, pkgName string) error {
 	f, err := ioutil.TempFile(".", "microgen-bootstrap-*.go")
 	if err != nil {
 		return errors.Wrap(err, "can't create bootstrap file")
@@ -24,7 +24,7 @@ func Run(plugins []string, iface string, pkg string) error {
 		return errors.New("prefix content was loosed")
 	}
 
-	mainContent, err := mainFunc(plugins, iface, pkg)
+	mainContent, err := mainFunc(plugins, iface, pkg, pkgName)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ var prefix = []byte(`// +build microgen-ignore
 package main
 `)
 
-func mainFunc(plugins []string, iface string, pkg string) ([]byte, error) {
+func mainFunc(plugins []string, iface string, pkg string, pkgName string) ([]byte, error) {
 	var b lnBuilder
 	b.L(0, "import (")
 	if len(plugins) > 0 {
@@ -67,9 +67,22 @@ func mainFunc(plugins []string, iface string, pkg string) ([]byte, error) {
 	b.L(1, `microgen "github.com/devimteam/microgen/pkg/microgen"`)
 	b.L(0, ")")
 	b.L(0, "func main() {")
-	b.L(1, fmt.Sprintf(`microgen.Run("%s", pkg.%s(nil))`, iface, iface))
+	b.L(1, "microgen.RegisterPackage(", pkgName, ")")
+	b.L(1, "microgen.RegisterInterface(microgen.Interface{") //
+	b.L(2, "Name:", strconv.Quote(iface), ",")
+	b.L(2, "Value:reflect.ValueOf(pkg.", iface, "(nil)),")
+	b.L(1, "})")
+	b.L(1, `microgen.Exec()`)
 	b.L(0, "}")
 	return b.Bytes(), nil
+}
+
+func stringmap(ss []string, f func(string) string) []string {
+	res := make([]string, len(ss))
+	for i := range ss {
+		res[i] = f(ss[i])
+	}
+	return res
 }
 
 func runFile(name string) error {

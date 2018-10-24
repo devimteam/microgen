@@ -11,6 +11,7 @@ var (
 	// holds all plugins by their names.
 	pluginsRepository = make(map[string]Plugin)
 	targetInterface   Interface
+	sourcePackage     string
 	// makes RegisterPlugin calls concurrency safe (just for fun and because can).
 	regLock sync.Mutex
 )
@@ -36,5 +37,11 @@ func RegisterInterface(iface Interface) {
 	regLock.Lock()
 	targetInterface = iface
 	lg.Logger.Logln(logger.Detail, "register interface", iface.Name)
+	regLock.Unlock()
+}
+
+func RegisterPackage(pkg string) {
+	regLock.Lock()
+	sourcePackage = pkg
 	regLock.Unlock()
 }

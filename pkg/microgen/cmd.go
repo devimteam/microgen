@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"plugin"
 	"runtime"
 	"strings"
 	"time"
@@ -18,7 +17,6 @@ import (
 	"github.com/devimteam/microgen/logger"
 	lg "github.com/devimteam/microgen/logger"
 	"github.com/pkg/errors"
-	"github.com/vetcher/go-astra"
 	"github.com/vetcher/go-astra/types"
 )
 
@@ -75,68 +73,45 @@ func Exec() {
 	lg.Logger.Logln(logger.Detail, "Config:", *flagConfig)
 	cfg, err := processConfig(*flagConfig)
 	if err != nil {
-		return
-	}
-
-	pkg, err := astra.GetPackage(".", astra.AllowAnyImportAliases,
-		astra.IgnoreStructs, astra.IgnoreFunctions, astra.IgnoreConstants,
-		astra.IgnoreMethods, astra.IgnoreTypes, astra.IgnoreVariables,
-	)
-	if err != nil {
-		lg.Logger.Logln(0, "fatal:", err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	ii := findInterfaces(pkg)
-	iface, err := selectInterface(ii, cfg.Interface)
+	currentPkg, err := gen.GetPkgPath(".", true)
 	if err != nil {
-		lg.Logger.Logln(logger.Detail, "All founded interfaces:")
-		lg.Logger.Logln(logger.Detail, listInterfaces(pkg.Interfaces))
-		return
-	}
-	if err = validateInterface(iface); err != nil {
-		return
-	}
-
-	err = initPlugins(cfg.Plugins)
-	if err != nil {
-		return
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 	source, err := os.Getwd()
 	if err != nil {
 		return
 	}
-	sourcePackage, err := gen.GetPkgPath(".", true)
-	if err != nil {
-		return
-	}
-
 	lg.Logger.Logln(logger.Debug, "Start generation")
 	ctx := Context{
-		Interface:           iface,
+		Interface:           &targetInterface,
 		Source:              source,
-		SourcePackageName:   pkg.Name,
-		SourcePackageImport: sourcePackage,
+		SourcePackageName:   sourcePackage,
+		SourcePackageImport: currentPkg,
 		FileHeader:          DefaultFileHeader,
 		Files:               nil,
-		AllowedMethods:      makeAllowedMethods(iface),
+		AllowedMethods:      makeAllowedMethods(&targetInterface),
 	}
 	lg.Logger.Logln(logger.Debug, "Exec plugins")
 	for i, pcfg := range cfg.Generate {
 		fnErr := func() error {
 			defer func() {
 				if e := recover(); e != nil {
-					err = errors.Errorf("recover panic from '%s' plugin. Message: %v", pcfg.Name, e)
+					err = errors.Errorf("recover panic from '%s' plugin. Message: %v", pcfg.Plugin, e)
 				}
 			}()
-			p, ok := pluginsRepository[pcfg.Name]
+			p, ok := pluginsRepository[pcfg.Plugin]
 			if !ok {
-				return errors.Errorf("plugin '%s' not registered", pcfg.Name)
+				return errors.Errorf("plugin '%s' not registered", pcfg.Plugin)
 			}
-			lg.Logger.Logln(logger.Debug, "\t", i+1, "\texec plugin", "'"+pcfg.Name+"'", "with args:", string(pcfg.Args))
+			lg.Logger.Logln(logger.Debug, "\t", i+1, "\texec plugin", "'"+pcfg.Plugin+"'", "with args:", string(pcfg.Args))
 			ctx, err = p.Generate(ctx, pcfg.Args)
 			if err != nil {
-				return errors.Wrapf(err, "plugin '%s' returns an error", pcfg.Name)
+				return errors.Wrapf(err, "plugin '%s' returns an error", pcfg.Plugin)
 			}
 			return nil
 		}()
@@ -194,12 +169,16 @@ func makeDirsAndCreateFile(p string) (*os.File, error) {
 	return tgtFile, nil
 }
 
-func makeAllowedMethods(iface *types.Interface) map[string]bool {
+func makeAllowedMethods(iface *Interface) map[string]bool {
 	m := make(map[string]bool)
 	for _, fn := range iface.Methods {
 		m[fn.Name] = !FetchTags(fn.Docs, "//"+Microgen).Has("-")
 	}
 	return m
+}
+
+func nonTestFilter(info os.FileInfo) bool {
+	return !strings.HasSuffix(info.Name(), "_test.go")
 }
 
 func findInterfaces(file *types.File) []*types.Interface {
@@ -218,18 +197,6 @@ func listInterfaces(ii []types.Interface) string {
 		s = s + fmt.Sprintf("\t%s(%d methods, %d embedded interfaces)\n", i.Name, len(i.Methods), len(i.Interfaces))
 	}
 	return s
-}
-
-func selectInterface(ii []*types.Interface, name string) (*types.Interface, error) {
-	if name == "" {
-		return nil, fmt.Errorf("%d interfaces founded, but 'interface' config parameter is empty. Add \"interface = InterfaceName\" to config file", len(ii))
-	}
-	for i := range ii {
-		if ii[i].Name == name {
-			return ii[i], nil
-		}
-	}
-	return nil, fmt.Errorf("'%s' interface not found, but %d others are available", name, len(ii))
 }
 
 func docsContainMicrogenTag(strs []string) bool {
@@ -257,16 +224,6 @@ func processConfig(pathToConfig string) (*config, error) {
 		return nil, errors.WithMessage(err, "unmarshal config")
 	}
 	return &cfg, nil
-}
-
-func initPlugins(plugins []string) error {
-	for i := range plugins {
-		_, err := plugin.Open(plugins[i])
-		if err != nil {
-			return errors.Wrapf(err, "open plugin '%s'", plugins[i])
-		}
-	}
-	return nil
 }
 
 func validateInterface(iface *types.Interface) error {

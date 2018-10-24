@@ -2,12 +2,10 @@ package microgen
 
 import (
 	"reflect"
-
-	"github.com/vetcher/go-astra/types"
 )
 
 type Context struct {
-	Interface           *types.Interface
+	Interface           *Interface
 	Source              string
 	SourcePackageName   string
 	SourcePackageImport string
@@ -24,9 +22,15 @@ type File struct {
 }
 
 type Interface struct {
-	Name     string
-	Value    reflect.Value
-	Comments []string
-	Args     []string
-	Results  []string
+	Name    string
+	Value   reflect.Value
+	Docs    []string
+	Methods []Method
+}
+
+type Method struct {
+	Docs    []string
+	Name    string
+	Args    []string
+	Results []string
 }
