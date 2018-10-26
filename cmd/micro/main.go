@@ -4,23 +4,28 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
 	"strings"
 
-	"github.com/devimteam/microgen/pkg/microgen"
-
 	"github.com/devimteam/microgen/gen"
+	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/internal/bootstrap"
+	"github.com/devimteam/microgen/logger"
+	"github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 )
 
 var (
-	flagConfig = flag.String("config", "microgen.yaml", "path to configuration file")
+	flagConfig  = flag.String("config", "microgen.yaml", "path to configuration file")
+	flagVerbose = flag.Int("v", logger.Common, "Sets microgen verbose level.")
+	flagDebug   = flag.Bool("debug", false, "Print all microgen messages. Equivalent to -v=100.")
 )
+
+func init() {
+	flag.Parse()
+}
 
 func main() {
 	if len(os.Args) == 1 {
@@ -28,57 +33,15 @@ func main() {
 		os.Exit(1)
 	}
 	ifaceArg := os.Args[len(os.Args)-1]
-	pkgs, err := parser.ParseDir(token.NewFileSet(), ".", nonTestFilter, 0)
+	pkgs, err := parser.ParseDir(token.NewFileSet(), ".", nonTestFilter, parser.ParseComments)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	var iface microgen.Interface
-	var pkgName string
-	for _, pkg := range pkgs {
-		// Remove all unexported declarations
-		if !ast.PackageExports(pkg) {
-			continue
-		}
-		if ast.FilterPackage(pkg, func(name string) bool { return name == ifaceArg }) {
-			pkgName = pkg.Name
-			var (
-				emptyInterface bool
-			)
-			ast.Inspect(pkg, func(node ast.Node) bool {
-				switch n := node.(type) {
-				case *ast.GenDecl:
-					return true
-				case *ast.TypeSpec:
-					if n.Name == nil || n.Name.Name != ifaceArg {
-						return false
-					}
-					i, ok := n.Type.(*ast.InterfaceType)
-					if !ok {
-						return false
-					}
-					iface.Docs = parseComments(n.Doc)
-					if i.Methods == nil {
-						emptyInterface = true
-						return false
-					}
-					for _, method := range i.Methods.List {
-						if method == nil {
-							continue
-						}
-
-					}
-				default:
-					return false
-				}
-				return false
-			})
-			if emptyInterface {
-				fmt.Fprintln(os.Stderr, "interface has no methods")
-				os.Exit(1)
-			}
-			break // found
-		}
+	iface, err := internal.GetInterface(ifaceArg, pkgs)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	cfg, err := processConfig(*flagConfig)
 	if err != nil {
@@ -90,7 +53,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	err = bootstrap.Run(trim(cfg.Plugins), ifaceArg, currentPkg, pkgName)
+	err = bootstrap.Run(trim(cfg.Plugins), iface, currentPkg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -109,16 +72,6 @@ func trim(ss []string) []string {
 	return ss
 }
 
-func parseComments(group *ast.CommentGroup) (comments []string) {
-	if group == nil {
-		return
-	}
-	for _, comment := range group.List {
-		comments = append(comments, comment.Text)
-	}
-	return
-}
-
 func processConfig(pathToConfig string) (*config, error) {
 	file, err := os.Open(pathToConfig)
 	if err != nil {
@@ -130,7 +83,7 @@ func processConfig(pathToConfig string) (*config, error) {
 		return nil, errors.WithMessage(err, "read from config")
 	}
 	var cfg config
-	err = yaml.NewDecoder(&rawToml).Decode(&cfg)
+	err = toml.NewDecoder(&rawToml).Decode(&cfg)
 	if err != nil {
 		return nil, errors.WithMessage(err, "unmarshal config")
 	}

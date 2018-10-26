@@ -1,0 +1,55 @@
+import = [
+  "example.com/name/project"
+]
+
+[[generate]]
+plugin = "logging"
+
+  [generate.params]
+  path = "service/logging.microgen.go"
+  easyjson = true
+  took = true
+
+[[generate]]
+plugin = "logging"
+
+  [generate.params]
+  name = "DebugLogging"
+  path = "service/debug_logging.microgen.go"
+  easyjson = true
+  inline = true
+
+[[generate]]
+plugin = "recovering"
+
+  [generate.params]
+  path = "service/recovering.microgen.go"
+  stack = true
+
+[[generate]]
+plugin = "go-kit-transport"
+
+  [generate.params]
+
+    [generate.params.exchanges]
+    easyjson = true
+    style = "camel"
+
+    [generate.params.endpoints]
+    latency = true
+
+    [generate.params.client]
+    trace = true
+
+    [generate.params.server]
+    trace = true
+
+[[generate]]
+plugin = "go-kit-grpc"
+
+  [generate.params]
+  protobuf = "github.com/devimteam/microgen/examples/usersvc/pb"
+  transportpkg = "transport"
+
+    [generate.params.client]
+    trace = true

@@ -2,29 +2,34 @@ import:
   - example.com/name/project
 generate:
   - plugin: logging
-    path: "service/logging.microgen.go"
-    easyjson: true
-    took: true
-  - plugin: logging
-    name: DebugLogging
-    path: "service/debug_logging.microgen.go"
-    easyjson: true
-    inline: true
-  - plugin: recovering
-    path: "service/recovering.microgen.go"
-    stack: true
-  - plugin: go-kit-transport
-    exchanges:
+    params:
+      path: "service/logging.microgen.go"
       easyjson: true
-      style: camel
-    endpoints:
-      latency: true
-    client:
-      trace: true
-    server:
-      trace: true
+      took: true
+  - plugin: logging
+    params:
+      name: DebugLogging
+      path: "service/debug_logging.microgen.go"
+      easyjson: true
+      inline: true
+  - plugin: recovering
+    params:
+      path: "service/recovering.microgen.go"
+      stack: true
+  - plugin: go-kit-transport
+    params:
+      exchanges:
+        easyjson: true
+        style: camel
+      endpoints:
+        latency: true
+      client:
+        trace: true
+      server:
+        trace: true
   - plugin: go-kit-grpc
-    protobuf: "github.com/devimteam/microgen/examples/usersvc/pb"
-    transportpkg: "transport"
-    client:
-      trace: true
+    params:
+      protobuf: "github.com/devimteam/microgen/examples/usersvc/pb"
+      transportpkg: "transport"
+      client:
+        trace: true
