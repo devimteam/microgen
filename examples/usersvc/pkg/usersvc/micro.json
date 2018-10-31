@@ -2,6 +2,9 @@
   "import": [
     "example.com/name/project"
   ],
+  "vars": {
+    "trace": true
+  },
   "generate": [
     {
       "plugin": "logging",
@@ -36,12 +39,6 @@
         },
         "endpoints": {
           "latency": true
-        },
-        "client": {
-          "trace": true
-        },
-        "server": {
-          "trace": true
         }
       }
     },
@@ -49,10 +46,7 @@
       "plugin": "go-kit-grpc",
       "params": {
         "protobuf": "github.com/devimteam/microgen/examples/usersvc/pb",
-        "transportpkg": "transport",
-        "client": {
-          "trace": true
-        }
+        "transportpkg": "transport"
       }
     }
   ]

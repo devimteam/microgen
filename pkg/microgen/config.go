@@ -1,11 +1,8 @@
 package microgen
 
-import "github.com/pelletier/go-toml"
-
-type config struct {
-	Plugins  []string
-	Generate []PluginConfig
-}
+import (
+	toml "github.com/pelletier/go-toml"
+)
 
 type PluginConfig struct {
 	Plugin string    `toml:"plugin"`

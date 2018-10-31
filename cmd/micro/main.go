@@ -13,7 +13,7 @@ import (
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/internal/bootstrap"
 	"github.com/devimteam/microgen/logger"
-	"github.com/pelletier/go-toml"
+	toml "github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 )
 
@@ -53,7 +53,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	err = bootstrap.Run(trim(cfg.Plugins), iface, currentPkg)
+	err = bootstrap.Run(trim(expandEnv(cfg.Import)), iface, currentPkg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -68,6 +68,13 @@ func nonTestFilter(info os.FileInfo) bool {
 func trim(ss []string) []string {
 	for i := range ss {
 		ss[i] = strings.Trim(ss[i], `"`)
+	}
+	return ss
+}
+
+func expandEnv(ss []string) []string {
+	for i := range ss {
+		ss[i] = os.ExpandEnv(ss[i])
 	}
 	return ss
 }
@@ -91,5 +98,5 @@ func processConfig(pathToConfig string) (*config, error) {
 }
 
 type config struct {
-	Plugins []string
+	Import []string `toml:"import"`
 }

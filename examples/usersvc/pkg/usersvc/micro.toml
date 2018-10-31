@@ -2,6 +2,9 @@ import = [
   "example.com/name/project"
 ]
 
+[vars]
+trace = true
+
 [[generate]]
 plugin = "logging"
 
@@ -38,18 +41,9 @@ plugin = "go-kit-transport"
     [generate.params.endpoints]
     latency = true
 
-    [generate.params.client]
-    trace = true
-
-    [generate.params.server]
-    trace = true
-
 [[generate]]
 plugin = "go-kit-grpc"
 
   [generate.params]
   protobuf = "github.com/devimteam/microgen/examples/usersvc/pb"
   transportpkg = "transport"
-
-    [generate.params.client]
-    trace = true

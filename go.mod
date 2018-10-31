@@ -28,5 +28,5 @@ require (
 	golang.org/x/text v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20180316064809-f8c870359523 // indirect
 	google.golang.org/grpc v1.10.0
-	gopkg.in/yaml.v2 v2.2.1
+	gopkg.in/yaml.v2 v2.2.1 // indirect
 )

@@ -14,6 +14,7 @@ type Context struct {
 	SourcePackageImport string
 	FileHeader          string
 	AllowedMethods      map[string]bool
+	Variables           map[string]string
 	Files               []File
 }
 
