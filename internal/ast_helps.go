@@ -54,8 +54,8 @@ func GetInterface(name string, pkgs map[string]*ast.Package) (iface microgen.Int
 						iface.Methods = append(iface.Methods, microgen.Method{
 							Docs:    parseComments(method.Doc),
 							Name:    safeName(method.Names),
-							Args:    namesFromFieldList(fn.Params),
-							Results: namesFromFieldList(fn.Results),
+							Args:    namesToVars(namesFromFieldList(fn.Params)),
+							Results: namesToVars(namesFromFieldList(fn.Results)),
 						})
 					}
 				}
@@ -109,6 +109,14 @@ func namesFromFieldList(list *ast.FieldList) []string {
 		res = append(res, safeNames(list.List[i].Names)...)
 	}
 	return res
+}
+
+func namesToVars(ss []string) []microgen.Var {
+	x := make([]microgen.Var, len(ss))
+	for i := range ss {
+		x[i].Name = ss[i]
+	}
+	return x
 }
 
 func parseComments(groups ...*ast.CommentGroup) (comments []string) {

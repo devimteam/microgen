@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	fset = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	fset = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	flagDstDir  = fset.String("dst", ".", "Destiny path.")
 	flagVerbose = fset.Int("v", logger.Common, "Sets microgen verbose level.")
@@ -29,6 +29,7 @@ var (
 	flagConfig  = fset.String("config", "microgen.toml", "")
 	flagDry     = fset.Bool("dry", false, "Do everything except writing files.")
 	flagInit    = fset.Bool("init", false, "")
+	flagKeep    = fset.Bool("keep", false, "")
 )
 
 const (
@@ -68,7 +69,7 @@ func Exec(args ...string) {
 	lg.Logger.Level = *flagVerbose
 	if *flagDebug {
 		lg.Logger.Level = logger.Debug
-		lg.Logger.Logln(logger.Debug, "Debug logs mode in on")
+		//lg.Logger.Logln(logger.Debug, "Debug logs mode in on")
 	}
 	lg.Logger.Logln(logger.Common, Microgen, MicrogenVersion)
 

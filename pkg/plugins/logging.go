@@ -2,7 +2,7 @@ package plugins
 
 import (
 	"bytes"
-	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -12,7 +12,7 @@ import (
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"
-	"github.com/vetcher/go-astra/types"
+	toml "github.com/pelletier/go-toml"
 )
 
 const loggingPlugin = "logging"
@@ -27,17 +27,17 @@ type loggingConfig struct {
 	// When true, all arguments and results will be on the same level,
 	// instead of inside 'request' and 'response' fields. Also, special types will be omitted.
 	Inline bool
-	Ignore map[string][]string
-	Len    map[string][]string
+	Ignore map[string][]string `toml:"-"`
+	Len    map[string][]string `toml:"-"`
 	// When true, comment '//easyjson:json' above types will be generated
 	Easyjson bool
 	// When true, additional field 'took' will be generated in response
 	Took bool
 }
 
-func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMessage) (microgen.Context, error) {
+func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args []byte) (microgen.Context, error) {
 	cfg := loggingConfig{}
-	err := json.Unmarshal(args, &cfg)
+	err := toml.Unmarshal(args, &cfg)
 	if err != nil {
 		return ctx, err
 	}
@@ -47,12 +47,8 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMe
 	if cfg.Path == "" {
 		cfg.Path = "logging.microgen.go"
 	}
-	if cfg.Ignore == nil {
-		cfg.Ignore = make(map[string][]string)
-	}
-	if cfg.Len == nil {
-		cfg.Len = make(map[string][]string)
-	}
+	cfg.Ignore = makeMapFromComments("//logs-ignore", ctx.Interface)
+	cfg.Len = makeMapFromComments("//logs-len", ctx.Interface)
 
 	ImportAliasFromSources = true
 	pluginPackagePath, err := gen.GetPkgPath(cfg.Path, false)
@@ -132,7 +128,26 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMe
 	return ctx, nil
 }
 
-func (p *loggingMiddlewarePlugin) loggingEntity(ctx microgen.Context, name, fnName string, params []types.Variable, cfg loggingConfig) Code {
+func makeMapFromComments(prefix string, iface *microgen.Interface) map[string][]string {
+	m := make(map[string][]string)
+	for _, meth := range iface.Methods {
+		m[meth.Name] = getListFromComments(prefix, meth.Docs)
+	}
+	return m
+}
+
+func getListFromComments(prefix string, comments []string) []string {
+	var res []string
+	for i := range comments {
+		if !strings.HasPrefix(comments[i], prefix) {
+			continue
+		}
+		res = append(res, strings.Split(strings.Replace(comments[i][len(prefix):], " ", "", -1), ",")...)
+	}
+	return res
+}
+
+func (p *loggingMiddlewarePlugin) loggingEntity(ctx microgen.Context, name, fnName string, params []microgen.Var, cfg loggingConfig) Code {
 	if len(params) == 0 {
 		return Empty()
 	}
@@ -145,7 +160,7 @@ func (p *loggingMiddlewarePlugin) loggingEntity(ctx microgen.Context, name, fnNa
 		lenParams := cfg.Len[fnName]
 		for _, field := range params {
 			if !ms.IsInStringSlice(field.Name, ignore) {
-				g.Id(ms.ToUpperFirst(field.Name)).Add(internal.VarType(ctx, field.Type, false))
+				g.Id(ms.ToUpperFirst(field.Name)).Add(internal.VarType(field.Type, false))
 			}
 			if ms.IsInStringSlice(field.Name, lenParams) {
 				g.Id("Len" + ms.ToUpperFirst(field.Name)).Int().Tag(map[string]string{"json": "len(" + ms.ToUpperFirst(field.Name) + ")"})
@@ -167,13 +182,13 @@ func (p *loggingMiddlewarePlugin) loggingEntity(ctx microgen.Context, name, fnNa
 //			return s.next.Count(ctx, text, symbol)
 //		}
 //
-func (p *loggingMiddlewarePlugin) loggingFunc(ctx microgen.Context, cfg loggingConfig, signature *types.Function) *Statement {
+func (p *loggingMiddlewarePlugin) loggingFunc(ctx microgen.Context, cfg loggingConfig, signature microgen.Method) *Statement {
 	normal := internal.NormalizeFunction(signature)
-	return internal.MethodDefinition(ctx, ms.ToLowerFirst(cfg.Name), &normal.Function).
+	return internal.MethodDefinition(ms.ToLowerFirst(cfg.Name), normal.Method).
 		BlockFunc(p.loggingFuncBody(ctx, cfg, signature))
 }
 
-func (p *loggingMiddlewarePlugin) loggingFuncBody(ctx microgen.Context, cfg loggingConfig, fn *types.Function) func(g *Group) {
+func (p *loggingMiddlewarePlugin) loggingFuncBody(ctx microgen.Context, cfg loggingConfig, fn microgen.Method) func(g *Group) {
 	normal := internal.NormalizeFunction(fn)
 	return func(g *Group) {
 		if !ctx.AllowedMethods[fn.Name] {
@@ -211,9 +226,9 @@ func (p *loggingMiddlewarePlugin) loggingFuncBody(ctx microgen.Context, cfg logg
 							Lit("request"),
 							Id(join_("log", cfg.Name, fn.Name, _Request_)).Add(
 								p.fillMap(cfg,
-									normal.Parent,
-									internal.RemoveContextIfFirst(normal.Parent.Args),
+									fn,
 									internal.RemoveContextIfFirst(fn.Args),
+									internal.RemoveContextIfFirst(normal.Args),
 								),
 							),
 						)
@@ -223,16 +238,16 @@ func (p *loggingMiddlewarePlugin) loggingFuncBody(ctx microgen.Context, cfg logg
 							Lit("response"),
 							Id(join_("log", cfg.Name, fn.Name, _Response_)).Add(
 								p.fillMap(cfg,
-									normal.Parent,
-									internal.RemoveErrorIfLast(normal.Parent.Results),
+									fn,
 									internal.RemoveErrorIfLast(fn.Results),
+									internal.RemoveErrorIfLast(normal.Results),
 								),
 							),
 						)
 					}
 				}
 				if !ms.IsInStringSlice(internal.NameOfLastResultError(fn), cfg.Ignore[fn.Name]) {
-					g.Line().List(Lit(internal.NameOfLastResultError(fn)), Id(internal.NameOfLastResultError(&normal.Function)))
+					g.Line().List(Lit(internal.NameOfLastResultError(fn)), Id(internal.NameOfLastResultError(normal.Method)))
 				}
 				if cfg.Took {
 					g.Line().List(Lit("took"), Qual(pkg.Time, "Since").Call(Id("begin")))
@@ -253,7 +268,8 @@ func (p *loggingMiddlewarePlugin) loggerLogContent(
 	)
 }
 
-func (p *loggingMiddlewarePlugin) fillMap(cfg loggingConfig, fn *types.Function, params, normal []types.Variable) *Statement {
+func (p *loggingMiddlewarePlugin) fillMap(cfg loggingConfig, fn microgen.Method, params, normal []microgen.Var) *Statement {
+	fmt.Println(fn, normal, params)
 	return Values(DictFunc(func(d Dict) {
 		ignore := cfg.Ignore[fn.Name]
 		lenParams := cfg.Len[fn.Name]
@@ -274,7 +290,7 @@ func (p *loggingMiddlewarePlugin) fillMap(cfg loggingConfig, fn *types.Function,
 // 		"result", result,
 //		"count", count,
 //
-func (p *loggingMiddlewarePlugin) paramsNameAndValue(cfg loggingConfig, fields, normFds []types.Variable, functionName string) *Statement {
+func (p *loggingMiddlewarePlugin) paramsNameAndValue(cfg loggingConfig, fields, normFds []microgen.Var, functionName string) *Statement {
 	return ListFunc(func(g *Group) {
 		ignore := cfg.Ignore[functionName]
 		lenParams := cfg.Len[functionName]
@@ -289,7 +305,7 @@ func (p *loggingMiddlewarePlugin) paramsNameAndValue(cfg loggingConfig, fields, 
 	})
 }
 
-func calcParamAmount(name string, params []types.Variable, cfg loggingConfig) int {
+func calcParamAmount(name string, params []microgen.Var, cfg loggingConfig) int {
 	ignore := cfg.Ignore[name]
 	lenParams := cfg.Len[name]
 	paramAmount := len(params)

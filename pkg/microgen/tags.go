@@ -42,7 +42,7 @@ func FetchTags(docs []string, prefix string) TagsSet {
 		if !strings.HasPrefix(comment, prefix) {
 			continue
 		}
-		command := strings.Split(comment[len(prefix):], ":")
+		command := strings.SplitN(comment[len(prefix):], ":", 1)
 		if len(command[0]) == 0 {
 			continue
 		}

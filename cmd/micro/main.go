@@ -12,15 +12,16 @@ import (
 	"github.com/devimteam/microgen/gen"
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/internal/bootstrap"
-	"github.com/devimteam/microgen/logger"
+	lg "github.com/devimteam/microgen/logger"
 	toml "github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 )
 
 var (
 	flagConfig  = flag.String("config", "microgen.yaml", "path to configuration file")
-	flagVerbose = flag.Int("v", logger.Common, "Sets microgen verbose level.")
+	flagVerbose = flag.Int("v", lg.Common, "Sets microgen verbose level.")
 	flagDebug   = flag.Bool("debug", false, "Print all microgen messages. Equivalent to -v=100.")
+	flagKeep    = flag.Bool("keep", false, "Keeps bootstrapped file after execution.")
 )
 
 func init() {
@@ -31,6 +32,14 @@ func main() {
 	if len(os.Args) == 1 {
 		fmt.Fprintln(os.Stderr, "interface name is required. Example: '$ microgen UserService'")
 		os.Exit(1)
+	}
+	if *flagVerbose < lg.Critical {
+		*flagVerbose = lg.Critical
+	}
+	lg.Logger.Level = *flagVerbose
+	if *flagDebug {
+		lg.Logger.Level = lg.Debug
+		lg.Logger.Logln(lg.Debug, "Debug logs mode in on")
 	}
 	ifaceArg := os.Args[len(os.Args)-1]
 	pkgs, err := parser.ParseDir(token.NewFileSet(), ".", nonTestFilter, parser.ParseComments)
@@ -53,7 +62,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	err = bootstrap.Run(trim(expandEnv(cfg.Import)), iface, currentPkg)
+	err = bootstrap.Run(trim(expandEnv(cfg.Import)), iface, currentPkg, *flagKeep)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

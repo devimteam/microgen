@@ -28,7 +28,7 @@ type File struct {
 type Interface struct {
 	PackageName string
 	Name        string
-	Value       reflect.Value
+	Type        reflect.Type
 	Docs        []string
 	Methods     []Method
 }
@@ -50,17 +50,34 @@ func (iface Interface) String() string {
 type Method struct {
 	Docs    []string
 	Name    string
-	Args    []string
-	Results []string
+	Args    []Var
+	Results []Var
+	Type    reflect.Type
+}
+
+type Var struct {
+	Name string
+	Type reflect.Type
+}
+
+func varsNames(vv []Var) []string {
+	x := make([]string, len(vv))
+	for i := range vv {
+		x[i] = vv[i].Name
+	}
+	return x
 }
 
 func (m Method) String() string {
 	b := strings.Builder{}
 	b.WriteString("microgen.Method{\n")
 	fmt.Fprintf(&b, "Name:%s,\n", strconv.Quote(m.Name))
-	fmt.Fprintf(&b, "Docs:[]string{%s},\n", strings.Join(stringpipe(strconv.Quote)(m.Docs), ","))
-	fmt.Fprintf(&b, "Args:[]string{%s},\n", strings.Join(stringpipe(strconv.Quote)(m.Args), ","))
-	fmt.Fprintf(&b, "Results:[]string{%s},\n", strings.Join(stringpipe(strconv.Quote)(m.Results), ","))
+	fmt.Fprintf(&b, "Docs:[]string{%s},\n", strings.Join(
+		stringpipe(strconv.Quote)(m.Docs), ","))
+	fmt.Fprintf(&b, "Args:[]microgen.Var{%s},\n", strings.Join(
+		stringpipe(strconv.Quote, before("{Name: "), after("}"))(varsNames(m.Args)), ","))
+	fmt.Fprintf(&b, "Results:[]microgen.Var{%s},\n", strings.Join(
+		stringpipe(strconv.Quote, before("{Name: "), after("}"))(varsNames(m.Results)), ","))
 	b.WriteByte('}')
 	return b.String()
 }
@@ -75,5 +92,17 @@ func stringpipe(ff ...func(string) string) func([]string) []string {
 			}
 		}
 		return ss
+	}
+}
+
+func before(s string) func(string) string {
+	return func(orig string) string {
+		return s + orig
+	}
+}
+
+func after(s string) func(string) string {
+	return func(orig string) string {
+		return orig + s
 	}
 }

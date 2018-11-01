@@ -8,16 +8,22 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/devimteam/microgen/logger"
+
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/pkg/errors"
 )
 
-func Run(plugins []string, iface microgen.Interface, currentPkg string) error {
+func Run(plugins []string, iface microgen.Interface, currentPkg string, keep bool) error {
 	f, err := ioutil.TempFile(".", "microgen-bootstrap-*.go")
 	if err != nil {
 		return errors.Wrap(err, "can't create bootstrap file")
 	}
-	//defer os.Remove(f.Name())
+	if !keep {
+		defer os.Remove(f.Name())
+	} else {
+		logger.Logger.Logln(logger.Info, "keep", f.Name())
+	}
 
 	if n, err := f.Write(prefix); err != nil {
 		return errors.Wrap(err, "writing error")
@@ -70,11 +76,26 @@ func mainFunc(plugins []string, iface microgen.Interface, currentPkg string) ([]
 	b.L("func main() {")
 	b.L("microgen.RegisterPackage(", strconv.Quote(currentPkg), ")")
 	b.L("targetInterface := ", iface.String())
-	//b.L("targetInterface.Value=reflect.ValueOf((*pkg.", iface.Name, ")(nil)).Elem()")
-	b.L("targetInterface.Value=reflect.ValueOf(new(pkg.", iface.Name, ")).Elem()")
+	//b.L("targetInterface.Type=reflect.TypeOf((*pkg.", iface.Name, ")(nil)).Elem()")
+	b.L("// Add reflect data")
+	b.L("targetInterface.Type                  = reflect.TypeOf(new(pkg.", iface.Name, ")).Elem()")
+	for i := range iface.Methods {
+		b.L("// ", iface.Methods[i].Name)
+		b.L(fmt.Sprintf("targetInterface.Methods[%d].  Type  = methodToType(targetInterface.Type.MethodByName(%s))", i, strconv.Quote(iface.Methods[i].Name)))
+		for j := range iface.Methods[i].Args {
+			b.L(fmt.Sprintf("targetInterface.Methods[%d].  Args [%d].Type = targetInterface.Methods[%d].Type. In(%d) // %s", i, j, i, j, iface.Methods[i].Args[j].Name))
+		}
+		for j := range iface.Methods[i].Results {
+			b.L(fmt.Sprintf("targetInterface.Methods[%d].Results[%d].Type = targetInterface.Methods[%d].Type.Out(%d) // %s", i, j, i, j, iface.Methods[i].Results[j].Name))
+		}
+	}
+	b.L()
 	b.L("microgen.RegisterInterface(targetInterface)") //
 	b.L("microgen.Exec(", strings.Join(stringpipe(strconv.Quote)(os.Args[1:]), ","), ")")
 	b.L("}")
+	b.L(`func methodToType(m reflect.Method, ok bool) reflect.Type {
+return m.Type
+}`)
 	return b.Bytes(), nil
 }
 

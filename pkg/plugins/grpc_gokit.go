@@ -2,16 +2,16 @@ package plugins
 
 import (
 	"bytes"
-	"encoding/json"
 	"path/filepath"
+	"reflect"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/gen"
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"
+	toml "github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
-	"github.com/vetcher/go-astra/types"
 )
 
 const (
@@ -26,17 +26,13 @@ type grpcGokitConfig struct {
 	TransportPkg string
 	Client       struct {
 		DefaultAddr string
-		Trace       bool
-	}
-	Server struct {
-		Trace bool
 	}
 }
 
-func (p *grpcGokitPlugin) Generate(ctx microgen.Context, args json.RawMessage) (microgen.Context, error) {
+func (p *grpcGokitPlugin) Generate(ctx microgen.Context, args []byte) (microgen.Context, error) {
 	cfg := grpcGokitConfig{}
 	if len(args) > 0 {
-		err := json.Unmarshal(args, &cfg)
+		err := toml.Unmarshal(args, &cfg)
 		if err != nil {
 			return ctx, err
 		}
@@ -123,7 +119,7 @@ func (p *grpcGokitPlugin) client(ctx microgen.Context, cfg grpcGokitConfig) (mic
 		Return(Id("opts")),
 	)
 
-	if cfg.Client.Trace {
+	if ctx.Variables["trace"] == "true" {
 		f.Line().Func().Id("TracingClientOptions").Params(
 			Id("tracer").Qual(pkg.OpenTracing, "Tracer"),
 			Id("logger").Qual(pkg.GoKitLog, "Logger"),
@@ -187,7 +183,7 @@ func (p *grpcGokitPlugin) server(ctx microgen.Context, cfg grpcGokitConfig) (mic
 	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
 	f.HeaderComment(ctx.FileHeader)
 
-	if cfg.Server.Trace {
+	if ctx.Variables["trace"] == "true" {
 		f.Func().Id("TraceServer").Params(
 			Id("tracer").Qual(pkg.OpenTracing, "Tracer"),
 		).Params(
@@ -222,7 +218,7 @@ func (p *grpcGokitPlugin) server(ctx microgen.Context, cfg grpcGokitConfig) (mic
 	return ctx, nil
 }
 
-func (p *grpcGokitPlugin) protobufReplyType(ctx microgen.Context, cfg grpcGokitConfig, fn *types.Function) Code {
+func (p *grpcGokitPlugin) protobufReplyType(ctx microgen.Context, cfg grpcGokitConfig, fn microgen.Method) Code {
 	results := internal.RemoveErrorIfLast(fn.Results)
 	if len(results) == 0 {
 		return Qual(pkg.EmptyProtobuf, "Empty")
@@ -236,7 +232,7 @@ func (p *grpcGokitPlugin) protobufReplyType(ctx microgen.Context, cfg grpcGokitC
 	return Qual(cfg.Protobuf, fn.Name+_Response_)
 }
 
-type ProtobufTypeBinder func(types.Type) (string, bool)
+type ProtobufTypeBinder func(reflect.Type) (string, bool)
 
 var protobufBindings = make([]ProtobufTypeBinder, 0)
 
@@ -244,7 +240,7 @@ func RegisterProtobufTypeBinding(fn ProtobufTypeBinder) {
 	protobufBindings = append(protobufBindings, fn)
 }
 
-func findCustomBinding(t types.Type) (string, bool) {
+func findCustomBinding(t reflect.Type) (string, bool) {
 	n := len(protobufBindings)
 	for i := 0; i < n; i++ {
 		if s, ok := protobufBindings[n-i-1](t); ok {

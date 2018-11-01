@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -14,7 +13,7 @@ import (
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"
-	"github.com/vetcher/go-astra/types"
+	toml "github.com/pelletier/go-toml"
 )
 
 const (
@@ -36,18 +35,12 @@ type transportGokitConfig struct {
 		Chain   bool
 		Latency bool
 	}
-	Client struct {
-		Trace bool
-	}
-	Server struct {
-		Trace bool
-	}
 }
 
-func (p *transportGokitPlugin) Generate(ctx microgen.Context, args json.RawMessage) (microgen.Context, error) {
+func (p *transportGokitPlugin) Generate(ctx microgen.Context, args []byte) (microgen.Context, error) {
 	cfg := transportGokitConfig{}
 	if len(args) > 0 {
-		err := json.Unmarshal(args, &cfg)
+		err := toml.Unmarshal(args, &cfg)
 		if err != nil {
 			return ctx, err
 		}
@@ -187,10 +180,10 @@ func %[1]sChain(fns ...func(%[1]s) %[1]s) func(%[1]s) %[1]s {
 	return ctx, nil
 }
 
-func (p *transportGokitPlugin) serviceEndpointMethod(ctx microgen.Context, cfg transportGokitConfig, fn *types.Function) *Statement {
+func (p *transportGokitPlugin) serviceEndpointMethod(ctx microgen.Context, cfg transportGokitConfig, fn microgen.Method) *Statement {
 	normal := internal.NormalizeFunction(fn)
-	return internal.MethodDefinition(ctx, _Endpoints_, &normal.Function).
-		BlockFunc(p.serviceEndpointMethodBody(ctx, cfg, fn, &normal.Function))
+	return internal.MethodDefinition(_Endpoints_, normal.Method).
+		BlockFunc(p.serviceEndpointMethodBody(ctx, cfg, fn, normal.Method))
 }
 
 func (p *transportGokitPlugin) exchanges(ctx microgen.Context, cfg transportGokitConfig) (microgen.Context, error) {
@@ -241,7 +234,7 @@ func (p *transportGokitPlugin) exchanges(ctx microgen.Context, cfg transportGoki
 	return ctx, nil
 }
 
-func (p *transportGokitPlugin) serviceEndpointMethodBody(ctx microgen.Context, cfg transportGokitConfig, fn *types.Function, normal *types.Function) func(g *Group) {
+func (p *transportGokitPlugin) serviceEndpointMethodBody(ctx microgen.Context, cfg transportGokitConfig, fn microgen.Method, normal microgen.Method) func(g *Group) {
 	reqName := "request"
 	respName := "response"
 	return func(g *Group) {
@@ -269,7 +262,7 @@ func (p *transportGokitPlugin) serviceEndpointMethodBody(ctx microgen.Context, c
 	}
 }
 
-func endpointResponse(respName string, fn *types.Function) *Statement {
+func endpointResponse(respName string, fn microgen.Method) *Statement {
 	if len(internal.RemoveErrorIfLast(fn.Results)) > 0 {
 		return List(Id(respName), Id(internal.NameOfLastResultError(fn))).Op(":=")
 	}
@@ -291,7 +284,7 @@ func (p *transportGokitPlugin) client(ctx microgen.Context, cfg transportGokitCo
 	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
 	f.HeaderComment(ctx.FileHeader)
 
-	if cfg.Client.Trace {
+	if ctx.Variables["trace"] == "true" {
 		f.Func().Id("TraceClient").Params(
 			Id("tracer").Qual(pkg.OpenTracing, "Tracer"),
 		).Params(
@@ -341,7 +334,7 @@ func (p *transportGokitPlugin) server(ctx microgen.Context, cfg transportGokitCo
 	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
 	f.HeaderComment(ctx.FileHeader)
 
-	if cfg.Server.Trace {
+	if ctx.Variables["trace"] == "true" {
 		f.Func().Id("TraceServer").Params(
 			Id("tracer").Qual(pkg.OpenTracing, "Tracer"),
 		).Params(
@@ -382,25 +375,25 @@ func (p *transportGokitPlugin) server(ctx microgen.Context, cfg transportGokitCo
 //  	Visit *entity.Visit `json:"visit"`
 //  }
 //
-func exchange(ctx microgen.Context, cfg transportGokitConfig, name string, params []types.Variable) Code {
+func exchange(ctx microgen.Context, cfg transportGokitConfig, name string, params []microgen.Var) Code {
 	if len(params) == 0 {
 		return Comment("Formal exchange type, please do not delete.").Line().
 			Type().Id(name).Struct()
 	}
 	return Type().Id(name).StructFunc(func(g *Group) {
 		for _, param := range params {
-			g.Add(structField(ctx, cfg, &param))
+			g.Add(structField(ctx, cfg, param))
 		}
 	})
 }
 
-func structField(ctx microgen.Context, cfg transportGokitConfig, field *types.Variable) *Statement {
+func structField(ctx microgen.Context, cfg transportGokitConfig, field microgen.Var) *Statement {
 	s := Id(mstrings.ToUpperFirst(field.Name))
-	s.Add(internal.VarType(ctx, field.Type, false))
+	s.Add(internal.VarType(field.Type, false))
 	s.Tag(map[string]string{"json": selectNamingFunc(cfg.Exchanges.Style)(field.Name)})
-	if types.IsEllipsis(field.Type) {
+	/*if types.IsEllipsis(field.Type) {
 		s.Comment("This field was defined with ellipsis (...).")
-	}
+	}*/
 	return s
 }
 

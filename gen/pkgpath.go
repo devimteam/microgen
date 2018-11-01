@@ -5,7 +5,6 @@ package gen
 
 import (
 	"bytes"
-	"fmt"
 	"go/ast"
 	"go/build"
 	"go/parser"
@@ -19,6 +18,7 @@ import (
 	"strings"
 
 	lg "github.com/devimteam/microgen/logger"
+	"github.com/pkg/errors"
 )
 
 func GetPkgPath(fname string, isDir bool) (string, error) {
@@ -29,7 +29,12 @@ func GetPkgPath(fname string, isDir bool) (string, error) {
 		}
 		fname = filepath.Join(pwd, fname)
 	}
-	goModPath, _ := goModPath(fname, isDir)
+	goModPath, err := goModPath(fname, isDir)
+	if err != nil {
+		lg.Logger.Logln(lg.Info, errors.Wrap(err, "cannot find go.mod because of"))
+	} else {
+		lg.Logger.Logln(lg.Debug, "go.mod:", goModPath)
+	}
 	if strings.Contains(goModPath, "go.mod") {
 		pkgPath, err := getPkgPathFromGoMod(fname, isDir, goModPath)
 		if err != nil {
@@ -70,7 +75,7 @@ func goModPath(fname string, isDir bool) (string, error) {
 func getPkgPathFromGoMod(fname string, isDir bool, goModPath string) (string, error) {
 	modulePath := getModulePath(goModPath)
 	if modulePath == "" {
-		return "", fmt.Errorf("cannot determine module path from %s", goModPath)
+		return "", errors.Errorf("cannot determine module path from %s", goModPath)
 	}
 	rel := path.Join(modulePath, filePathToPackagePath(strings.TrimPrefix(fname, filepath.Dir(goModPath))))
 	if !isDir {
@@ -135,7 +140,7 @@ func GetRelatedFilePath(pkg string) (string, error) {
 			var err error
 			gopath, err = getDefaultGoPath()
 			if err != nil {
-				return "", fmt.Errorf("cannot determine GOPATH: %s", err)
+				return "", errors.Wrap(err, "cannot determine GOPATH")
 			}
 		}
 		gopathCache = gopath
@@ -147,7 +152,7 @@ func GetRelatedFilePath(pkg string) (string, error) {
 			return checkingPath, nil
 		}
 	}
-	return "", fmt.Errorf("file '%v' is not in GOROOT or GOPATH. Checked paths:\n%s", pkg, strings.Join(paths, "\n"))
+	return "", errors.Errorf("file '%v' is not in GOROOT or GOPATH. Checked paths:\n%s", pkg, strings.Join(paths, "\n"))
 }
 
 func allPaths(gopaths []string) []string {
@@ -168,7 +173,7 @@ func getPkgPathFromGOPATH(fname string, isDir bool) (string, error) {
 			var err error
 			gopath, err = getDefaultGoPath()
 			if err != nil {
-				return "", fmt.Errorf("cannot determine GOPATH: %s", err)
+				return "", errors.Wrap(err, "cannot determine GOPATH")
 			}
 		}
 		gopathCache = gopath
@@ -183,7 +188,7 @@ func getPkgPathFromGOPATH(fname string, isDir bool) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("file '%v' is not in GOPATH", fname)
+	return "", errors.Errorf("file '%s' is not in GOPATH. Checked paths:\n%s", fname, strings.Join(filepath.SplitList(gopathCache), "\n"))
 }
 
 func filePathToPackagePath(path string) string {
@@ -225,4 +230,9 @@ func PackageName(path string, decl string) (string, error) {
 		}
 	}
 	return alias, nil
+}
+
+// filters all files with tests
+func nonTestFilter(info os.FileInfo) bool {
+	return !strings.HasSuffix(info.Name(), "_test.go")
 }

@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"bytes"
-	"encoding/json"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/gen"
@@ -10,7 +9,7 @@ import (
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"
-	"github.com/vetcher/go-astra/types"
+	toml "github.com/pelletier/go-toml"
 )
 
 const recoveringPlugin = "recovering"
@@ -23,9 +22,9 @@ type recoveringConfig struct {
 	Stack bool
 }
 
-func (p *recoveringMiddlewarePlugin) Generate(ctx microgen.Context, args json.RawMessage) (microgen.Context, error) {
+func (p *recoveringMiddlewarePlugin) Generate(ctx microgen.Context, args []byte) (microgen.Context, error) {
 	cfg := recoveringConfig{}
-	err := json.Unmarshal(args, &cfg)
+	err := toml.Unmarshal(args, &cfg)
 	if err != nil {
 		return ctx, err
 	}
@@ -88,12 +87,12 @@ func (p *recoveringMiddlewarePlugin) Generate(ctx microgen.Context, args json.Ra
 	return ctx, nil
 }
 
-func (p *recoveringMiddlewarePlugin) recoverFunc(ctx microgen.Context, cfg recoveringConfig, signature *types.Function) *Statement {
-	return internal.MethodDefinition(ctx, ms.ToLowerFirst(cfg.Name), signature).
+func (p *recoveringMiddlewarePlugin) recoverFunc(ctx microgen.Context, cfg recoveringConfig, signature microgen.Method) *Statement {
+	return internal.MethodDefinition(ms.ToLowerFirst(cfg.Name), signature).
 		BlockFunc(p.recoverFuncBody(ctx, cfg, signature))
 }
 
-func (p *recoveringMiddlewarePlugin) recoverFuncBody(ctx microgen.Context, cfg recoveringConfig, signature *types.Function) func(g *Group) {
+func (p *recoveringMiddlewarePlugin) recoverFuncBody(ctx microgen.Context, cfg recoveringConfig, signature microgen.Method) func(g *Group) {
 	return func(g *Group) {
 		if !ctx.AllowedMethods[signature.Name] {
 			s := &Statement{}
