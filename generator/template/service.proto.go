@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/devimteam/microgen/generator/strings"
+	"github.com/devimteam/microgen/gen/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/vetcher/go-astra/types"
 )

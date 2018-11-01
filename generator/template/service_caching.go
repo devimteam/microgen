@@ -6,7 +6,7 @@ import (
 	"github.com/devimteam/microgen/internal"
 
 	. "github.com/dave/jennifer/jen"
-	mstrings "github.com/devimteam/microgen/generator/strings"
+	mstrings "github.com/devimteam/microgen/gen/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
 	"github.com/vetcher/go-astra/types"
 )

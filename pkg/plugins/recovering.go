@@ -5,7 +5,7 @@ import (
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/gen"
-	ms "github.com/devimteam/microgen/generator/strings"
+	ms "github.com/devimteam/microgen/gen/strings"
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"

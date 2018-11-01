@@ -78,6 +78,12 @@ func Exec(args ...string) {
 	if err != nil {
 		return
 	}
+
+	lg.Logger.Logln(logger.Debug, "Validate interface")
+	if err = ValidateInterface(&targetInterface); err != nil {
+		return
+	}
+
 	currentPkg, err := gen.GetPkgPath(".", true)
 	if err != nil {
 		return

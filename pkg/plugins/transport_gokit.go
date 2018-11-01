@@ -9,7 +9,7 @@ import (
 	. "github.com/dave/jennifer/jen"
 	go_case "github.com/devimteam/go-case"
 	"github.com/devimteam/microgen/gen"
-	mstrings "github.com/devimteam/microgen/generator/strings"
+	mstrings "github.com/devimteam/microgen/gen/strings"
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"
