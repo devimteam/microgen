@@ -8,7 +8,6 @@ require (
 	github.com/dave/jennifer v0.19.0
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/devimteam/go-case v1.0.0
-	github.com/fatih/structtag v0.1.0 // indirect
 	github.com/go-kit/kit v0.7.0
 	github.com/go-logfmt/logfmt v0.3.0 // indirect
 	github.com/go-stack/stack v1.7.0 // indirect
@@ -21,7 +20,7 @@ require (
 	github.com/pelletier/go-toml v1.2.0
 	github.com/pkg/errors v0.8.0
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/testify v0.0.0-20171018052257-2aa2c176b9da
+	github.com/stretchr/testify v0.0.0-20171018052257-2aa2c176b9da // indirect
 	github.com/vetcher/go-astra v1.2.0
 	golang.org/x/net v0.0.0-20180320002117-6078986fec03
 	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f

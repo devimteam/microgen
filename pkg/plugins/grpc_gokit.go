@@ -7,6 +7,7 @@ import (
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/gen"
+	mstrings "github.com/devimteam/microgen/gen/strings"
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"
@@ -183,25 +184,52 @@ func (p *grpcGokitPlugin) server(ctx microgen.Context, cfg grpcGokitConfig) (mic
 	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
 	f.HeaderComment(ctx.FileHeader)
 
-	if ctx.Variables["trace"] == "true" {
-		f.Func().Id("TraceServer").Params(
-			Id("tracer").Qual(pkg.OpenTracing, "Tracer"),
-		).Params(
-			Func().Params(Id("endpoints").Id(_Endpoints_)).Params(Id(_Endpoints_)),
-		).Block(
-			Return().Func().Params(Id("endpoints").Id(_Endpoints_)).Params(Id(_Endpoints_)).
-				BlockFunc(func(body *Group) {
-					body.Return(Id(_Endpoints_).Values(DictFunc(func(d Dict) {
-						for _, signature := range ctx.Interface.Methods {
-							if ctx.AllowedMethods[signature.Name] {
-								// CreateComment_Endpoint:   latency(dur, "CreateComment")(endpoints.CreateComment_Endpoint),
-								d[Id(join_(signature.Name, "Endpoint"))] = Qual(pkg.GoKitOpenTracing, "TraceServer").Call(Id("tracer"),
-									Lit(signature.Name)).Call(Id("endpoints").Dot(join_(signature.Name, "Endpoint")))
-							}
-						}
-					})))
-				}),
+	f.Type().Id(mstrings.ToLowerFirst(ctx.Interface.Name) + "Server").StructFunc(func(g *Group) {
+		for _, method := range ctx.Interface.Methods {
+			if !ctx.AllowedMethods[method.Name] {
+				continue
+			}
+			g.Id(mstrings.ToLowerFirst(method.Name)).Qual(pkg.GoKitGRPC, "Handler")
+		}
+	}).Line()
+
+	f.Func().Id("NewGRPCServer").
+		ParamsFunc(func(p *Group) {
+			p.Id("endpoints").Op("*").Qual(cfg.TransportPkg, _Endpoints_)
+			if ctx.Variables["trace"] == "true" {
+				p.Id("logger").Qual(pkg.GoKitLog, "Logger")
+			}
+			if ctx.Variables["trace"] == "true" {
+				p.Id("tracer").Qual(pkg.OpenTracing, "Tracer")
+			}
+			p.Id("opts").Op("...").Qual(pkg.GoKitGRPC, "ServerOption")
+		}).Params(
+		Qual(cfg.Protobuf, mstrings.ToUpperFirst(ctx.Interface.Name)+"Server"),
+	).
+		Block(
+			Return().Op("&").Id(mstrings.ToLowerFirst(ctx.Interface.Name) + "Server").Values(DictFunc(func(g Dict) {
+				for _, m := range ctx.Interface.Methods {
+					if !ctx.AllowedMethods[m.Name] {
+						continue
+					}
+					g[(&Statement{}).Id(mstrings.ToLowerFirst(m.Name))] = Qual(pkg.GoKitGRPC, "NewServer").
+						Call(
+							Line().Id("endpoints").Dot(join_(m.Name, "Endpoint")),
+							Line().Id(join_("_Decode", m.Name, _Request_)),
+							Line().Id(join_("_Encode", m.Name, _Response_)),
+							Line().Add(p.serverOpts(ctx, m)).Op("...").Line(),
+						)
+				}
+			}),
+			),
 		)
+	f.Line()
+
+	for _, signature := range ctx.Interface.Methods {
+		if !ctx.AllowedMethods[signature.Name] {
+			continue
+		}
+		f.Add(p.grpcServerFunc(signature, ctx.Interface)).Line()
 	}
 
 	outfile := microgen.File{
@@ -216,6 +244,29 @@ func (p *grpcGokitPlugin) server(ctx microgen.Context, cfg grpcGokitConfig) (mic
 	outfile.Content = b.Bytes()
 	ctx.Files = append(ctx.Files, outfile)
 	return ctx, nil
+}
+
+func (p *grpcGokitPlugin) grpcServerFunc(signature microgen.Method, i *microgen.Interface) *Statement {
+	return Func().
+		Params(Id(internal.Rec(mstrings.ToLowerFirst(i.Name)+"Server")).Op("*").Id(mstrings.ToLowerFirst(i.Name)+"Server")).
+		Id(signature.Name).
+		Call(Id("ctx").Qual(pkg.Context, "Context"), Id("req").Add(p.grpcServerReqStruct(signature))).
+		Params(p.grpcServerRespStruct(signature), Error()).
+		BlockFunc(p.grpcServerFuncBody(signature, i))
+}
+
+func (p *grpcGokitPlugin) grpcServerReqStruct(cfg grpcGokitConfig, fn microgen.Method) *Statement {
+	args := internal.RemoveContextIfFirst(fn.Args)
+	if len(args) == 0 {
+		return Op("*").Qual(pkg.EmptyProtobuf, "Empty")
+	}
+	if len(args) == 1 {
+		str, ok := findCustomBinding(args[0].Type)
+		if ok {
+			return Id(str)
+		}
+	}
+	return Op("*").Qual(cfg.Protobuf, fn.Name+_Request_)
 }
 
 func (p *grpcGokitPlugin) protobufReplyType(ctx microgen.Context, cfg grpcGokitConfig, fn microgen.Method) Code {
