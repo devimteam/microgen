@@ -142,7 +142,17 @@ func getListFromComments(prefix string, comments []string) []string {
 		if !strings.HasPrefix(comments[i], prefix) {
 			continue
 		}
-		res = append(res, strings.Split(strings.Replace(comments[i][len(prefix):], " ", "", -1), ",")...)
+		res = append(res,
+			strings.Split(
+				strings.Replace(
+					strings.Replace(
+						comments[i][len(prefix):], " ", "", -1,
+					),
+					":", "", -1,
+				),
+				",",
+			)...,
+		)
 	}
 	return res
 }

@@ -9,6 +9,7 @@ type UserService interface {
 	CreateUser(ctx context.Context, user User) (id string, err error)
 	UpdateUser(ctx context.Context, user User) (err error)
 	GetUser(ctx context.Context, id string) (user User, err error)
+	//logs-len: results
 	FindUsers(ctx context.Context) (results map[string]User, err error)
 	CreateComment(ctx context.Context, comment Comment) (id string, err error)
 	GetComment(ctx context.Context, id string) (comment Comment, err error)

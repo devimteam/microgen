@@ -66,7 +66,10 @@ func (M loggingMiddleware) FindUsers(arg_0 context.Context) (res_0 map[string]se
 	defer func(begin time.Time) {
 		M.logger.Log(
 			"method", "FindUsers",
-			"response", log_LoggingMiddleware_FindUsers_Response{Results: res_0},
+			"response", log_LoggingMiddleware_FindUsers_Response{
+				LenResults: len(res_0),
+				Results:    res_0,
+			},
 			"err", res_1,
 			"took", time.Since(begin))
 	}(time.Now())
@@ -127,7 +130,8 @@ type (
 		User service.User
 	}
 	log_LoggingMiddleware_FindUsers_Response struct {
-		Results map[string]service.User
+		Results    map[string]service.User
+		LenResults int `json:"len(Results)"`
 	}
 	log_LoggingMiddleware_CreateComment_Request struct {
 		Comment service.Comment
