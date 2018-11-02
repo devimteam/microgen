@@ -50,10 +50,11 @@ func Var(v microgen.Var) *jen.Statement {
 
 func VarType(field reflect.Type, allowEllipsis bool) *jen.Statement {
 	c := &jen.Statement{}
-	for field != nil {
+Loop:
+	for {
 		if field.PkgPath() != "" {
 			c.Qual(field.PkgPath(), field.Name())
-			break
+			break Loop
 		}
 		switch field.Kind() {
 		case reflect.Array:
@@ -70,17 +71,17 @@ func VarType(field reflect.Type, allowEllipsis bool) *jen.Statement {
 			}
 			field = field.Elem()
 		case reflect.Func:
-			field = nil
+			break Loop
 		case reflect.Interface:
 			if field.NumMethod() == 0 {
 				c.Interface()
 			} else if field == ErrorType {
 				c.Error()
 			}
-			field = nil
+			break Loop
 		case reflect.Map:
 			c.Map(VarType(field.Key(), false)).Add(VarType(field.Elem(), false))
-			field = nil
+			break Loop
 		case reflect.Ptr:
 			c.Op("*")
 			field = field.Elem()
@@ -90,7 +91,7 @@ func VarType(field reflect.Type, allowEllipsis bool) *jen.Statement {
 			field.Name()
 		default:
 			c.Id(field.String())
-			field = nil
+			break Loop
 		}
 	}
 	return c

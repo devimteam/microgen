@@ -6,16 +6,17 @@ package transportgrpc
 import (
 	"context"
 	"errors"
+
 	pb "github.com/devimteam/microgen/examples/protobuf"
 	transport "github.com/devimteam/microgen/examples/usersvc/pkg/transport"
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
 func _Encode_CreateUser_Request(ctx context.Context, request interface{}) (interface{}, error) {
-	if request == nil {
+	req, ok := request.(*transport.CreateUserRequest)
+	if !ok {
 		return nil, errors.New("nil CreateUserRequest")
 	}
-	req := request.(*transport.CreateUserRequest)
 	reqUser, err := UserToProto(req.User)
 	if err != nil {
 		return nil, err

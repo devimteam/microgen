@@ -21,6 +21,7 @@ func ValidateInterface(iface *Interface) error {
 // * First argument is context.Context.
 // * Last result is error.
 // * All params have names.
+// * Not a raw interface, function or struct.
 func validateFunction(fn Method) (errs []error) {
 	// do not validate methods with `//microgen:-`
 	if FetchTags(fn.Docs, "//"+Microgen).Has("-") {
@@ -74,9 +75,9 @@ func isRawStruct(t reflect.Type) bool {
 	}
 	switch t.Kind() {
 	case reflect.Ptr, reflect.Slice, reflect.Array, reflect.Chan:
-		return isRawInterface(t.Elem())
+		return isRawStruct(t.Elem())
 	case reflect.Map:
-		return isRawInterface(t.Key()) && isRawInterface(t.Elem())
+		return isRawStruct(t.Key()) && isRawStruct(t.Elem())
 	case reflect.Struct:
 		return true
 	default:
@@ -90,9 +91,9 @@ func isRawFunc(t reflect.Type) bool {
 	}
 	switch t.Kind() {
 	case reflect.Ptr, reflect.Slice, reflect.Array, reflect.Chan:
-		return isRawInterface(t.Elem())
+		return isRawFunc(t.Elem())
 	case reflect.Map:
-		return isRawInterface(t.Key()) && isRawInterface(t.Elem())
+		return isRawFunc(t.Key()) && isRawFunc(t.Elem())
 	case reflect.Func:
 		return true
 	default:

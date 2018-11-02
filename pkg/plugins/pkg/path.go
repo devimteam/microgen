@@ -6,6 +6,7 @@ const (
 	Runtime = "runtime"
 	Context = "context"
 	Strconv = "strconv"
+	Errors  = "errors"
 
 	GoKitLog         = "github.com/go-kit/kit/log"
 	GoKitEndpoint    = "github.com/go-kit/kit/endpoint"
