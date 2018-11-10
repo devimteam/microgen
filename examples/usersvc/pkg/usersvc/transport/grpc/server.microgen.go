@@ -3,20 +3,132 @@
 package grpc
 
 import (
+	"context"
+	pb "github.com/devimteam/microgen/examples/usersvc/pb"
+	transport "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc/transport"
+	log "github.com/go-kit/kit/log"
 	opentracing "github.com/go-kit/kit/tracing/opentracing"
+	grpc "github.com/go-kit/kit/transport/grpc"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	opentracinggo "github.com/opentracing/opentracing-go"
 )
 
-func TraceServer(tracer opentracinggo.Tracer) func(endpoints Endpoints) Endpoints {
-	return func(endpoints Endpoints) Endpoints {
-		return Endpoints{
-			CreateComment_Endpoint:   opentracing.TraceServer(tracer, "CreateComment")(endpoints.CreateComment_Endpoint),
-			CreateUser_Endpoint:      opentracing.TraceServer(tracer, "CreateUser")(endpoints.CreateUser_Endpoint),
-			FindUsers_Endpoint:       opentracing.TraceServer(tracer, "FindUsers")(endpoints.FindUsers_Endpoint),
-			GetComment_Endpoint:      opentracing.TraceServer(tracer, "GetComment")(endpoints.GetComment_Endpoint),
-			GetUserComments_Endpoint: opentracing.TraceServer(tracer, "GetUserComments")(endpoints.GetUserComments_Endpoint),
-			GetUser_Endpoint:         opentracing.TraceServer(tracer, "GetUser")(endpoints.GetUser_Endpoint),
-			UpdateUser_Endpoint:      opentracing.TraceServer(tracer, "UpdateUser")(endpoints.UpdateUser_Endpoint),
-		}
+type userServiceServer struct {
+	createUser      grpc.Handler
+	updateUser      grpc.Handler
+	getUser         grpc.Handler
+	findUsers       grpc.Handler
+	createComment   grpc.Handler
+	getComment      grpc.Handler
+	getUserComments grpc.Handler
+}
+
+func NewGRPCServer(endpoints *transport.Endpoints, logger log.Logger, tracer opentracinggo.Tracer, opts ...grpc.ServerOption) pb.UserServiceServer {
+	return &userServiceServer{
+		createComment: grpc.NewServer(
+			endpoints.CreateComment_Endpoint,
+			_Decode_CreateComment_Request,
+			_Encode_CreateComment_Response,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "CreateComment", logger)))...,
+		),
+		createUser: grpc.NewServer(
+			endpoints.CreateUser_Endpoint,
+			_Decode_CreateUser_Request,
+			_Encode_CreateUser_Response,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "CreateUser", logger)))...,
+		),
+		findUsers: grpc.NewServer(
+			endpoints.FindUsers_Endpoint,
+			_Decode_FindUsers_Request,
+			_Encode_FindUsers_Response,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "FindUsers", logger)))...,
+		),
+		getComment: grpc.NewServer(
+			endpoints.GetComment_Endpoint,
+			_Decode_GetComment_Request,
+			_Encode_GetComment_Response,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "GetComment", logger)))...,
+		),
+		getUser: grpc.NewServer(
+			endpoints.GetUser_Endpoint,
+			_Decode_GetUser_Request,
+			_Encode_GetUser_Response,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "GetUser", logger)))...,
+		),
+		getUserComments: grpc.NewServer(
+			endpoints.GetUserComments_Endpoint,
+			_Decode_GetUserComments_Request,
+			_Encode_GetUserComments_Response,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "GetUserComments", logger)))...,
+		),
+		updateUser: grpc.NewServer(
+			endpoints.UpdateUser_Endpoint,
+			_Decode_UpdateUser_Request,
+			_Encode_UpdateUser_Response,
+			append(opts, grpc.ServerBefore(
+				opentracing.GRPCToContext(tracer, "UpdateUser", logger)))...,
+		),
 	}
+}
+
+func (S *userServiceServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (string, error) {
+	_, resp, err := S.createUser.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(string), nil
+}
+
+func (S *userServiceServer) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (empty.Empty, error) {
+	_, resp, err := S.updateUser.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(empty.Empty), nil
+}
+
+func (S *userServiceServer) GetUser(ctx context.Context, req string) (pb.GetUserResponse, error) {
+	_, resp, err := S.getUser.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(pb.GetUserResponse), nil
+}
+
+func (S *userServiceServer) FindUsers(ctx context.Context, req *empty.Empty) (pb.FindUsersResponse, error) {
+	_, resp, err := S.findUsers.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(pb.FindUsersResponse), nil
+}
+
+func (S *userServiceServer) CreateComment(ctx context.Context, req *pb.CreateCommentRequest) (string, error) {
+	_, resp, err := S.createComment.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(string), nil
+}
+
+func (S *userServiceServer) GetComment(ctx context.Context, req string) (pb.GetCommentResponse, error) {
+	_, resp, err := S.getComment.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(pb.GetCommentResponse), nil
+}
+
+func (S *userServiceServer) GetUserComments(ctx context.Context, req string) (pb.GetUserCommentsResponse, error) {
+	_, resp, err := S.getUserComments.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(pb.GetUserCommentsResponse), nil
 }

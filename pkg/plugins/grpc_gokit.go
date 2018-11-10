@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -67,6 +68,10 @@ func (p *grpcGokitPlugin) Generate(ctx microgen.Context, args []byte) (microgen.
 		return ctx, err
 	}
 	ctx, err = p.endpointConverters(ctx, cfg)
+	if err != nil {
+		return ctx, err
+	}
+	ctx, err = p.typeConverters(ctx, cfg)
 	if err != nil {
 		return ctx, err
 	}
@@ -260,11 +265,11 @@ func (p *grpcGokitPlugin) endpointConverters(ctx microgen.Context, cfg grpcGokit
 	ImportAliasFromSources = true
 	pluginPackagePath, err := gen.GetPkgPath(filepath.Join(cfg.Path, filename), false)
 	if err != nil {
-		return ctx, err
+		return ctx, errors.Wrap(err, filename)
 	}
 	pkgName, err := gen.PackageName(pluginPackagePath, "")
 	if err != nil {
-		return ctx, err
+		return ctx, errors.Wrap(err, filename)
 	}
 	f := NewFilePathName(pluginPackagePath, pkgName)
 	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
@@ -289,7 +294,7 @@ func (p *grpcGokitPlugin) endpointConverters(ctx microgen.Context, cfg grpcGokit
 		}
 		f.Line().Add(p.encodeRequest(ctx, signature, cfg))
 	}
-	for _, signature := range responseEncoders {
+	/*for _, signature := range responseEncoders {
 		if cfg.CheckNil {
 			f.Line().Var().Id(endpointErrorName(signature, _Response_)).Op("=").Add(endpointError(signature, _Response_))
 		}
@@ -306,6 +311,51 @@ func (p *grpcGokitPlugin) endpointConverters(ctx microgen.Context, cfg grpcGokit
 			f.Line().Var().Id(endpointErrorName(signature, _Response_)).Op("=").Add(endpointError(signature, _Response_))
 		}
 		f.Line().Add(p.decodeResponse(ctx, signature))
+	}*/
+
+	outfile := microgen.File{
+		Name: grpcKitPlugin,
+		Path: filepath.Join(cfg.Path, filename),
+	}
+	var b bytes.Buffer
+	err = f.Render(&b)
+	if err != nil {
+		return ctx, errors.Wrap(err, filename)
+	}
+	outfile.Content = b.Bytes()
+	ctx.Files = append(ctx.Files, outfile)
+	return ctx, nil
+}
+
+func (p *grpcGokitPlugin) typeConverters(ctx microgen.Context, cfg grpcGokitConfig) (microgen.Context, error) {
+	const filename = "type_converters.microgen.go"
+	ImportAliasFromSources = true
+	pluginPackagePath, err := gen.GetPkgPath(filepath.Join(cfg.Path, filename), false)
+	if err != nil {
+		return ctx, errors.Wrap(err, filename)
+	}
+	pkgName, err := gen.PackageName(pluginPackagePath, "")
+	if err != nil {
+		return ctx, errors.Wrap(err, filename)
+	}
+	f := NewFilePathName(pluginPackagePath, pkgName)
+	f.ImportAlias(ctx.SourcePackageImport, serviceAlias)
+	f.ImportAlias(cfg.Protobuf, "pb")
+	f.ImportAlias(pkg.GoKitGRPC, "grpckit")
+	f.HeaderComment(ctx.FileHeader)
+
+	generated := make(map[reflect.Type][]string)
+	for lenConvMap(generated) < lenConvMap(requiredConverters) {
+		converters := listRequiredConverters()
+		fmt.Println(lenConvMap(generated), "vs", len(converters))
+		for _, c := range converters {
+			if ss, ok := generated[c.t]; ok && mstrings.IsInStringSlice(c.name, ss) {
+				continue
+			}
+			fmt.Println(c.t)
+			f.Add(typeToProtoConverter(c.t, c.name, cfg))
+			generated[c.t] = append(generated[c.t], c.name)
+		}
 	}
 
 	outfile := microgen.File{
@@ -315,7 +365,7 @@ func (p *grpcGokitPlugin) endpointConverters(ctx microgen.Context, cfg grpcGokit
 	var b bytes.Buffer
 	err = f.Render(&b)
 	if err != nil {
-		return ctx, err
+		return ctx, errors.Wrap(err, filename)
 	}
 	outfile.Content = b.Bytes()
 	ctx.Files = append(ctx.Files, outfile)
@@ -326,19 +376,23 @@ var ctx_contextContext = Id(_ctx_).Qual(pkg.Context, "Context")
 
 func (p *grpcGokitPlugin) encodeRequest(ctx microgen.Context, fn microgen.Method, cfg grpcGokitConfig) *Statement {
 	methodParams := internal.RemoveContextIfFirst(fn.Args)
-	fullName := "request"
-	shortName := "req"
+	const fullName = "request"
+	const shortName = "req"
 	return Line().Func().Id(join_("_Encode", fn.Name, _Request_)).Params(ctx_contextContext, Id(fullName).Interface()).
 		Params(Interface(), Error()).BlockFunc(
 		func(group *Group) {
-			if len(methodParams) == 1 {
-				str, ok := findCustomBinding(methodParams[0].Type)
+			switch len(methodParams) {
+			case 0:
+				group.Return(Op("&").Qual(pkg.EmptyProtobuf, "Empty").Values())
+				return
+			case 1:
+				marshal, _, ok := findCustomBindingLayouts(methodParams[0].Type)
 				if ok {
-					group.Id(str)
+					group.Return(Id(fmt.Sprintf(marshal, fullName)))
 					return
 				}
-			}
-			if len(methodParams) > 0 {
+				fallthrough
+			default:
 				if cfg.CheckNil {
 					group.List(Id(shortName), Id("ok")).Op(":=").Id(fullName).Assert(Op("*").Qual(cfg.TransportPkg, join_(fn.Name, _Request_)))
 					group.If(Id("!ok")).Block(
@@ -347,14 +401,14 @@ func (p *grpcGokitPlugin) encodeRequest(ctx microgen.Context, fn microgen.Method
 				} else {
 					group.Id(shortName).Op(":=").Id(fullName).Assert(Op("*").Qual(cfg.TransportPkg, join_(fn.Name, _Request_)))
 				}
-				exchangeType := reflect.StructOf(makeStructFromVars(methodParams))
 				//for _, field := range methodParams {
 				//	if _, ok := golangTypeToProto(ctx, "", &field); !ok {
 				//		group.Add(convertCustomType(shortName, typeToProto(field.Type, 0), &field))
 				//	}
 				//}
 			}
-			group.Return().List(p.grpcEndpointConvReturn(ctx, fn, methodParams, join_(fn.Name, _Request_), shortName, golangTypeToProto, cfg.Protobuf), Nil())
+			exchangeType := reflect.StructOf(makeStructFromVars(methodParams))
+			group.Return().Id(converterToProtoName(exchangeType, join_(fn.Name, _Request_), true)).Call(Id(shortName))
 		},
 	).Line()
 }
@@ -370,22 +424,22 @@ func makeStructFromVars(vv []microgen.Var) []reflect.StructField {
 	return x
 }
 
-func (p *grpcGokitPlugin) grpcEndpointConvReturn(
-	t reflect.Type,
-	cfg grpcGokitConfig,
-) *Statement {
-	return protobufType(t, cfg).Values(DictFunc(func(dict Dict) {
-		for i := range t.Name() {
-			dict[Id(mstrings.ToUpperFirst(""))] = Line()
-		}
-	}))
-	/*return Op("&").Qual(pkg, strNameFn(fn)).Values(DictFunc(func(dict Dict) {
-		for _, field := range methodParams {
-			req, _ := typeToProtoFn(ctx, rec, &field)
-			dict[Id(mstrings.ToUpperFirst(field.Name))] = Line().Add(req)
-		}
-	}))*/
-}
+//func (p *grpcGokitPlugin) grpcEndpointConvReturn(
+//	t reflect.Type,
+//	cfg grpcGokitConfig,
+//) *Statement {
+//	return protobufType(t, cfg).Values(DictFunc(func(dict Dict) {
+//		for i := range t.Name() {
+//			dict[Id(mstrings.ToUpperFirst(""))] = Line()
+//		}
+//	}))
+//	/*return Op("&").Qual(pkg, strNameFn(fn)).Values(DictFunc(func(dict Dict) {
+//		for _, field := range methodParams {
+//			req, _ := typeToProtoFn(ctx, rec, &field)
+//			dict[Id(mstrings.ToUpperFirst(field.Name))] = Line().Add(req)
+//		}
+//	}))*/
+//}
 
 var protobufCodec = reflect.TypeOf(new(ProtobufCodec)).Elem()
 
@@ -397,9 +451,15 @@ func typeToProtoConverter(t reflect.Type, structName string, cfg grpcGokitConfig
 	} else {
 		binding = protobufType(t, cfg)
 	}*/
-	s.Func().Id(converterToProtoName(t, structName)).
-		Params(ctx_contextContext, Id("value").Add(internal.VarType(t, false))).
-		Params(Id("converted").Add(protobufType(t, cfg)), Err(), Error()).
+	currentType := func() Code {
+		if structName != "" {
+			return Qual(cfg.TransportPkg, structName)
+		}
+		return internal.VarType(t, false)
+	}()
+	s.Func().Id(converterToProtoName(t, structName, true)).
+		Params(ctx_contextContext, Id("value").Add(currentType)).
+		Params(protobufType(t, structName, cfg), Error()).
 		BlockFunc(func(body *Group) {
 			/*if t.Implements(protobufCodec) {
 				body.Return(Id("Value").Dot("ToProtobuf").Call())
@@ -410,26 +470,26 @@ func typeToProtoConverter(t reflect.Type, structName string, cfg grpcGokitConfig
 				body.If(Id("value").Op("==").Nil()).Block(
 					Return(Nil(), Nil()),
 				).Line()
-				body.Return(Id(converterToProtoName(t.Elem(), "")).Call(Op("*").Id("value")))
-			case reflect.Array:
+				body.Return(Id(converterToProtoName(t.Elem(), "", true)).Call(Op("*").Id("value")))
+			case reflect.Slice:
 				body.If(Id("value").Op("==").Nil()).Block(
 					Return(Nil(), Nil()),
 				)
-				body.Id("converted").Op("=").Make(protobufType(t, cfg), Len(Id("value")))
+				body.Var().Err().Error()
+				body.Id("converted").Op(":=").Make(protobufType(t, structName, cfg), Len(Id("value")))
 				body.For(Id(_i_).Op(":=").Range().Id("value")).BlockFunc(func(block *Group) {
 					if t.Elem().Implements(protobufCodec) {
 						block.Id("value").Index(Id(_i_)).Dot("ToProtobuf").Call()
 					} else {
-						block.List(Id("temp"), Err()).Id(converterToProtoName(t.Elem(), "")).Call(Id("value").Index(Id(_i_)))
+						block.List(Id("converted").Index(Id("i")), Err()).Op("=").Id(converterToProtoName(t.Elem(), "", true)).Call(Id("value").Index(Id(_i_)))
 					}
 					block.If(Err().Op("!=").Nil()).Block(
 						Return(Nil(), Err()),
 					)
-					block.Id("converted").Index(Id("i")).Op("=").Id("temp")
 				})
 				body.Return(Id("converted"), Nil())
 			case reflect.Struct:
-				body.Id("converted").Op("=").New(protobufType(t, cfg))
+				//body.Id("converted").Op("=").New(protobufType(t, structName, cfg))
 				for fIdx, n := 0, t.NumField(); fIdx < n; fIdx++ {
 					field := t.Field(fIdx)
 					if field.Anonymous {
@@ -445,16 +505,16 @@ func typeToProtoConverter(t reflect.Type, structName string, cfg grpcGokitConfig
 						)
 						continue
 					}
-					if fn, _, ok := findCustomBindingLayouts(t); ok {
+					if fn, _, ok := findCustomBindingLayouts(field.Type); ok {
 						body.List(Id("_" + field.Name)).Op(":=").Id(fmt.Sprintf(fn, "value."+field.Name))
 						continue
 					}
-					body.List(Id("_"+field.Name), Err()).Op(":=").Id(converterToProtoName(field.Type, "")).Call(Id("value").Index(Id(_i_)))
+					body.List(Id("_"+field.Name), Err()).Op(":=").Id(converterToProtoName(field.Type, "", true)).Call(Id("value").Dot(field.Name))
 					body.If(Err().Op("!=").Nil()).Block(
 						Return(Nil(), Err()),
 					)
 				}
-				body.Add(protobufType(t, cfg)).Block(DictFunc(func(d Dict) {
+				body.Return(protobufType(t, structName, cfg).Values(DictFunc(func(d Dict) {
 					for fIdx, n := 0, t.NumField(); fIdx < n; fIdx++ {
 						field := t.Field(fIdx)
 						if field.Anonymous {
@@ -463,27 +523,53 @@ func typeToProtoConverter(t reflect.Type, structName string, cfg grpcGokitConfig
 						if r := []rune(field.Name)[0]; unicode.IsLower(r) {
 							continue // unexported
 						}
-						d[Id(field.Name)] = Line().Id("_" + field.Name)
+						d[Id(field.Name)] = Id("_" + field.Name)
 					}
-				}))
+				})), Nil())
 			}
 		})
 	return s
 }
 
-func protobufType(t reflect.Type, cfg grpcGokitConfig) *Statement {
+func protobufType(t reflect.Type, structName string, cfg grpcGokitConfig) *Statement {
 	c := &Statement{}
 Loop:
 	for {
 		if t.PkgPath() != "" {
-			c.Qual(cfg.Protobuf, t.Name())
+			if structName != "" {
+				c.Qual(cfg.Protobuf, structName)
+			} else {
+				c.Qual(cfg.Protobuf, t.Name())
+			}
 			break Loop
+		}
+		switch t.Kind() {
+		case reflect.Array:
+			c.Index(Lit(t.Len()))
+			t = t.Elem()
+		case reflect.Func:
+			break Loop
+		case reflect.Interface:
+			if t.NumMethod() == 0 {
+				c.Interface()
+			} else if t == internal.ErrorType {
+				c.Error()
+			}
+			break Loop
+		case reflect.Ptr:
+			c.Op("*")
+			t = t.Elem()
+		case reflect.Slice:
+			c.Index()
+			t = t.Elem()
+		case reflect.Struct:
+			c.Qual(cfg.Protobuf, structName)
+			break Loop
+		default:
+			panic(errors.Errorf("unexpected type '%s' in 'protobufType' of kind '%s'", t.String(), t.Kind()))
 		}
 		/*
 			switch field.Kind() {
-			case reflect.Array:
-				c.Index(jen.Lit(field.Len()))
-				field = field.Elem()
 			case reflect.Chan:
 				switch field.ChanDir() {
 				case reflect.RecvDir:
@@ -496,23 +582,9 @@ Loop:
 				field = field.Elem()
 			case reflect.Func:
 				field = nil
-			case reflect.Interface:
-				if field.NumMethod() == 0 {
-					c.Interface()
-				} else if field == ErrorType {
-					c.Error()
-				}
-				field = nil
 			case reflect.Map:
 				c.Map(VarType(field.Key(), false)).Add(VarType(field.Elem(), false))
 				field = nil
-			case reflect.Ptr:
-				c.Op("*")
-				field = field.Elem()
-			case reflect.Slice:
-				c.Index()
-				field = field.Elem()
-				field.Name()
 			default:
 				c.Id(field.String())
 				field = nil
@@ -521,10 +593,62 @@ Loop:
 	return c
 }
 
-var requiredConverters = make(map[reflect.Type]string)
+func listRequiredConverters() requiredConvertersSlice {
+	x := make(requiredConvertersSlice, 0)
+	for directType, typeNames := range requiredConverters {
+		for i := range typeNames {
+			x = append(x, requiredConvertersType{name: typeNames[i], t: directType})
+		}
+	}
+	sort.Sort(x)
+	return x
+}
 
-func converterToProtoName(t reflect.Type, typeName string) string {
-	requiredConverters[t] = typeName
+func lenConvMap(someMap map[reflect.Type][]string) int {
+	sum := 0
+	for _, typeNames := range someMap {
+		sum += len(typeNames)
+	}
+	return sum
+}
+
+type (
+	requiredConvertersType struct {
+		name string
+		t    reflect.Type
+	}
+	requiredConvertersSlice []requiredConvertersType
+)
+
+func (s requiredConvertersSlice) Len() int {
+	return len(s)
+}
+
+func (s requiredConvertersSlice) Less(i, j int) bool {
+	return converterToProtoName(s[i].t, s[i].name, false) < converterToProtoName(s[j].t, s[j].name, false)
+}
+
+func (s requiredConvertersSlice) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+var requiredConverters = make(map[reflect.Type][]string)
+
+func converterToProtoName(t reflect.Type, typeName string, register bool) string {
+	if register {
+		// check, if this type already registered
+		if old, ok := requiredConverters[t]; ok {
+			// check, if this name of anonymous type is already registered.
+			if !mstrings.IsInStringSlice(typeName, old) {
+				// append to existed list of anonymous types
+				requiredConverters[t] = append(old, typeName)
+			}
+		} else {
+			// not registered, create new
+			requiredConverters[t] = []string{typeName}
+		}
+		fmt.Println("register", t, typeName, len(requiredConverters))
+	}
 
 	str := strings.Builder{}
 	str.WriteRune('_')
@@ -547,8 +671,15 @@ Loop:
 		case reflect.Ptr:
 			str.WriteRune('P')
 			t = t.Elem()
+		case reflect.Struct:
+			str.WriteRune('_')
+			str.WriteString(typeName)
+			break Loop
+		case reflect.String, reflect.Int:
+			str.WriteString(t.Kind().String())
+			break Loop
 		default:
-			panic(fmt.Errorf("unexpected type '%s' in 'converterToProtoName'", t.String()))
+			panic(errors.Errorf("unexpected type '%s' in 'converterToProtoName' of kind '%s'", t.String(), t.Kind()))
 		}
 	}
 	str.WriteString("_ToProtobuf")
@@ -629,24 +760,26 @@ func endpointErrorName(fn microgen.Method, entityType string) string {
 	return join_(mstrings.ToLowerFirst(fn.Name), entityType)
 }
 
-type ProtobufTypeBinder func(origType reflect.Type) (pbType reflect.Type, ok bool)
+type ProtobufTypeBinder func(origType reflect.Type) (pbType reflect.Type, marshalLayout, unmarshalLayout string, ok bool)
 
 type protobufBinder struct {
-	fn              ProtobufTypeBinder
-	marshalLayout   string
-	unmarshalLayout string
+	fn ProtobufTypeBinder
 }
 
 var protobufBindings = make([]protobufBinder, 0)
 
-func RegisterProtobufTypeBinding(fn ProtobufTypeBinder, marshalLayout, unmarshalLayout string) {
-	protobufBindings = append(protobufBindings, protobufBinder{fn: fn, marshalLayout: marshalLayout, unmarshalLayout: unmarshalLayout})
+func init() {
+	RegisterProtobufTypeBinding(stdBinding)
+}
+
+func RegisterProtobufTypeBinding(fn ProtobufTypeBinder) {
+	protobufBindings = append(protobufBindings, protobufBinder{fn: fn})
 }
 
 func findCustomBinding(t reflect.Type) (reflect.Type, bool) {
 	n := len(protobufBindings)
 	for i := 0; i < n; i++ {
-		if s, ok := protobufBindings[n-i-1].fn(t); ok {
+		if s, _, _, ok := protobufBindings[n-i-1].fn(t); ok {
 			return s, true
 		}
 	}
@@ -656,8 +789,8 @@ func findCustomBinding(t reflect.Type) (reflect.Type, bool) {
 func findCustomBindingLayouts(t reflect.Type) (marshal string, unmarshal string, ok bool) {
 	n := len(protobufBindings)
 	for i := 0; i < n; i++ {
-		if _, ok := protobufBindings[n-i-1].fn(t); ok {
-			return protobufBindings[n-i-1].marshalLayout, protobufBindings[n-i-1].unmarshalLayout, true
+		if _, marshalLayout, unmarshalLayout, ok := protobufBindings[n-i-1].fn(t); ok {
+			return marshalLayout, unmarshalLayout, true
 		}
 	}
 	return "", "", false
@@ -672,3 +805,19 @@ type ProtobufCodec interface {
 	// FromProtobuf(y Y) (x X, err error) of this type as a converter from protobuf to golang
 	ProtobufDecoder()
 }
+
+func stdBinding(t reflect.Type) (reflect.Type, string, string, bool) {
+	fmt.Println("check", t, intType, t == intType)
+	switch t {
+	case stringType, bytesType, intType:
+		return t, "%s", "%s", true
+	default:
+		return nil, "", "", false
+	}
+}
+
+var (
+	stringType = reflect.TypeOf(new(string)).Elem()
+	bytesType  = reflect.TypeOf(new([]byte)).Elem()
+	intType    = reflect.TypeOf(new(int)).Elem()
+)

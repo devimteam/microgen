@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"bytes"
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -279,7 +278,6 @@ func (p *loggingMiddlewarePlugin) loggerLogContent(
 }
 
 func (p *loggingMiddlewarePlugin) fillMap(cfg loggingConfig, fn microgen.Method, params, normal []microgen.Var) *Statement {
-	fmt.Println(fn, normal, params)
 	return Values(DictFunc(func(d Dict) {
 		ignore := cfg.Ignore[fn.Name]
 		lenParams := cfg.Len[fn.Name]

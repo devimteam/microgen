@@ -19,14 +19,14 @@ func NewGRPCClient(conn *grpc.ClientConn, addr string, opts ...grpckit.ClientOpt
 			conn, addr, "CreateComment",
 			_Encode_CreateComment_Request,
 			_Decode_CreateComment_Response,
-			pb.CreateCommentResponse{},
+			string{},
 			opts...,
 		).Endpoint(),
 		CreateUser_Endpoint: grpckit.NewClient(
 			conn, addr, "CreateUser",
 			_Encode_CreateUser_Request,
 			_Decode_CreateUser_Response,
-			pb.CreateUserResponse{},
+			string{},
 			opts...,
 		).Endpoint(),
 		FindUsers_Endpoint: grpckit.NewClient(
