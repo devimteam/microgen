@@ -14,6 +14,7 @@ const (
 	GoKitOpenTracing = "github.com/go-kit/kit/tracing/opentracing"
 	GoKitGRPC        = "github.com/go-kit/kit/transport/grpc"
 	OpenTracing      = "github.com/opentracing/opentracing-go"
+	OpenTracingExt   = "github.com/opentracing/opentracing-go/ext"
 
 	GoogleGRPC    = "google.golang.org/grpc"
 	EmptyProtobuf = "github.com/golang/protobuf/ptypes/empty"

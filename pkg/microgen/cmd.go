@@ -117,12 +117,17 @@ func Exec(args ...string) {
 			if !ok {
 				return errors.Errorf("plugin '%s' not registered", plugin)
 			}
-			params, ok := pcfg.Get("params").(*toml.Tree)
-			if !ok {
+			var input string
+			switch params := pcfg.Get("params").(type) {
+			case *toml.Tree:
+				input = params.String()
+			case nil:
+				input = ""
+			default:
 				return errors.Errorf("params should be tree, but got '%T'", pcfg.Get("params"))
 			}
-			lg.Logger.Logln(logger.Debug, "\t", i+1, "\texec plugin", "'"+plugin+"'", "with args:", params.String())
-			ctx, err = p.Generate(ctx, []byte(params.String()))
+			lg.Logger.Logln(logger.Debug, "\t", i+1, "\texec plugin", "'"+plugin+"'", "with args:", input)
+			ctx, err = p.Generate(ctx, []byte(input))
 			if err != nil {
 				return errors.Wrapf(err, "plugin '%s' returns an error", plugin)
 			}

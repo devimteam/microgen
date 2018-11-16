@@ -5,6 +5,7 @@ import "github.com/devimteam/microgen/pkg/microgen"
 func init() {
 	microgen.RegisterPlugin(loggingPlugin, &loggingMiddlewarePlugin{})
 	microgen.RegisterPlugin(recoveringPlugin, &recoveringMiddlewarePlugin{})
+	microgen.RegisterPlugin(opentracingPlugin, &opentracingMiddlewarePlugin{})
 	microgen.RegisterPlugin(transportKitPlugin, &transportGokitPlugin{})
 	microgen.RegisterPlugin(grpcKitPlugin, &grpcGokitPlugin{})
 }
@@ -18,4 +19,5 @@ const (
 	_Request_    = "Request"
 	_Response_   = "Response"
 	_i_          = "i"
+	_tracer_     = "tracer"
 )

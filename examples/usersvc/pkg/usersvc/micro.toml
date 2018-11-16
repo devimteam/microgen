@@ -23,6 +23,9 @@ plugin = "logging"
   inline = true
 
 [[generate]]
+plugin = "opentracing"
+
+[[generate]]
 plugin = "recovering"
 
   [generate.params]

@@ -36,6 +36,7 @@ func Run(plugins []string, iface microgen.Interface, currentPkg string, keep boo
 		return err
 	}
 
+	logger.Logger.Logln(logger.Detail, "write to", f.Name())
 	if n, err := f.Write(mainContent); err != nil {
 		return errors.Wrap(err, "writing error")
 	} else if n != len(mainContent) {
@@ -45,6 +46,7 @@ func Run(plugins []string, iface microgen.Interface, currentPkg string, keep boo
 	if err := f.Close(); err != nil {
 		return errors.Wrap(err, "close error")
 	}
+	logger.Logger.Logln(logger.Detail, "compile and run", f.Name())
 	if err := runFile(genName); err != nil {
 		return errors.Wrap(err, "run new generator")
 	}
@@ -100,7 +102,7 @@ return m.Type
 }
 
 func runFile(name string) error {
-	cmd := exec.Command("go", "run", name)
+	cmd := exec.Command("go", "run", "-tags=\"microgen-ignore\"", name)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	return cmd.Run()
