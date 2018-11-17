@@ -101,7 +101,7 @@ func Exec(args ...string) {
 		SourcePackageImport: currentPkg,
 		FileHeader:          DefaultFileHeader,
 		Files:               nil,
-		Variables:           prepareVariables(cfg.Get(VariablesSection).(*toml.Tree)),
+		Variables:           prepareVariables(cfg.Get(VariablesSection)),
 		AllowedMethods:      makeAllowedMethods(&targetInterface),
 	}
 	lg.Logger.Logln(logger.Debug, "Exec plugins")
@@ -161,24 +161,30 @@ func Exec(args ...string) {
 	lg.Logger.Logln(logger.Info, "Done")
 }
 
-func prepareVariables(varsTree *toml.Tree) map[string]string {
+func prepareVariables(varsTree interface{}) map[string]string {
 	m := make(map[string]string)
-	for _, k := range varsTree.Keys() {
-		value := varsTree.Get(k)
-		if value == nil {
-			continue
-		}
-		switch v := value.(type) {
-		case string:
-			m[k] = os.ExpandEnv(v)
-		case int64:
-			m[k] = strconv.FormatInt(v, 64)
-		case uint64:
-			m[k] = strconv.FormatUint(v, 64)
-		case float64:
-			m[k] = strconv.FormatFloat(v, 'f', -1, 64)
-		case bool:
-			m[k] = strconv.FormatBool(v)
+	if varsTree == nil {
+		return m
+	}
+	switch v := varsTree.(type) {
+	case *toml.Tree:
+		for _, k := range v.Keys() {
+			value := v.Get(k)
+			if value == nil {
+				continue
+			}
+			switch v := value.(type) {
+			case string:
+				m[k] = os.ExpandEnv(v)
+			case int64:
+				m[k] = strconv.FormatInt(v, 64)
+			case uint64:
+				m[k] = strconv.FormatUint(v, 64)
+			case float64:
+				m[k] = strconv.FormatFloat(v, 'f', -1, 64)
+			case bool:
+				m[k] = strconv.FormatBool(v)
+			}
 		}
 	}
 	return m
