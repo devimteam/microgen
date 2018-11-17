@@ -3,11 +3,10 @@ package plugins
 import (
 	"bytes"
 
-	"github.com/devimteam/microgen/internal"
-
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/gen"
 	ms "github.com/devimteam/microgen/gen/strings"
+	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"
 	toml "github.com/pelletier/go-toml"
@@ -24,6 +23,8 @@ type opentracingConfig struct {
 	Name      string
 	Type      TraceType
 	Component string
+	MarkError bool
+	LogError  bool
 }
 
 type TraceType int
@@ -92,17 +93,16 @@ func (p *opentracingMiddlewarePlugin) Generate(ctx microgen.Context, args []byte
 		f.Line().Add(p.tracingFunc(ctx, cfg, fn))
 	}
 
-	outfile := microgen.File{
-		Name: opentracingPlugin,
-		Path: cfg.Path,
-	}
 	var b bytes.Buffer
 	err = f.Render(&b)
 	if err != nil {
 		return ctx, err
 	}
-	outfile.Content = b.Bytes()
-	ctx.Files = append(ctx.Files, outfile)
+	ctx.Files = append(ctx.Files, microgen.File{
+		Name:    opentracingPlugin,
+		Path:    cfg.Path,
+		Content: b.Bytes(),
+	})
 	return ctx, nil
 }
 
@@ -127,20 +127,55 @@ func (p *opentracingMiddlewarePlugin) tracingFuncBody(ctx microgen.Context, cfg 
 			return
 		}
 		// todo: add special parameters
-		var extendSpan, setTag, specialParameters Code
+		var extendSpan, defaultSpan, specialParameters Code
 		switch cfg.Type {
 		case TraceClient:
-			extendSpan = Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(Lit(fn.Name), Qual(pkg.OpenTracing, "ChildOf").Call(Id(_parentSpan_)))
-			setTag = Qual(pkg.OpenTracingExt, "SpanKindRPCClient").Dot("Set").Call(Id(_opSpan_))
+			extendSpan = Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(
+				Line().Lit(fn.Name),
+				Qual(pkg.OpenTracingExt, "SpanKindRPCClient"),
+				Line().Qual(pkg.OpenTracing, "ChildOf").Call(Id(_parentSpan_).Dot("Context").Call()),
+				Line(),
+			)
+			defaultSpan = Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(
+				Line().Lit(fn.Name),
+				Line().Qual(pkg.OpenTracingExt, "SpanKindRPCClient"),
+				Line(),
+			)
 		case TraceServer:
-			extendSpan = Id(_opSpan_).Op("=").Id(_parentSpan_).Dot("SetOperationName").Call(Lit(fn.Name))
-			setTag = Qual(pkg.OpenTracingExt, "SpanKindRPCServer").Dot("Set").Call(Id(_opSpan_))
+			extendSpan = Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(
+				Line().Lit(fn.Name),
+				Line().Qual(pkg.OpenTracingExt, "RPCServerOption").Call(Id(_parentSpan_).Dot("Context").Call()),
+				Line(),
+			)
+			defaultSpan = Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(
+				Line().Lit(fn.Name),
+				Line().Qual(pkg.OpenTracingExt, "SpanKindRPCServer"),
+				Line(),
+			)
 		case TraceProducer:
-			extendSpan = Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(Lit(fn.Name), Qual(pkg.OpenTracing, "FollowsFrom").Call(Id(_parentSpan_)))
-			setTag = Qual(pkg.OpenTracingExt, "SpanKindProducer").Dot("Set").Call(Id(_opSpan_))
+			extendSpan = Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(
+				Line().Lit(fn.Name),
+				Line().Qual(pkg.OpenTracingExt, "SpanKindProducer"),
+				Line().Qual(pkg.OpenTracing, "FollowsFrom").Call(Id(_parentSpan_).Dot("Context").Call()),
+				Line(),
+			)
+			defaultSpan = Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(
+				Line().Lit(fn.Name),
+				Line().Qual(pkg.OpenTracingExt, "SpanKindProducer"),
+				Line(),
+			)
 		case TraceConsumer:
-			extendSpan = Id(_opSpan_).Op("=").Id(_parentSpan_).Dot("SetOperationName").Call(Lit(fn.Name))
-			setTag = Qual(pkg.OpenTracingExt, "SpanKindConsumer").Dot("Set").Call(Id(_opSpan_))
+			extendSpan = Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(
+				Line().Lit(fn.Name),
+				Line().Qual(pkg.OpenTracingExt, "SpanKindConsumer"),
+				Line().Qual(pkg.OpenTracing, "FollowsFrom").Call(Id(_parentSpan_).Dot("Context").Call()),
+				Line(),
+			)
+			defaultSpan = Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(
+				Line().Lit(fn.Name),
+				Line().Qual(pkg.OpenTracingExt, "SpanKindConsumer"),
+				Line(),
+			)
 		default:
 			s := &Statement{}
 			if len(normal.Results) > 0 {
@@ -154,14 +189,28 @@ func (p *opentracingMiddlewarePlugin) tracingFuncBody(ctx microgen.Context, cfg 
 		g.If(Id(_parentSpan_).Op(":=").Qual(pkg.OpenTracing, "SpanFromContext").Call(Id(internal.FirstArgName(normal.Method))), Id(_parentSpan_).Op("!=").Nil()).Block(
 			extendSpan,
 		).Else().Block(
-			Id(_opSpan_).Op("=").Id(rec).Dot(_tracer_).Dot("StartSpan").Call(Lit(fn.Name)),
+			defaultSpan,
 		)
-		g.Defer().Id(_opSpan_).Dot("Finish").Call()
-		g.Add(setTag)
+		if cfg.LogError || cfg.MarkError {
+			g.Defer().Func().Params().BlockFunc(func(block *Group) {
+				if cfg.LogError {
+					block.Id(_opSpan_).Dot("LogFields").Call(Qual(pkg.OpenTracingLog, "Error").Call(Id(internal.NameOfLastResultError(normal.Method))))
+				}
+				if cfg.MarkError {
+					block.Qual(pkg.OpenTracingExt, "Error").Dot("Set").Call(Id(_opSpan_), Id(internal.NameOfLastResultError(normal.Method)).Op("!=").Nil())
+				}
+				block.Id(_opSpan_).Dot("Finish").Call()
+			}).Call()
+		} else {
+			g.Defer().Id(_opSpan_).Dot("Finish").Call()
+		}
 		if cfg.Component != "" {
 			g.Qual(pkg.OpenTracingExt, "Component").Dot("Set").Call(Id(_opSpan_), Lit(cfg.Component))
 		}
-		g.Add(specialParameters)
+		if specialParameters != nil {
+			g.Add(specialParameters)
+		}
+		g.Id(internal.FirstArgName(normal.Method)).Op("=").Qual(pkg.OpenTracing, "ContextWithSpan").Call(Id(internal.FirstArgName(normal.Method)), Id(_opSpan_))
 		g.Return().Id(internal.Rec(ms.ToLowerFirst(cfg.Name))).Dot(_next_).Dot(fn.Name).Call(internal.ParamNames(normal.Args))
 	}
 }

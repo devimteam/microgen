@@ -102,7 +102,7 @@ return m.Type
 }
 
 func runFile(name string) error {
-	cmd := exec.Command("go", "run", "-tags=\"microgen-ignore\"", name)
+	cmd := exec.Command("go", "run", name)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	return cmd.Run()

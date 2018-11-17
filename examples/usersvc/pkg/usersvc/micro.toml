@@ -25,6 +25,11 @@ plugin = "logging"
 [[generate]]
 plugin = "opentracing"
 
+  [generate.params]
+  path = "service/tracing.microgen.go"
+  markerror = true
+  logerror = true
+
 [[generate]]
 plugin = "recovering"
 

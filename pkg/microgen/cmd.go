@@ -109,7 +109,7 @@ func Exec(args ...string) {
 		fnErr := func() error {
 			defer func() {
 				if e := recover(); e != nil {
-					err = errors.Errorf("recover panic from plugin. Message: %v", e)
+					panic(errors.Errorf("recover panic from plugin. Message: %v", e))
 				}
 			}()
 			plugin := pcfg.GetDefault("plugin", "").(string)
@@ -126,7 +126,7 @@ func Exec(args ...string) {
 			default:
 				return errors.Errorf("params should be tree, but got '%T'", pcfg.Get("params"))
 			}
-			lg.Logger.Logln(logger.Debug, "\t", i+1, "\texec plugin", "'"+plugin+"'", "with args:", input)
+			lg.Logger.Logln(logger.Debug, "\t", i+1, "\texec plugin", "'"+plugin+"'", "with args:\n", input)
 			ctx, err = p.Generate(ctx, []byte(input))
 			if err != nil {
 				return errors.Wrapf(err, "plugin '%s' returns an error", plugin)
