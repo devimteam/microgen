@@ -190,7 +190,7 @@ func prepareVariables(varsTree interface{}) map[string]string {
 	return m
 }
 
-const MkdirPermissions = 0777
+const mkdirPermissions = 0777
 
 func makeDirsAndCreateFile(p string) (*os.File, error) {
 	outpath, err := filepath.Abs(p)
@@ -201,7 +201,7 @@ func makeDirsAndCreateFile(p string) (*os.File, error) {
 
 	_, err = os.Stat(dir)
 	if os.IsNotExist(err) {
-		err = os.MkdirAll(dir, MkdirPermissions)
+		err = os.MkdirAll(dir, mkdirPermissions)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to create directory '%s'", outpath)
 		}
