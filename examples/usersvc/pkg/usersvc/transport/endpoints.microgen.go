@@ -38,7 +38,7 @@ func (E Endpoints) GetUser(arg_0 context.Context, arg_1 string) (res_0 service.U
 	response, res_1 := E.GetUser_Endpoint(arg_0, &request)
 	return response.(*GetUser_Response).User, res_1
 }
-func (E Endpoints) FindUsers(arg_0 context.Context) (res_0 map[string]service.User, res_1 error) {
+func (E Endpoints) FindUsers(arg_0 context.Context) (res_0 []*service.User, res_1 error) {
 	request := FindUsers_Request{}
 	response, res_1 := E.FindUsers_Endpoint(arg_0, &request)
 	return response.(*FindUsers_Response).Results, res_1

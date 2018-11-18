@@ -74,7 +74,7 @@ func (M recoveringMiddleware) GetUser(ctx context.Context, id string) (user serv
 	return M.next.GetUser(ctx, id)
 }
 
-func (M recoveringMiddleware) FindUsers(ctx context.Context) (results map[string]service.User, err error) {
+func (M recoveringMiddleware) FindUsers(ctx context.Context) (results []*service.User, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			const size = 64 << 10

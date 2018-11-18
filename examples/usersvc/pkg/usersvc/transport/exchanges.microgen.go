@@ -41,7 +41,7 @@ type FindUsers_Request struct{}
 
 //easyjson:json
 type FindUsers_Response struct {
-	Results map[string]service.User `json:"results"`
+	Results []*service.User `json:"results"`
 }
 
 //easyjson:json

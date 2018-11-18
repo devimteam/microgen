@@ -58,7 +58,7 @@ func (L debugLogging) GetUser(arg_0 context.Context, arg_1 string) (res_0 servic
 	return L.next.GetUser(arg_0, arg_1)
 }
 
-func (L debugLogging) FindUsers(arg_0 context.Context) (res_0 map[string]service.User, res_1 error) {
+func (L debugLogging) FindUsers(arg_0 context.Context) (res_0 []*service.User, res_1 error) {
 	defer func() {
 		L.logger.Log(
 			"method", "FindUsers",

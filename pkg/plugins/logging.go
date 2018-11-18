@@ -64,7 +64,7 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args []byte) (m
 
 	filename := filepath.Base(cfg.Path)
 	if cfg.Easyjson {
-		f.Id("//go:generate easyjson -all " + filename).Line()
+		f.Comment("//go:generate easyjson -all " + filename).Line()
 	}
 
 	f.Var().Id("_").Qual(ctx.SourcePackageImport, ctx.Interface.Name).Op("=&").Id(ms.ToLowerFirst(cfg.Name)).Block()
@@ -96,7 +96,7 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args []byte) (m
 	if !cfg.Inline {
 		if len(ctx.Interface.Methods) > 0 {
 			if cfg.Easyjson {
-				f.Id("//easyjson:json")
+				f.Comment("//easyjson:json")
 			}
 			f.Type().Op("(")
 		}

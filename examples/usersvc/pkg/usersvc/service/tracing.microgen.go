@@ -95,7 +95,7 @@ func (M tracingMiddleware) GetUser(arg_0 context.Context, arg_1 string) (res_0 s
 	return M.next.GetUser(arg_0, arg_1)
 }
 
-func (M tracingMiddleware) FindUsers(arg_0 context.Context) (res_0 map[string]service.User, res_1 error) {
+func (M tracingMiddleware) FindUsers(arg_0 context.Context) (res_0 []*service.User, res_1 error) {
 	var operationSpan opentracinggo.Span
 	if parentSpan := opentracinggo.SpanFromContext(arg_0); parentSpan != nil {
 		operationSpan = M.tracer.StartSpan(

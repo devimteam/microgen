@@ -10,7 +10,7 @@ type UserService interface {
 	UpdateUser(ctx context.Context, user User) (err error)
 	GetUser(ctx context.Context, id string) (user User, err error)
 	//logs-len: results
-	FindUsers(ctx context.Context) (results map[string]User, err error)
+	FindUsers(ctx context.Context) (results []*User, err error)
 	CreateComment(ctx context.Context, comment Comment) (id string, err error)
 	GetComment(ctx context.Context, id string) (comment Comment, err error)
 	GetUserComments(ctx context.Context, userId string) (list []Comment, err error)
