@@ -23,20 +23,6 @@ func __CreateComment_Request_FromProtobuf(ctx context.Context, value pb.CreateCo
 	}
 	return transport.CreateComment_Request{Comment: _Comment}, nil
 }
-func __CreateComment_Response_ToProtobuf(ctx context.Context, value transport.CreateComment_Response) (pb.CreateComment_Response, error) {
-	_Comment, err := __usersvcComment_ToProtobuf(value.Comment)
-	if err != nil {
-		return nil, err
-	}
-	return pb.CreateComment_Response{Comment: _Comment}, nil
-}
-func __CreateComment_Response_FromProtobuf(ctx context.Context, value pb.CreateComment_Response) (transport.CreateComment_Response, error) {
-	_Comment, err := __usersvcComment_FromProtobuf(value.Comment)
-	if err != nil {
-		return nil, err
-	}
-	return transport.CreateComment_Response{Comment: _Comment}, nil
-}
 func __CreateUser_Request_ToProtobuf(ctx context.Context, value transport.CreateUser_Request) (pb.CreateUser_Request, error) {
 	_User, err := __usersvcUser_ToProtobuf(value.User)
 	if err != nil {
@@ -50,20 +36,6 @@ func __CreateUser_Request_FromProtobuf(ctx context.Context, value pb.CreateUser_
 		return nil, err
 	}
 	return transport.CreateUser_Request{User: _User}, nil
-}
-func __CreateUser_Response_ToProtobuf(ctx context.Context, value transport.CreateUser_Response) (pb.CreateUser_Response, error) {
-	_User, err := __usersvcUser_ToProtobuf(value.User)
-	if err != nil {
-		return nil, err
-	}
-	return pb.CreateUser_Response{User: _User}, nil
-}
-func __CreateUser_Response_FromProtobuf(ctx context.Context, value pb.CreateUser_Response) (transport.CreateUser_Response, error) {
-	_User, err := __usersvcUser_FromProtobuf(value.User)
-	if err != nil {
-		return nil, err
-	}
-	return transport.CreateUser_Response{User: _User}, nil
 }
 func __FindUsers_Response_ToProtobuf(ctx context.Context, value transport.FindUsers_Response) (pb.FindUsers_Response, error) {
 	_Results, err := _SP_usersvcUser_ToProtobuf(value.Results)
@@ -134,20 +106,6 @@ func __UpdateUser_Request_FromProtobuf(ctx context.Context, value pb.UpdateUser_
 		return nil, err
 	}
 	return transport.UpdateUser_Request{User: _User}, nil
-}
-func __UpdateUser_Response_ToProtobuf(ctx context.Context, value transport.UpdateUser_Response) (pb.UpdateUser_Response, error) {
-	_User, err := __usersvcUser_ToProtobuf(value.User)
-	if err != nil {
-		return nil, err
-	}
-	return pb.UpdateUser_Response{User: _User}, nil
-}
-func __UpdateUser_Response_FromProtobuf(ctx context.Context, value pb.UpdateUser_Response) (transport.UpdateUser_Response, error) {
-	_User, err := __usersvcUser_FromProtobuf(value.User)
-	if err != nil {
-		return nil, err
-	}
-	return transport.UpdateUser_Response{User: _User}, nil
 }
 func _SP_usersvcUser_ToProtobuf(ctx context.Context, value []*service.User) ([]*pb.User, error) {
 	if value == nil {
@@ -255,13 +213,11 @@ func _P_usersvcUser_ToProtobuf(ctx context.Context, value *service.User) (*pb.Us
 	if value == nil {
 		return nil, nil
 	}
-
 	return __usersvcUser_ToProtobuf(*value)
 }
 func _P_usersvcUser_FromProtobuf(ctx context.Context, value *pb.User) (*service.User, error) {
 	if value == nil {
 		return nil, nil
 	}
-
 	return __usersvcUser_FromProtobuf(*value)
 }
