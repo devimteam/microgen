@@ -380,10 +380,14 @@ func (p *grpcGokitPlugin) protoFile(ctx microgen.Context, cfg grpcGokitConfig) (
 	f.Ln()
 	f.Lnf(`option go_package = "%s;pb";`, cfg.Protobuf)
 	f.Ln()
-	protoPkg := cfg.Client.DefaultAddr
-	if strings.HasSuffix(protoPkg, ctx.Interface.Name) {
-		protoPkg = protoPkg[:len(protoPkg)-len(ctx.Interface.Name)]
+	protoPkg := cfg.Proto.Package
+	if protoPkg == "" {
+		protoPkg = cfg.Client.DefaultAddr
+		if strings.HasSuffix(protoPkg, ctx.Interface.Name) {
+			protoPkg = protoPkg[:len(protoPkg)-len(ctx.Interface.Name)]
+		}
 	}
+
 	f.Lnf("package %s;", protoPkg)
 	f.Ln()
 	{
@@ -415,7 +419,7 @@ func (p *grpcGokitPlugin) protoFile(ctx microgen.Context, cfg grpcGokitConfig) (
 			{
 				args := internal.RemoveContextIfFirst(method.Args)
 				reqTypeName, externalImport := protoMessageName(args, join_(method.Name, _Request_))
-				if externalImport == nil {
+				if externalImport == nil && reqTypeName == join_(method.Name, _Request_) {
 					d.Ln()
 					d.Lnf("message %s {", reqTypeName)
 					for i, arg := range args {
@@ -431,7 +435,7 @@ func (p *grpcGokitPlugin) protoFile(ctx microgen.Context, cfg grpcGokitConfig) (
 			{
 				params := internal.RemoveErrorIfLast(method.Results)
 				reqTypeName, externalImport := protoMessageName(params, join_(method.Name, _Response_))
-				if externalImport == nil {
+				if externalImport == nil && reqTypeName == join_(method.Name, _Response_) {
 					d.Ln()
 					d.Lnf("message %s {", reqTypeName)
 					for i, arg := range params {
@@ -442,6 +446,30 @@ func (p *grpcGokitPlugin) protoFile(ctx microgen.Context, cfg grpcGokitConfig) (
 						d.Lnf(tab+"%s %s = %d;", n, mstrings.ToSnakeCase(arg.Name), i+1)
 					}
 					d.Ln("}")
+				}
+			}
+		}
+		{
+			generated := make(map[reflect.Type][]string)
+			for lenConvMap(generated) < lenConvMap(protobufMessages) {
+				protobufMessages := listProtobufMessages()
+				fmt.Println(lenConvMap(generated), "vs", len(protobufMessages))
+				for _, c := range protobufMessages {
+					if ss, ok := generated[c.t]; ok && mstrings.IsInStringSlice(c.name, ss) {
+						continue
+					}
+					fmt.Println(c.t)
+					d.Ln()
+					d.Lnf("message %s {", c.name)
+					for i, n := 0, c.t.NumField(); i < n; i++ {
+						n, imp := protoTypeName(c.t.Field(i).Type, "")
+						if imp != nil {
+							imports[*imp] = struct{}{}
+						}
+						d.Lnf(tab+"%s %s = %d;", n, mstrings.ToSnakeCase(c.t.Field(i).Name), i+1)
+					}
+					d.Ln("}")
+					generated[c.t] = append(generated[c.t], c.name)
 				}
 			}
 		}
@@ -1010,9 +1038,23 @@ func protoMessageName(params []microgen.Var, def string) (string, *string) {
 
 var protobufMessages = make(map[reflect.Type][]string)
 
+func listProtobufMessages() requiredConvertersSlice {
+	x := make(requiredConvertersSlice, 0)
+	for directType, typeNames := range protobufMessages {
+		for i := range typeNames {
+			x = append(x, requiredConvertersType{name: typeNames[i], t: directType})
+		}
+	}
+	sort.Sort(x)
+	return x
+}
+
 func protoTypeName(v reflect.Type, typeName string) (t string, imp *string) {
 	if fieldType, requiredImport, ok := findCustomBindingProtoBinding(v); ok {
 		return fieldType, requiredImport
+	}
+	if typeName == "" && v.Name() != "" {
+		typeName = v.Name()
 	}
 	// check, if this type already registered
 	if old, ok := protobufMessages[v]; ok {
@@ -1023,7 +1065,9 @@ func protoTypeName(v reflect.Type, typeName string) (t string, imp *string) {
 		}
 	} else {
 		// not registered, create new
-		protobufMessages[v] = []string{typeName}
+		if v.Kind() == reflect.Struct {
+			protobufMessages[v] = []string{typeName}
+		}
 	}
 	switch v {
 	case stringType:

@@ -55,4 +55,7 @@ plugin = "go-kit-grpc"
   [generate.params]
   protobuf = "github.com/devimteam/microgen/examples/usersvc/pb"
   transportpkg = "transport"
-  genproto = true
+  [generate.params.proto]
+  gen = true
+  package = "devimteam.proto"
+  path = "./transport/protobuf/api.proto"
