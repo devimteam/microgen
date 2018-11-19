@@ -1,11 +1,11 @@
 package microgen
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -23,13 +23,13 @@ import (
 var (
 	fset = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
-	flagDstDir  = fset.String("dst", ".", "Destiny path.")
 	flagVerbose = fset.Int("v", logger.Common, "Sets microgen verbose level.")
 	flagDebug   = fset.Bool("debug", false, "Print all microgen messages. Equivalent to -v=100.")
 	flagConfig  = fset.String("config", "microgen.toml", "")
 	flagDry     = fset.Bool("dry", false, "Do everything except writing files.")
 	flagInit    = fset.Bool("init", false, "")
 	flagKeep    = fset.Bool("keep", false, "")
+	flagForce   = fset.Bool("force", false, "Forcing microgen to overwrite files, that was marked as 'edited manually'")
 )
 
 const (
@@ -147,14 +147,17 @@ func Exec(args ...string) {
 		lg.Logger.Logln(logger.Debug, "\t", i+1, "\tcreate\t", f.Path)
 		tgtFile, e := makeDirsAndCreateFile(f.Path)
 		if e != nil {
-			err = errors.Wrapf(e, "plugin '%s': during creating '%s' file", f.Name, f.Path)
+			err = errors.Wrapf(e, "plugin-file '%s': during creating '%s' file", f.Name, f.Path)
 			return
+		}
+		if tgtFile == nil {
+			continue
 		}
 		defer tgtFile.Close()
 		lg.Logger.Logln(logger.Debug, "\t", i+1, "\twrite\t", f.Path)
 		_, e = tgtFile.Write(f.Content)
 		if e != nil {
-			err = errors.Wrapf(e, "plugin '%s': during writing '%s' file", f.Name, f.Path)
+			err = errors.Wrapf(e, "plugin-file '%s': during writing '%s' file", f.Name, f.Path)
 			return
 		}
 	}
@@ -197,7 +200,7 @@ func makeDirsAndCreateFile(p string) (*os.File, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "unable to resolve path")
 	}
-	dir := path.Dir(outpath)
+	dir := filepath.Dir(outpath)
 
 	_, err = os.Stat(dir)
 	if os.IsNotExist(err) {
@@ -208,12 +211,37 @@ func makeDirsAndCreateFile(p string) (*os.File, error) {
 	} else if err != nil {
 		return nil, errors.WithMessage(err, "could not stat file")
 	}
+	if !*flagForce {
+		if marked, err := isMarkedManual(outpath); err != nil {
+			return nil, err
+		} else if marked {
+			lg.Logger.Logln(lg.Critical, "WARN skip write:", p, "is marked as 'edited manually'")
+			return nil, nil
+		}
+	}
 
 	tgtFile, err := os.Create(p)
 	if err != nil {
 		return nil, errors.WithMessage(err, "create file")
 	}
 	return tgtFile, nil
+}
+
+var manualMark = []byte("microgen:manual")
+
+func isMarkedManual(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	bts, err := bufio.NewReader(f).ReadBytes('\n')
+	if err != nil {
+		return false, errors.Wrap(err, "read bytes")
+	}
+	return bytes.Index(bts, manualMark) != -1, nil
 }
 
 func makeAllowedMethods(iface *Interface) map[string]bool {
@@ -270,14 +298,6 @@ func processConfig(pathToConfig string) (*toml.Tree, error) {
 		return nil, errors.WithMessage(err, "unmarshal config")
 	}
 	return tree, nil
-}
-
-func validateInterface(iface *types.Interface) error {
-	var errs []error
-	if len(iface.Methods) == 0 {
-		errs = append(errs, fmt.Errorf("%s does not have any methods", iface.Name))
-	}
-	return composeErrors(errs...)
 }
 
 func composeErrors(errs ...error) error {

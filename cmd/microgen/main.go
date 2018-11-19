@@ -22,6 +22,7 @@ var (
 	flagVerbose = flag.Int("v", lg.Common, "Sets microgen verbose level.")
 	flagDebug   = flag.Bool("debug", false, "Print all microgen messages. Equivalent to -v=100.")
 	flagKeep    = flag.Bool("keep", false, "Keeps bootstrapped file after execution.")
+	flagForce   = flag.Bool("force", false, "Forcing microgen to overwrite files, that was marked as 'edited manually'")
 )
 
 func init() {
