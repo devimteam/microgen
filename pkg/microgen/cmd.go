@@ -12,7 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devimteam/microgen/gen"
+	"github.com/devimteam/microgen/internal"
+
 	"github.com/devimteam/microgen/logger"
 	lg "github.com/devimteam/microgen/logger"
 	toml "github.com/pelletier/go-toml"
@@ -27,7 +28,6 @@ var (
 	flagDebug   = fset.Bool("debug", false, "Print all microgen messages. Equivalent to -v=100.")
 	flagConfig  = fset.String("config", "microgen.toml", "")
 	flagDry     = fset.Bool("dry", false, "Do everything except writing files.")
-	flagInit    = fset.Bool("init", false, "")
 	flagKeep    = fset.Bool("keep", false, "")
 	flagForce   = fset.Bool("force", false, "Forcing microgen to overwrite files, that was marked as 'edited manually'")
 )
@@ -84,7 +84,7 @@ func Exec(args ...string) {
 		return
 	}
 
-	currentPkg, err := gen.GetPkgPath(".", true)
+	currentPkg, err := internal.GetPkgPath(".", true)
 	if err != nil {
 		return
 	}

@@ -1,4 +1,4 @@
-package gen
+package internal
 
 // Copied from https://github.com/mailru/easyjson/pull/185 with some changes.
 // Thanks to @zelenin for original realization.

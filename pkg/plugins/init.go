@@ -3,7 +3,7 @@ package plugins
 import "github.com/devimteam/microgen/pkg/microgen"
 
 func init() {
-	microgen.RegisterPlugin(loggingPlugin, &loggingMiddlewarePlugin{})
+	microgen.RegisterPlugin(LoggingPlugin, &loggingMiddlewarePlugin{})
 	microgen.RegisterPlugin(recoveringPlugin, &recoveringMiddlewarePlugin{})
 	microgen.RegisterPlugin(opentracingPlugin, &opentracingMiddlewarePlugin{})
 	microgen.RegisterPlugin(transportKitPlugin, &transportGokitPlugin{})

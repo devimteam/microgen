@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/dave/jennifer/jen"
-	mstrings "github.com/devimteam/microgen/gen/strings"
+	mstrings "github.com/devimteam/microgen/internal/strings"
 	"github.com/devimteam/microgen/pkg/microgen"
 )
 

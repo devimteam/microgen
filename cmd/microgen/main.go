@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/devimteam/microgen/gen"
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/internal/bootstrap"
 	lg "github.com/devimteam/microgen/logger"
@@ -18,9 +17,10 @@ import (
 )
 
 var (
-	flagConfig  = flag.String("config", "microgen.yaml", "path to configuration file")
 	flagVerbose = flag.Int("v", lg.Common, "Sets microgen verbose level.")
 	flagDebug   = flag.Bool("debug", false, "Print all microgen messages. Equivalent to -v=100.")
+	flagConfig  = flag.String("config", "microgen.yaml", "path to configuration file")
+	flagDry     = flag.Bool("dry", false, "Do everything except writing files.")
 	flagKeep    = flag.Bool("keep", false, "Keeps bootstrapped file after execution.")
 	flagForce   = flag.Bool("force", false, "Forcing microgen to overwrite files, that was marked as 'edited manually'")
 )
@@ -58,7 +58,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	currentPkg, err := gen.GetPkgPath(".", true)
+	currentPkg, err := internal.GetPkgPath(".", true)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

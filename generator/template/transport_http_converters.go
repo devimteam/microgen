@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 
 	. "github.com/dave/jennifer/jen"
-	mstrings "github.com/devimteam/microgen/gen/strings"
 	"github.com/devimteam/microgen/generator/write_strategy"
+	mstrings "github.com/devimteam/microgen/internal/strings"
 	"github.com/vetcher/go-astra/types"
 )
 

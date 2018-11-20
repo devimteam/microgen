@@ -11,9 +11,8 @@ import (
 	"unicode"
 
 	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/gen"
-	mstrings "github.com/devimteam/microgen/gen/strings"
 	"github.com/devimteam/microgen/internal"
+	mstrings "github.com/devimteam/microgen/internal/strings"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"
 	toml "github.com/pelletier/go-toml"
@@ -58,7 +57,7 @@ func (p *grpcGokitPlugin) Generate(ctx microgen.Context, args []byte) (microgen.
 	if cfg.Path == "" {
 		cfg.Path = "transport/grpc"
 	}
-	resolvedPkgPath, err := gen.GetPkgPath(cfg.TransportPkg, true)
+	resolvedPkgPath, err := internal.GetPkgPath(cfg.TransportPkg, true)
 	if err != nil {
 		return ctx, err
 	}
@@ -92,11 +91,11 @@ func (p *grpcGokitPlugin) Generate(ctx microgen.Context, args []byte) (microgen.
 func (p *grpcGokitPlugin) client(ctx microgen.Context, cfg grpcGokitConfig) (microgen.Context, error) {
 	const filename = "client.microgen.go"
 	ImportAliasFromSources = true
-	pluginPackagePath, err := gen.GetPkgPath(filepath.Join(cfg.Path, filename), false)
+	pluginPackagePath, err := internal.GetPkgPath(filepath.Join(cfg.Path, filename), false)
 	if err != nil {
 		return ctx, err
 	}
-	pkgName, err := gen.PackageName(pluginPackagePath, "")
+	pkgName, err := internal.PackageName(pluginPackagePath, "")
 	if err != nil {
 		return ctx, err
 	}
@@ -177,11 +176,11 @@ func (p *grpcGokitPlugin) client(ctx microgen.Context, cfg grpcGokitConfig) (mic
 func (p *grpcGokitPlugin) server(ctx microgen.Context, cfg grpcGokitConfig) (microgen.Context, error) {
 	const filename = "server.microgen.go"
 	ImportAliasFromSources = true
-	pluginPackagePath, err := gen.GetPkgPath(filepath.Join(cfg.Path, filename), false)
+	pluginPackagePath, err := internal.GetPkgPath(filepath.Join(cfg.Path, filename), false)
 	if err != nil {
 		return ctx, err
 	}
-	pkgName, err := gen.PackageName(pluginPackagePath, "")
+	pkgName, err := internal.PackageName(pluginPackagePath, "")
 	if err != nil {
 		return ctx, err
 	}
@@ -254,11 +253,11 @@ func (p *grpcGokitPlugin) server(ctx microgen.Context, cfg grpcGokitConfig) (mic
 func (p *grpcGokitPlugin) endpointConverters(ctx microgen.Context, cfg grpcGokitConfig) (microgen.Context, error) {
 	const filename = "endpoint_converters.microgen.go"
 	ImportAliasFromSources = true
-	pluginPackagePath, err := gen.GetPkgPath(filepath.Join(cfg.Path, filename), false)
+	pluginPackagePath, err := internal.GetPkgPath(filepath.Join(cfg.Path, filename), false)
 	if err != nil {
 		return ctx, errors.Wrap(err, filename)
 	}
-	pkgName, err := gen.PackageName(pluginPackagePath, "")
+	pkgName, err := internal.PackageName(pluginPackagePath, "")
 	if err != nil {
 		return ctx, errors.Wrap(err, filename)
 	}
@@ -325,11 +324,11 @@ func (p *grpcGokitPlugin) endpointConverters(ctx microgen.Context, cfg grpcGokit
 func (p *grpcGokitPlugin) typeConverters(ctx microgen.Context, cfg grpcGokitConfig) (microgen.Context, error) {
 	const filename = "type_converters.microgen.go"
 	ImportAliasFromSources = true
-	pluginPackagePath, err := gen.GetPkgPath(filepath.Join(cfg.Path, filename), false)
+	pluginPackagePath, err := internal.GetPkgPath(filepath.Join(cfg.Path, filename), false)
 	if err != nil {
 		return ctx, errors.Wrap(err, filename)
 	}
-	pkgName, err := gen.PackageName(pluginPackagePath, "")
+	pkgName, err := internal.PackageName(pluginPackagePath, "")
 	if err != nil {
 		return ctx, errors.Wrap(err, filename)
 	}

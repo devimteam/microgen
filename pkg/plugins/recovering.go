@@ -4,9 +4,8 @@ import (
 	"bytes"
 
 	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/gen"
-	ms "github.com/devimteam/microgen/gen/strings"
 	"github.com/devimteam/microgen/internal"
+	ms "github.com/devimteam/microgen/internal/strings"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"
 	toml "github.com/pelletier/go-toml"
@@ -37,11 +36,11 @@ func (p *recoveringMiddlewarePlugin) Generate(ctx microgen.Context, args []byte)
 	outfile := microgen.File{}
 
 	ImportAliasFromSources = true
-	pluginPackagePath, err := gen.GetPkgPath(cfg.Path, false)
+	pluginPackagePath, err := internal.GetPkgPath(cfg.Path, false)
 	if err != nil {
 		return ctx, err
 	}
-	pkgName, err := gen.PackageName(pluginPackagePath, "")
+	pkgName, err := internal.PackageName(pluginPackagePath, "")
 	if err != nil {
 		return ctx, err
 	}

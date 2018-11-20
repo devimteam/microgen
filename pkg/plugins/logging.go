@@ -6,15 +6,24 @@ import (
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
-	"github.com/devimteam/microgen/gen"
-	ms "github.com/devimteam/microgen/gen/strings"
 	"github.com/devimteam/microgen/internal"
+	ms "github.com/devimteam/microgen/internal/strings"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"
 	toml "github.com/pelletier/go-toml"
 )
 
-const loggingPlugin = "logging"
+// Canonical plugin 'logging' generates interface closure that helps to log your method calls.
+// It uses go-kit 'Logger' interface as parameter.
+//
+// Parameters:
+//	- path : relative path of generated file. Default: `./logging.microgen.go`
+//	- name : generated closure name. Default: `LoggingMiddleware`
+//	- easyjson : add easyjson comment for each generated struct and general go:generate comment for automatization. Default: `false`
+//	- took : additional field 'took' will be generated in response which will contain request duration. Default: `false`
+//	- inline : generate all parameters (arguments and results) inlined in Log statement. Default: `false`
+//
+const LoggingPlugin = "logging"
 
 type loggingMiddlewarePlugin struct{}
 
@@ -50,11 +59,11 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args []byte) (m
 	cfg.Len = makeMapFromComments("//logs-len", ctx.Interface)
 
 	ImportAliasFromSources = true
-	pluginPackagePath, err := gen.GetPkgPath(cfg.Path, false)
+	pluginPackagePath, err := internal.GetPkgPath(cfg.Path, false)
 	if err != nil {
 		return ctx, err
 	}
-	pkgName, err := gen.PackageName(pluginPackagePath, "")
+	pkgName, err := internal.PackageName(pluginPackagePath, "")
 	if err != nil {
 		return ctx, err
 	}
@@ -114,7 +123,7 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args []byte) (m
 	}
 
 	outfile := microgen.File{
-		Name: loggingPlugin,
+		Name: LoggingPlugin,
 		Path: cfg.Path,
 	}
 	var b bytes.Buffer
