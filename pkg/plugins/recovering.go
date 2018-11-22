@@ -11,7 +11,15 @@ import (
 	toml "github.com/pelletier/go-toml"
 )
 
-const recoveringPlugin = "recovering"
+// Recovering plugin generates interface closure that recovers panics from deeper calls and
+// returns panic message as error
+//
+// Parameters:
+//      - path : relative path of generated file. Default: `./recovering.microgen.go`
+//      - name : generated closure name. Default: `RecoveringMiddleware`
+//      - stack : logs panic stacktrace. Default: `false`
+//
+const RecoveringPlugin = "recovering"
 
 type recoveringMiddlewarePlugin struct{}
 
@@ -74,7 +82,7 @@ func (p *recoveringMiddlewarePlugin) Generate(ctx microgen.Context, args []byte)
 		f.Add(p.recoverFunc(ctx, cfg, signature)).Line()
 	}
 
-	outfile.Name = recoveringPlugin
+	outfile.Name = RecoveringPlugin
 	outfile.Path = cfg.Path
 	var b bytes.Buffer
 	err = f.Render(&b)

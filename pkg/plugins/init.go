@@ -4,7 +4,7 @@ import "github.com/devimteam/microgen/pkg/microgen"
 
 func init() {
 	microgen.RegisterPlugin(LoggingPlugin, &loggingMiddlewarePlugin{})
-	microgen.RegisterPlugin(recoveringPlugin, &recoveringMiddlewarePlugin{})
+	microgen.RegisterPlugin(RecoveringPlugin, &recoveringMiddlewarePlugin{})
 	microgen.RegisterPlugin(opentracingPlugin, &opentracingMiddlewarePlugin{})
 	microgen.RegisterPlugin(transportKitPlugin, &transportGokitPlugin{})
 	microgen.RegisterPlugin(grpcKitPlugin, &grpcGokitPlugin{})
