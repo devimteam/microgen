@@ -3,6 +3,8 @@ package plugins
 import (
 	"bytes"
 
+	"github.com/devimteam/microgen/internal/pkgpath"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/devimteam/microgen/internal"
 	ms "github.com/devimteam/microgen/internal/strings"
@@ -44,11 +46,11 @@ func (p *recoveringMiddlewarePlugin) Generate(ctx microgen.Context, args []byte)
 	outfile := microgen.File{}
 
 	ImportAliasFromSources = true
-	pluginPackagePath, err := internal.GetPkgPath(cfg.Path, false)
+	pluginPackagePath, err := pkgpath.GetPkgPath(cfg.Path, false)
 	if err != nil {
 		return ctx, err
 	}
-	pkgName, err := internal.PackageName(pluginPackagePath, "")
+	pkgName, err := pkgpath.PackageName(pluginPackagePath, "")
 	if err != nil {
 		return ctx, err
 	}
