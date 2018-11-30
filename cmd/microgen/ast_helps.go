@@ -1,4 +1,4 @@
-package internal
+package main
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func GetInterface(name string, pkgs map[string]*ast.Package) (iface microgen.Interface, err error) {
+func getInterface(name string, pkgs map[string]*ast.Package) (iface microgen.Interface, err error) {
 	found := false
 	for _, pkg := range pkgs {
 		// Remove all unexported declarations

@@ -9,7 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/devimteam/microgen/internal"
+	"github.com/devimteam/microgen/internal/pkgpath"
+
 	"github.com/devimteam/microgen/internal/bootstrap"
 	lg "github.com/devimteam/microgen/logger"
 	toml "github.com/pelletier/go-toml"
@@ -48,7 +49,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	iface, err := internal.GetInterface(ifaceArg, pkgs)
+	iface, err := getInterface(ifaceArg, pkgs)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -58,7 +59,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	currentPkg, err := internal.GetPkgPath(".", true)
+	currentPkg, err := pkgpath.GetPkgPath(".", true)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

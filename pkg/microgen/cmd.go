@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devimteam/microgen/internal"
+	"github.com/devimteam/microgen/internal/pkgpath"
 
 	"github.com/devimteam/microgen/logger"
 	lg "github.com/devimteam/microgen/logger"
@@ -84,7 +84,7 @@ func Exec(args ...string) {
 		return
 	}
 
-	currentPkg, err := internal.GetPkgPath(".", true)
+	currentPkg, err := pkgpath.GetPkgPath(".", true)
 	if err != nil {
 		return
 	}
