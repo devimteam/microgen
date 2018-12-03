@@ -2,28 +2,21 @@
 
 
 [[projects]]
-  digest = "1:43015af5e71a6d45635e2a622359a0e4c2f2f52b3ab0667706cc33178dc41dc0"
+  digest = "1:24c149fa24344c2bac25d0ab9548b939bc7e0fc2e74b3f5485e6297b4869906f"
   name = "github.com/dave/jennifer"
   packages = ["jen"]
   pruneopts = ""
-  revision = "0264ec47f284c27fe4f52072dc0f4da5a5771c04"
-  version = "v0.19.0"
+  revision = "587dec40eecf24b4657be3c6babd4767946f38d2"
+  source = "github.com/devimteam/jennifer"
+  version = "v1.2.0"
 
 [[projects]]
-  digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
-  name = "github.com/davecgh/go-spew"
-  packages = ["spew"]
-  pruneopts = ""
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
-
-[[projects]]
-  digest = "1:e147742eedb0a0747da118ea5b207d1c99d3b8216207487a5a8f8a203499bf3e"
-  name = "github.com/fatih/structtag"
+  digest = "1:4de2c6deab39b63937b2b70c578350cc3694848410cc7734f7831c3ae22d613c"
+  name = "github.com/devimteam/go-case"
   packages = ["."]
   pruneopts = ""
-  revision = "da3d9ab5b78fdc25d3a7614853b085200bd10da9"
-  version = "v0.1.0"
+  revision = "04d06618c57b8bd9e3118844e63f18d6fb48c6ac"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:684664f6d28c17faefd0e9824ccaae8a673c25b4fad17d2659c1ff36c6fe1c81"
@@ -32,8 +25,6 @@
     "endpoint",
     "log",
     "metrics",
-    "sd",
-    "sd/lb",
     "tracing/opentracing",
     "transport/grpc",
     "transport/http",
@@ -110,27 +101,25 @@
   version = "v1.0.2"
 
 [[projects]]
-  digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
-  name = "github.com/pmezard/go-difflib"
-  packages = ["difflib"]
+  digest = "1:894aef961c056b6d85d12bac890bf60c44e99b46292888bfa66caf529f804457"
+  name = "github.com/pelletier/go-toml"
+  packages = ["."]
   pruneopts = ""
-  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
-  version = "v1.0.0"
+  revision = "c01d1270ff3e442a8a57cddc1c92dc1138598194"
+  version = "v1.2.0"
 
 [[projects]]
-  digest = "1:3b4870930878fb464616897c4e4bc100d323a8f95c3d8bbff0952d372571f7f7"
-  name = "github.com/stretchr/testify"
-  packages = ["assert"]
+  digest = "1:7365acd48986e205ccb8652cc746f09c8b7876030d53710ea6ef7d0bd0dcd7ca"
+  name = "github.com/pkg/errors"
+  packages = ["."]
   pruneopts = ""
-  revision = "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f"
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
 
 [[projects]]
   digest = "1:95e721b0e0d4d7d61e59675427b5ce05ee0bbbd4b432c40078dcc1c1619f3603"
   name = "github.com/vetcher/go-astra"
-  packages = [
-    ".",
-    "types",
-  ]
+  packages = ["types"]
   pruneopts = ""
   revision = "33d87e6fff592ef451fa3eb086bf99b086b6742c"
   version = "v1.2.0"
@@ -227,11 +216,10 @@
   analyzer-version = 1
   input-imports = [
     "github.com/dave/jennifer/jen",
+    "github.com/devimteam/go-case",
     "github.com/go-kit/kit/endpoint",
     "github.com/go-kit/kit/log",
     "github.com/go-kit/kit/metrics",
-    "github.com/go-kit/kit/sd",
-    "github.com/go-kit/kit/sd/lb",
     "github.com/go-kit/kit/tracing/opentracing",
     "github.com/go-kit/kit/transport/grpc",
     "github.com/go-kit/kit/transport/http",
@@ -240,8 +228,10 @@
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/gorilla/mux",
     "github.com/opentracing/opentracing-go",
-    "github.com/stretchr/testify/assert",
-    "github.com/vetcher/go-astra",
+    "github.com/opentracing/opentracing-go/ext",
+    "github.com/opentracing/opentracing-go/log",
+    "github.com/pelletier/go-toml",
+    "github.com/pkg/errors",
     "github.com/vetcher/go-astra/types",
     "golang.org/x/net/context",
     "golang.org/x/sync/errgroup",
