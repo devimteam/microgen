@@ -105,6 +105,9 @@ func trimVendor(s string) string {
 	if idx == -1 {
 		return s
 	}
+	if s[idx+lenVendor] == '/' {
+		return s[idx+lenVendor+1:]
+	}
 	return s[idx+lenVendor:]
 }
 
