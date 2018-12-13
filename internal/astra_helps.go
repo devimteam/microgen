@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/dave/jennifer/jen"
 	mstrings "github.com/devimteam/microgen/internal/strings"
@@ -53,7 +54,7 @@ func VarType(field reflect.Type, allowEllipsis bool) *jen.Statement {
 Loop:
 	for {
 		if field.PkgPath() != "" {
-			c.Qual(field.PkgPath(), field.Name())
+			c.Qual(trimVendor(field.PkgPath()), field.Name())
 			break Loop
 		}
 		switch field.Kind() {
@@ -95,6 +96,16 @@ Loop:
 		}
 	}
 	return c
+}
+
+func trimVendor(s string) string {
+	const vendor = "vendor"
+	const lenVendor = len(vendor)
+	idx := strings.Index(s, vendor)
+	if idx == -1 {
+		return s
+	}
+	return s[idx+lenVendor:]
 }
 
 // Render full method definition with receiver, method name, args and results.
