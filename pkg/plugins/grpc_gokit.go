@@ -10,7 +10,9 @@ import (
 	"strings"
 	"unicode"
 
-	. "github.com/dave/jennifer/jen"
+	"github.com/gogo/protobuf/types"
+
+	. "github.com/devimteam/jennifer/jen"
 	"github.com/devimteam/microgen/internal"
 	"github.com/devimteam/microgen/internal/pkgpath"
 	mstrings "github.com/devimteam/microgen/internal/strings"
@@ -342,12 +344,12 @@ func (p *grpcGokitPlugin) typeConverters(ctx microgen.Context, cfg grpcGokitConf
 	generated := make(map[reflect.Type][]string)
 	for lenConvMap(generated) < lenConvMap(requiredConverters) {
 		converters := listRequiredConverters()
-		fmt.Println(lenConvMap(generated), "vs", len(converters))
+		//fmt.Println(lenConvMap(generated), "vs", len(converters))
 		for _, c := range converters {
 			if ss, ok := generated[c.t]; ok && mstrings.IsInStringSlice(c.name, ss) {
 				continue
 			}
-			fmt.Println(c.t)
+			//fmt.Println(c.t)
 			f.Add(typeToProtoConverter(c.t, c.name, cfg))
 			f.Add(typeFromProtoConverter(c.t, c.name, cfg))
 			generated[c.t] = append(generated[c.t], c.name)
@@ -400,10 +402,14 @@ func (p *grpcGokitPlugin) protoFile(ctx microgen.Context, cfg grpcGokitConfig) (
 				continue
 			}
 			reqTypeName, externalImport := protoMessageName(internal.RemoveContextIfFirst(method.Args), join_(method.Name, _Request_))
+			// we should replace builtin types because protobuf spec not allow constructions like 'rpc Method(string) returns (string)'
+			reqTypeName, externalImport = replaceBuiltinProtoTypes(reqTypeName, externalImport)
 			if externalImport != nil && *externalImport != "" {
 				imports[*externalImport] = struct{}{}
 			}
 			respTypeName, externalImport := protoMessageName(internal.RemoveErrorIfLast(method.Results), join_(method.Name, _Response_))
+			// we should replace builtin types because protobuf spec not allow constructions like 'rpc Method(string) returns (string)'
+			respTypeName, externalImport = replaceBuiltinProtoTypes(respTypeName, externalImport)
 			if externalImport != nil && *externalImport != "" {
 				imports[*externalImport] = struct{}{}
 			}
@@ -453,12 +459,12 @@ func (p *grpcGokitPlugin) protoFile(ctx microgen.Context, cfg grpcGokitConfig) (
 			generated := make(map[reflect.Type][]string)
 			for lenConvMap(generated) < lenConvMap(protobufMessages) {
 				protobufMessages := listProtobufMessages()
-				fmt.Println(lenConvMap(generated), "vs", len(protobufMessages))
+				//fmt.Println(lenConvMap(generated), "vs", len(protobufMessages))
 				for _, c := range protobufMessages {
 					if ss, ok := generated[c.t]; ok && mstrings.IsInStringSlice(c.name, ss) {
 						continue
 					}
-					fmt.Println(c.t)
+					//fmt.Println(c.t)
 					d.Ln()
 					d.Lnf("message %s {", c.name)
 					for i, n := 0, c.t.NumField(); i < n; i++ {
@@ -528,8 +534,8 @@ func genericEncode(direction, shortName, fullName string, useResults bool) func(
 					group.Return(Op("&").Qual(pkg.EmptyProtobuf, "Empty").Values(), Nil())
 					return
 				case 1:
-					if marshal, ok := findCustomBindingMarshalLayout(methodParams[0].Type); ok {
-						group.Return(Id(fmt.Sprintf(marshal, fullName)), Nil())
+					if marshal, imp, ok := findCustomBindingMarshalLayout(methodParams[0].Type); ok {
+						group.Return(qualOrId(imp, fmt.Sprintf(marshal, fullName)), Nil())
 						return
 					}
 					fallthrough
@@ -564,8 +570,8 @@ func genericDecode(direction, shortName, fullName string, useResults bool) func(
 					group.Return(Nil(), Nil())
 					return
 				case 1:
-					if unmarshal, ok := findCustomBindingUnmarshalLayout(methodParams[0].Type); ok {
-						group.Return(Id(fmt.Sprintf(unmarshal, fullName)), Nil())
+					if unmarshal, imp, ok := findCustomBindingUnmarshalLayout(methodParams[0].Type); ok {
+						group.Return(qualOrId(imp, fmt.Sprintf(unmarshal, fullName)), Nil())
 						return
 					}
 					fallthrough
@@ -652,8 +658,8 @@ func typeToProtoConverter(t reflect.Type, structName string, cfg grpcGokitConfig
 						)
 						continue
 					}
-					if fn, ok := findCustomBindingMarshalLayout(field.Type); ok {
-						body.List(Id("_" + field.Name)).Op(":=").Id(fmt.Sprintf(fn, "value."+field.Name))
+					if fn, imp, ok := findCustomBindingMarshalLayout(field.Type); ok {
+						body.List(Id("_" + field.Name)).Op(":=").Add(qualOrId(imp, fmt.Sprintf(fn, "value."+field.Name)))
 						continue
 					}
 					body.List(Id("_"+field.Name), Err()).Op(":=").Id(converterToProtoName(field.Type, "", true)).Call(Id("value").Dot(field.Name))
@@ -731,8 +737,8 @@ func typeFromProtoConverter(t reflect.Type, structName string, cfg grpcGokitConf
 						)
 						continue
 					}
-					if fn, ok := findCustomBindingUnmarshalLayout(field.Type); ok {
-						body.List(Id("_" + field.Name)).Op(":=").Id(fmt.Sprintf(fn, "value."+field.Name))
+					if fn, imp, ok := findCustomBindingUnmarshalLayout(field.Type); ok {
+						body.List(Id("_" + field.Name)).Op(":=").Add(qualOrId(imp, fmt.Sprintf(fn, "value."+field.Name)))
 						continue
 					}
 					body.List(Id("_"+field.Name), Err()).Op(":=").Id(converterFromProtoName(field.Type, "", true)).Call(Id("value").Dot(field.Name))
@@ -852,7 +858,7 @@ func converterToProtoName(t reflect.Type, typeName string, register bool) string
 			// not registered, create new
 			requiredConverters[t] = []string{typeName}
 		}
-		fmt.Println("register", t, typeName, len(requiredConverters))
+		//fmt.Println("register", t, typeName, len(requiredConverters))
 	}
 	return genConvert("_ToProtobuf")(t, typeName)
 }
@@ -870,7 +876,7 @@ func converterFromProtoName(t reflect.Type, typeName string, register bool) stri
 			// not registered, create new
 			requiredConverters[t] = []string{typeName}
 		}
-		fmt.Println("register", t, typeName, len(requiredConverters))
+		//fmt.Println("register", t, typeName, len(requiredConverters))
 	}
 	return genConvert("_FromProtobuf")(t, typeName)
 }
@@ -918,15 +924,15 @@ func (p *grpcGokitPlugin) grpcServerFunc(signature microgen.Method, i *microgen.
 	return Func().
 		Params(Id(internal.Rec(mstrings.ToLowerFirst(i.Name)+"Server")).Op("*").Id(mstrings.ToLowerFirst(i.Name)+"Server")).
 		Id(signature.Name).
-		Call(ctx_contextContext, Id("req").Add(p.protobufRequestType(signature, cfg))).
-		Params(p.protobufResponseType(signature, cfg), Error()).
+		Call(ctx_contextContext, Id("req").Add(Op("*").Add(p.protobufRequestType(signature, cfg)))).
+		Params(Op("*").Add(p.protobufResponseType(signature, cfg)), Error()).
 		BlockFunc(p.grpcServerFuncBody(signature, i, cfg))
 }
 
 func (p *grpcGokitPlugin) protobufRequestType(fn microgen.Method, cfg grpcGokitConfig) *Statement {
 	args := internal.RemoveContextIfFirst(fn.Args)
 	if len(args) == 0 {
-		return Op("*").Qual(pkg.EmptyProtobuf, "Empty")
+		return Qual(pkg.EmptyProtobuf, "Empty")
 	}
 	if len(args) == 1 {
 		binding, ok := findCustomBindingType(args[0].Type)
@@ -934,7 +940,7 @@ func (p *grpcGokitPlugin) protobufRequestType(fn microgen.Method, cfg grpcGokitC
 			return internal.VarType(binding, false)
 		}
 	}
-	return Op("*").Qual(cfg.Protobuf, fn.Name+_Request_)
+	return Qual(cfg.Protobuf, fn.Name+_Request_)
 }
 
 func (p *grpcGokitPlugin) protobufResponseType(fn microgen.Method, cfg grpcGokitConfig) Code {
@@ -961,7 +967,7 @@ func (p *grpcGokitPlugin) grpcServerFuncBody(signature microgen.Method, i *micro
 			Return().List(Nil(), Err()),
 		)
 
-		g.Return().List(Id("resp").Assert(p.protobufResponseType(signature, cfg)), Nil())
+		g.Return().List(Id("resp").Assert(Op("*").Add(p.protobufResponseType(signature, cfg))), Nil())
 	}
 }
 
@@ -989,11 +995,15 @@ func endpointErrorName(fn microgen.Method, entityType string) string {
 }
 
 const (
-	googleProtobuf      = "google.protobuf."
-	googleProtobufEmpty = googleProtobuf + "Empty"
+	googleProtobuf                  = "google.protobuf."
+	googleProtobufEmpty             = googleProtobuf + "Empty"
+	googleProtobufStringValueString = googleProtobuf + "StringValue"
+	googleProtobufBoolValueString   = googleProtobuf + "BoolValue"
+	googleProtobufInt64ValueString  = googleProtobuf + "Int64Value"
 
-	importGoogleProtobuf      = "google/protobuf/"
-	importGoogleProtobufEmpty = importGoogleProtobuf + "empty.proto"
+	importGoogleProtobuf         = "google/protobuf/"
+	importGoogleProtobufWrappers = importGoogleProtobuf + "wrappers.proto"
+	importGoogleProtobufEmpty    = importGoogleProtobuf + "empty.proto"
 )
 
 func protoMessageName(params []microgen.Var, def string) (string, *string) {
@@ -1007,32 +1017,18 @@ func protoMessageName(params []microgen.Var, def string) (string, *string) {
 		fallthrough
 	default:
 		return def, nil
-		/*
-					switch params[0].Type.String() {
-					case "*string":
-						return googleProtobufStringValue, sp(importGoogleProtobufWrappers)
-					case "*bool":
-						return googleProtobufBoolValue, sp(importGoogleProtobufWrappers)
-					case "*int64":
-						return googleProtobufInt64Value, sp(importGoogleProtobufWrappers)
-					case "*int32":
-						return googleProtobufInt32Value, sp(importGoogleProtobufWrappers)
-					case "*uint64":
-						return googleProtobufUInt64Value, sp(importGoogleProtobufWrappers)
-					case "*uint32":
-						return googleProtobufUInt32Value, sp(importGoogleProtobufWrappers)
-					case "*float64":
-						return googleProtobufFloat64Value, sp(importGoogleProtobufWrappers)
-					case "*float32":
-						return googleProtobufFloat32Value, sp(importGoogleProtobufWrappers)
-					case "time.Time", "*time.Time":
-						return googleProtobufTimestamp, sp(importGoogleProtobufTimestamp)
-					}
-					fallthrough
+	}
+}
 
-			default:
-				return def, nil
-		*/
+func replaceBuiltinProtoTypes(name string, imp *string) (string, *string) {
+	if imp != nil {
+		return name, imp
+	}
+	switch name {
+	case "string":
+		return googleProtobufStringValueString, sp(importGoogleProtobufWrappers)
+	default:
+		return name, imp
 	}
 }
 
@@ -1109,8 +1105,8 @@ func sortedSliceFromStringSet(s map[string]struct{}) []string {
 // todo: make better names
 type ProtobufTypeBinder interface {
 	ProtobufType(origType reflect.Type) (pbType reflect.Type, ok bool)
-	MarshalLayout(origType reflect.Type) (marshalLayout string, ok bool)
-	UnmarshalLayout(origType reflect.Type) (unmarshalLayout string, ok bool)
+	MarshalLayout(origType reflect.Type) (marshalLayout string, requiredImport *string, ok bool)
+	UnmarshalLayout(origType reflect.Type) (unmarshalLayout string, requiredImport *string, ok bool)
 	ProtoBinding(origType reflect.Type) (fieldType string, requiredImport *string, ok bool)
 }
 
@@ -1134,24 +1130,24 @@ func findCustomBindingType(t reflect.Type) (reflect.Type, bool) {
 	return nil, false
 }
 
-func findCustomBindingMarshalLayout(t reflect.Type) (marshal string, ok bool) {
+func findCustomBindingMarshalLayout(t reflect.Type) (marshal string, requiredImport *string, ok bool) {
 	n := len(protobufBindings)
 	for i := 0; i < n; i++ {
-		if marshalLayout, ok := protobufBindings[n-i-1].MarshalLayout(t); ok {
-			return marshalLayout, true
+		if marshalLayout, imp, ok := protobufBindings[n-i-1].MarshalLayout(t); ok {
+			return marshalLayout, imp, true
 		}
 	}
-	return "", false
+	return "", nil, false
 }
 
-func findCustomBindingUnmarshalLayout(t reflect.Type) (marshal string, ok bool) {
+func findCustomBindingUnmarshalLayout(t reflect.Type) (marshal string, requiredImport *string, ok bool) {
 	n := len(protobufBindings)
 	for i := 0; i < n; i++ {
-		if unmarshalLayout, ok := protobufBindings[n-i-1].UnmarshalLayout(t); ok {
-			return unmarshalLayout, true
+		if unmarshalLayout, imp, ok := protobufBindings[n-i-1].UnmarshalLayout(t); ok {
+			return unmarshalLayout, imp, true
 		}
 	}
-	return "", false
+	return "", nil, false
 }
 
 func findCustomBindingProtoBinding(t reflect.Type) (fieldType string, requiredImport *string, ok bool) {
@@ -1168,7 +1164,9 @@ type stdBinding struct{}
 
 func (stdBinding) ProtobufType(origType reflect.Type) (pbType reflect.Type, ok bool) {
 	switch origType {
-	case stringType, bytesType,
+	case stringType:
+		return googleProtobufStringValue, true
+	case bytesType,
 		intType, int32Type, int64Type,
 		uintType, uint32Type, uint64Type,
 		float32Type, float64Type:
@@ -1178,27 +1176,27 @@ func (stdBinding) ProtobufType(origType reflect.Type) (pbType reflect.Type, ok b
 	}
 }
 
-func (stdBinding) MarshalLayout(origType reflect.Type) (marshalLayout string, ok bool) {
+func (stdBinding) MarshalLayout(origType reflect.Type) (marshalLayout string, requiredImport *string, ok bool) {
 	switch origType {
 	case stringType, bytesType,
 		intType, int32Type, int64Type,
 		uintType, uint32Type, uint64Type,
 		float32Type, float64Type:
-		return "%s", true
+		return "%s", nil, true
 	default:
-		return "", false
+		return "", nil, false
 	}
 }
 
-func (stdBinding) UnmarshalLayout(origType reflect.Type) (unmarshalLayout string, ok bool) {
+func (stdBinding) UnmarshalLayout(origType reflect.Type) (unmarshalLayout string, requiredImport *string, ok bool) {
 	switch origType {
 	case stringType, bytesType,
 		intType, int32Type, int64Type,
 		uintType, uint32Type, uint64Type,
 		float32Type, float64Type:
-		return "%s", true
+		return "%s", nil, true
 	default:
-		return "", false
+		return "", nil, false
 	}
 }
 
@@ -1237,6 +1235,10 @@ var (
 	float64Type = reflect.TypeOf(new(float64)).Elem()
 )
 
+var (
+	googleProtobufStringValue = reflect.TypeOf(new(types.StringValue)).Elem()
+)
+
 // Generic interface to use custom encoders and decoders golang <-> protobuf
 type ProtobufCodec interface {
 	// If type implements ProtobufEncoder then microgen would use function
@@ -1245,4 +1247,11 @@ type ProtobufCodec interface {
 	// If type implements ProtobufDecoder then microgen would use function
 	// FromProtobuf(y Y) (x X, err error) of this type as a converter from protobuf to golang
 	ProtobufDecoder()
+}
+
+func qualOrId(imp *string, name string) Code {
+	if imp != nil {
+		return Qual(*imp, name)
+	}
+	return Id(name)
 }

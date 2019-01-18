@@ -8,6 +8,7 @@ type User struct {
 }
 
 type Comment struct {
-	Id   string
-	Text string
+	Id    string
+	Text  string
+	Title *string
 }

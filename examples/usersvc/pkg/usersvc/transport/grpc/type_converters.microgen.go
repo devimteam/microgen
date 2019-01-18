@@ -7,6 +7,7 @@ import (
 	pb "github.com/devimteam/microgen/examples/usersvc/pb"
 	service "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc"
 	transport "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc/transport"
+	protobufext "github.com/devimteam/microgen/pkg/plugins/protobufext"
 )
 
 func __CreateComment_Request_ToProtobuf(ctx context.Context, value transport.CreateComment_Request) (pb.CreateComment_Request, error) {
@@ -166,17 +167,21 @@ func _S_usersvcComment_FromProtobuf(ctx context.Context, value []pb.Comment) ([]
 func __usersvcComment_ToProtobuf(ctx context.Context, value service.Comment) (pb.Comment, error) {
 	_Id := value.Id
 	_Text := value.Text
+	_Title := protobufext.P_String_ToProtobuf(value.Title)
 	return pb.Comment{
-		Id:   _Id,
-		Text: _Text,
+		Id:    _Id,
+		Text:  _Text,
+		Title: _Title,
 	}, nil
 }
 func __usersvcComment_FromProtobuf(ctx context.Context, value pb.Comment) (service.Comment, error) {
 	_Id := value.Id
 	_Text := value.Text
+	_Title := protobufext.P_String_FromProtobuf(value.Title)
 	return service.Comment{
-		Id:   _Id,
-		Text: _Text,
+		Id:    _Id,
+		Text:  _Text,
+		Title: _Title,
 	}, nil
 }
 func __usersvcUser_ToProtobuf(ctx context.Context, value service.User) (pb.User, error) {

@@ -9,6 +9,7 @@ import (
 	log "github.com/go-kit/kit/log"
 	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	grpc "github.com/go-kit/kit/transport/grpc"
+	types "github.com/gogo/protobuf/types"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	opentracinggo "github.com/opentracing/opentracing-go"
 )
@@ -77,58 +78,58 @@ func NewGRPCServer(endpoints *transport.Endpoints, logger log.Logger, tracer ope
 	}
 }
 
-func (S *userServiceServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (string, error) {
+func (S *userServiceServer) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*types.StringValue, error) {
 	_, resp, err := S.createUser.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(string), nil
+	return resp.(*types.StringValue), nil
 }
 
-func (S *userServiceServer) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (empty.Empty, error) {
+func (S *userServiceServer) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*empty.Empty, error) {
 	_, resp, err := S.updateUser.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(empty.Empty), nil
+	return resp.(*empty.Empty), nil
 }
 
-func (S *userServiceServer) GetUser(ctx context.Context, req string) (pb.GetUserResponse, error) {
+func (S *userServiceServer) GetUser(ctx context.Context, req *types.StringValue) (*pb.GetUserResponse, error) {
 	_, resp, err := S.getUser.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(pb.GetUserResponse), nil
+	return resp.(*pb.GetUserResponse), nil
 }
 
-func (S *userServiceServer) FindUsers(ctx context.Context, req *empty.Empty) (pb.FindUsersResponse, error) {
+func (S *userServiceServer) FindUsers(ctx context.Context, req *empty.Empty) (*pb.FindUsersResponse, error) {
 	_, resp, err := S.findUsers.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(pb.FindUsersResponse), nil
+	return resp.(*pb.FindUsersResponse), nil
 }
 
-func (S *userServiceServer) CreateComment(ctx context.Context, req *pb.CreateCommentRequest) (string, error) {
+func (S *userServiceServer) CreateComment(ctx context.Context, req *pb.CreateCommentRequest) (*types.StringValue, error) {
 	_, resp, err := S.createComment.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(string), nil
+	return resp.(*types.StringValue), nil
 }
 
-func (S *userServiceServer) GetComment(ctx context.Context, req string) (pb.GetCommentResponse, error) {
+func (S *userServiceServer) GetComment(ctx context.Context, req *types.StringValue) (*pb.GetCommentResponse, error) {
 	_, resp, err := S.getComment.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(pb.GetCommentResponse), nil
+	return resp.(*pb.GetCommentResponse), nil
 }
 
-func (S *userServiceServer) GetUserComments(ctx context.Context, req string) (pb.GetUserCommentsResponse, error) {
+func (S *userServiceServer) GetUserComments(ctx context.Context, req *types.StringValue) (*pb.GetUserCommentsResponse, error) {
 	_, resp, err := S.getUserComments.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(pb.GetUserCommentsResponse), nil
+	return resp.(*pb.GetUserCommentsResponse), nil
 }

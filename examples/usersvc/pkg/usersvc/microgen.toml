@@ -1,5 +1,5 @@
 import = [
-  #"example.com/name/project"
+  "github.com/devimteam/microgen/pkg/plugins/protobufext"
 ]
 
 [vars]
@@ -58,4 +58,4 @@ plugin = "go-kit-grpc"
   [generate.params.proto]
   gen = true
   package = "devimteam.proto"
-  path = "./transport/protobuf/api.proto"
+  path = "../../pb/api.proto"

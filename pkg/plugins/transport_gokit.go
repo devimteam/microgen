@@ -6,11 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/devimteam/microgen/internal/pkgpath"
-
-	. "github.com/dave/jennifer/jen"
 	go_case "github.com/devimteam/go-case"
+	. "github.com/devimteam/jennifer/jen"
 	"github.com/devimteam/microgen/internal"
+	"github.com/devimteam/microgen/internal/pkgpath"
 	mstrings "github.com/devimteam/microgen/internal/strings"
 	"github.com/devimteam/microgen/pkg/microgen"
 	"github.com/devimteam/microgen/pkg/plugins/pkg"

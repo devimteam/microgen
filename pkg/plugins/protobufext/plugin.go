@@ -26,20 +26,54 @@ const (
 	importGoogleProtobuf          = "google/protobuf/"
 	importGoogleProtobufWrappers  = importGoogleProtobuf + "wrappers.proto"
 	importGoogleProtobufTimestamp = importGoogleProtobuf + "timestamp.proto"
+
+	currentPackageImport = "github.com/devimteam/microgen/pkg/plugins/protobufext"
 )
 
 type protoext struct{}
 
 func (protoext) ProtobufType(origType reflect.Type) (pbType reflect.Type, ok bool) {
-	panic("implement me")
+	return origType, false
 }
 
-func (protoext) MarshalLayout(origType reflect.Type) (marshalLayout string, ok bool) {
-	panic("implement me")
+func (protoext) MarshalLayout(origType reflect.Type) (marshalLayout string, requiredImport *string, ok bool) {
+	switch origType {
+	case stringPType:
+		return "P_String_ToProtobuf(%s)", sp(currentPackageImport), true
+	case uint64PType:
+		return "P_UInt64_ToProtobuf(%s)", sp(currentPackageImport), true
+	case uint32PType:
+		return "P_UInt32_ToProtobuf(%s)", sp(currentPackageImport), true
+	case boolPType:
+		return "P_Bool_ToProtobuf(%s)", sp(currentPackageImport), true
+	case intPType, int32PType, int64PType,
+		uintPType,
+		timeType, timePType,
+		float32PType, float64PType:
+		return "%s", nil, true
+	default:
+		return "", nil, false
+	}
 }
 
-func (protoext) UnmarshalLayout(origType reflect.Type) (unmarshalLayout string, ok bool) {
-	panic("implement me")
+func (protoext) UnmarshalLayout(origType reflect.Type) (unmarshalLayout string, requiredImport *string, ok bool) {
+	switch origType {
+	case stringPType:
+		return "P_String_FromProtobuf(%s)", sp(currentPackageImport), true
+	case uint64PType:
+		return "P_UInt64_FromProtobuf(%s)", sp(currentPackageImport), true
+	case uint32PType:
+		return "P_UInt32_FromProtobuf(%s)", sp(currentPackageImport), true
+	case boolPType:
+		return "P_Bool_FromProtobuf(%s)", sp(currentPackageImport), true
+	case intPType, int32PType, int64PType,
+		uintPType,
+		timeType, timePType,
+		float32PType, float64PType:
+		return "%s", nil, true
+	default:
+		return "", nil, false
+	}
 }
 
 func (protoext) ProtoBinding(origType reflect.Type) (fieldType string, requiredImport *string, ok bool) {
@@ -78,14 +112,16 @@ func sp(s string) *string {
 }
 
 var (
+	stringType = reflect.TypeOf(new(string)).Elem()
+
 	stringPType  = reflect.TypeOf(new(*string)).Elem()
 	boolPType    = reflect.TypeOf(new(*bool)).Elem()
-	intPType     = reflect.TypeOf(new(int)).Elem()
-	int32PType   = reflect.TypeOf(new(int32)).Elem()
-	int64PType   = reflect.TypeOf(new(int64)).Elem()
-	uintPType    = reflect.TypeOf(new(uint)).Elem()
-	uint32PType  = reflect.TypeOf(new(uint32)).Elem()
-	uint64PType  = reflect.TypeOf(new(uint64)).Elem()
+	intPType     = reflect.TypeOf(new(*int)).Elem()
+	int32PType   = reflect.TypeOf(new(*int32)).Elem()
+	int64PType   = reflect.TypeOf(new(*int64)).Elem()
+	uintPType    = reflect.TypeOf(new(*uint)).Elem()
+	uint32PType  = reflect.TypeOf(new(*uint32)).Elem()
+	uint64PType  = reflect.TypeOf(new(*uint64)).Elem()
 	timeType     = reflect.TypeOf(new(time.Time)).Elem()
 	timePType    = reflect.TypeOf(new(*time.Time)).Elem()
 	float32PType = reflect.TypeOf(new(*float32)).Elem()

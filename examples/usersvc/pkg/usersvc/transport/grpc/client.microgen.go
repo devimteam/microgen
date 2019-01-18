@@ -8,6 +8,7 @@ import (
 	log "github.com/go-kit/kit/log"
 	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	grpckit "github.com/go-kit/kit/transport/grpc"
+	types "github.com/gogo/protobuf/types"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	opentracinggo "github.com/opentracing/opentracing-go"
 	grpc "google.golang.org/grpc"
@@ -19,14 +20,14 @@ func NewGRPCClient(conn *grpc.ClientConn, addr string, opts ...grpckit.ClientOpt
 			conn, addr, "CreateComment",
 			_Encode_CreateComment_Request,
 			_Decode_CreateComment_Response,
-			new(string),
+			new(types.StringValue),
 			opts...,
 		).Endpoint(),
 		CreateUser_Endpoint: grpckit.NewClient(
 			conn, addr, "CreateUser",
 			_Encode_CreateUser_Request,
 			_Decode_CreateUser_Response,
-			new(string),
+			new(types.StringValue),
 			opts...,
 		).Endpoint(),
 		FindUsers_Endpoint: grpckit.NewClient(

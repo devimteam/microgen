@@ -5,7 +5,7 @@ import (
 
 	"github.com/devimteam/microgen/internal/pkgpath"
 
-	. "github.com/dave/jennifer/jen"
+	. "github.com/devimteam/jennifer/jen"
 	"github.com/devimteam/microgen/internal"
 	ms "github.com/devimteam/microgen/internal/strings"
 	"github.com/devimteam/microgen/pkg/microgen"

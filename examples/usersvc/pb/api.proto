@@ -2,16 +2,58 @@ syntax = "proto3";
 
 option go_package = "github.com/devimteam/microgen/examples/usersvc/pb;pb";
 
-package service.usersvc;
+package devimteam.proto;
 
-import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
 
 service UserService {
-    rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
-    rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
-    rpc GetUser(GetUserRequest) returns (GetUserResponse);
-    rpc FindUsers(FindUsersRequest) returns (FindUsersResponse);
-    rpc CreateComment(CreateCommentRequest) returns (CreateCommentResponse);
-    rpc GetComment(GetCommentRequest) returns (GetCommentResponse);
-    rpc GetUserComments(GetUserCommentsRequest) returns (GetUserCommentsResponse);
+	rpc CreateUser (CreateUser_Request) returns (google.protobuf.StringValue);
+	rpc UpdateUser (UpdateUser_Request) returns (google.protobuf.Empty);
+	rpc GetUser (google.protobuf.StringValue) returns (GetUser_Response);
+	rpc FindUsers (google.protobuf.Empty) returns (FindUsers_Response);
+	rpc CreateComment (CreateComment_Request) returns (google.protobuf.StringValue);
+	rpc GetComment (google.protobuf.StringValue) returns (GetComment_Response);
+	rpc GetUserComments (google.protobuf.StringValue) returns (GetUserComments_Response);
+}
+
+message CreateUser_Request {
+	User user = 1;
+}
+
+message UpdateUser_Request {
+	User user = 1;
+}
+
+message GetUser_Response {
+	User user = 1;
+}
+
+message FindUsers_Response {
+	repeated User results = 1;
+}
+
+message CreateComment_Request {
+	Comment comment = 1;
+}
+
+message GetComment_Response {
+	Comment comment = 1;
+}
+
+message GetUserComments_Response {
+	repeated Comment list = 1;
+}
+
+message Comment {
+	string id = 1;
+	string text = 2;
+	google.protobuf.StringValue title = 3;
+}
+
+message User {
+	string id = 1;
+	string name = 2;
+	int64 gender = 3;
+	repeated Comment comments = 4;
 }
