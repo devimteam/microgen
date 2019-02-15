@@ -1,16 +1,16 @@
 module github.com/devimteam/microgen
 
-replace github.com/dave/jennifer => github.com/devimteam/jennifer v1.2.0
-
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
-	github.com/dave/jennifer v0.19.0
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/devimteam/go-case v1.0.0
+	github.com/devimteam/jennifer v0.0.0-20190213173732-6d03eae719c0
 	github.com/go-kit/kit v0.7.0
 	github.com/go-logfmt/logfmt v0.3.0 // indirect
 	github.com/go-stack/stack v1.7.0 // indirect
+	github.com/gofrs/uuid v3.2.0+incompatible
+	github.com/gogo/protobuf v1.2.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/protobuf v1.0.0
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f // indirect

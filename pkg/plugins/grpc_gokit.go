@@ -767,6 +767,10 @@ func protobufType(t reflect.Type, structName string, cfg grpcGokitConfig) *State
 	c := &Statement{}
 Loop:
 	for {
+		if custom, found := findCustomBindingType(t); found {
+			c.Add(internal.VarType(custom, false))
+			break Loop
+		}
 		if t.PkgPath() != "" {
 			if structName != "" {
 				c.Qual(cfg.Protobuf, structName)
@@ -908,11 +912,10 @@ func genConvert(suffix string) func(reflect.Type, string) string {
 				str.WriteRune('_')
 				str.WriteString(typeName)
 				break Loop
-			case reflect.String, reflect.Int:
-				str.WriteString(t.Kind().String())
-				break Loop
 			default:
-				panic(errors.Errorf("unexpected type '%s' in 'genConvert' of kind '%s'", t.String(), t.Kind()))
+				str.WriteString(t.Name())
+				break Loop
+				//panic(errors.Errorf("unexpected type '%s' in 'genConvert' of kind '%s'", t.String(), t.Kind()))
 			}
 		}
 		str.WriteString(suffix)
@@ -1164,12 +1167,12 @@ type stdBinding struct{}
 
 func (stdBinding) ProtobufType(origType reflect.Type) (pbType reflect.Type, ok bool) {
 	switch origType {
-	case stringType:
-		return googleProtobufStringValue, true
-	case bytesType,
+	//case stringType:
+	//	return googleProtobufStringValue, true
+	case stringType, bytesType,
 		intType, int32Type, int64Type,
 		uintType, uint32Type, uint64Type,
-		float32Type, float64Type:
+		float32Type, float64Type, boolType:
 		return origType, true
 	default:
 		return nil, false
@@ -1181,7 +1184,7 @@ func (stdBinding) MarshalLayout(origType reflect.Type) (marshalLayout string, re
 	case stringType, bytesType,
 		intType, int32Type, int64Type,
 		uintType, uint32Type, uint64Type,
-		float32Type, float64Type:
+		float32Type, float64Type, boolType:
 		return "%s", nil, true
 	default:
 		return "", nil, false
@@ -1193,7 +1196,7 @@ func (stdBinding) UnmarshalLayout(origType reflect.Type) (unmarshalLayout string
 	case stringType, bytesType,
 		intType, int32Type, int64Type,
 		uintType, uint32Type, uint64Type,
-		float32Type, float64Type:
+		float32Type, float64Type, boolType:
 		return "%s", nil, true
 	default:
 		return "", nil, false

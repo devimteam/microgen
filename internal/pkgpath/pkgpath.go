@@ -29,6 +29,7 @@ func GetPkgPath(fname string, isDir bool) (string, error) {
 		}
 		fname = filepath.Join(pwd, fname)
 	}
+	// find go.mod file
 	goModPath, err := goModPath(fname, isDir)
 	if err != nil {
 		lg.Logger.Logln(lg.Info, errors.Wrap(err, "cannot find go.mod because of"))
@@ -62,10 +63,24 @@ func goModPath(fname string, isDir bool) (string, error) {
 	defer func() {
 		goModPathCache[root] = goModPath
 	}()
-	cmd := exec.Command("go", "env", "GOMOD")
-	cmd.Dir = root
-	stdout, err := cmd.Output()
-	if err != nil {
+	var stdout []byte
+	var err error
+	for {
+		cmd := exec.Command("go", "env", "GOMOD")
+		cmd.Dir = root
+		stdout, err = cmd.Output()
+		if err == nil {
+			break
+		}
+		if _, ok := err.(*os.PathError); ok {
+			// try to find go.mod on level higher
+			r := filepath.Join(root, "..")
+			if r == root { // when we in root directory stop trying
+				return "", err
+			}
+			root = r
+			continue
+		}
 		return "", err
 	}
 	goModPath = string(bytes.TrimSpace(stdout))
@@ -188,6 +203,7 @@ func getPkgPathFromGOPATH(fname string, isDir bool) (string, error) {
 			}
 		}
 	}
+
 	return "", errors.Errorf("file '%s' is not in GOPATH. Checked paths:\n%s", fname, strings.Join(filepath.SplitList(gopathCache), "\n"))
 }
 

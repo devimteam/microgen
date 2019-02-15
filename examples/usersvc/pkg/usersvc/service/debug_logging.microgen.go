@@ -63,7 +63,6 @@ func (L debugLogging) FindUsers(arg_0 context.Context) (res_0 []*service.User, r
 		L.logger.Log(
 			"method", "FindUsers",
 			"results", res_0,
-			"len(results)", len(res_0),
 			"err", res_1)
 	}()
 	return L.next.FindUsers(arg_0)

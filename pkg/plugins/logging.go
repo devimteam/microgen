@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/devimteam/microgen/internal/pkgpath"
 
 	. "github.com/devimteam/jennifer/jen"
@@ -37,8 +39,8 @@ type loggingConfig struct {
 	// When true, all arguments and results will be on the same level,
 	// instead of inside 'request' and 'response' fields. Also, special types will be omitted.
 	Inline bool
-	Ignore map[string][]string `toml:"-"`
-	Len    map[string][]string `toml:"-"`
+	Ignore map[string][]string
+	Len    map[string][]string
 	// When true, comment '//easyjson:json' above types will be generated
 	Easyjson bool
 	// When true, additional field 'took' will be generated in response
@@ -57,13 +59,11 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args []byte) (m
 	if cfg.Path == "" {
 		cfg.Path = "logging.microgen.go"
 	}
-	cfg.Ignore = makeMapFromComments("//logs-ignore", ctx.Interface)
-	cfg.Len = makeMapFromComments("//logs-len", ctx.Interface)
 
 	ImportAliasFromSources = true
 	pluginPackagePath, err := pkgpath.GetPkgPath(cfg.Path, false)
 	if err != nil {
-		return ctx, err
+		return ctx, errors.WithMessage(err, "predict package path")
 	}
 	pkgName, err := pkgpath.PackageName(pluginPackagePath, "")
 	if err != nil {
@@ -138,6 +138,7 @@ func (p *loggingMiddlewarePlugin) Generate(ctx microgen.Context, args []byte) (m
 	return ctx, nil
 }
 
+//nolint
 func makeMapFromComments(prefix string, iface *microgen.Interface) map[string][]string {
 	m := make(map[string][]string)
 	for _, meth := range iface.Methods {

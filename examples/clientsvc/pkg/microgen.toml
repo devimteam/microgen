@@ -9,7 +9,7 @@ trace = true
 plugin = "logging"
 
   [generate.params]
-  path = "service/logging.microgen.go"
+  path = "../internal/service/logging.microgen.go"
   easyjson = true
   took = true
   [generate.params.len]
@@ -20,7 +20,7 @@ plugin = "logging"
 
   [generate.params]
   name = "DebugLogging"
-  path = "service/debug_logging.microgen.go"
+  path = "../internal/service/debug_logging.microgen.go"
   easyjson = true
   inline = true
 
@@ -28,7 +28,7 @@ plugin = "logging"
 plugin = "opentracing"
 
   [generate.params]
-  path = "service/tracing.microgen.go"
+  path = "../internal/service/tracing.microgen.go"
   markerror = true
   logerror = true
 
@@ -36,7 +36,7 @@ plugin = "opentracing"
 plugin = "recovering"
 
   [generate.params]
-  path = "service/recovering.microgen.go"
+  path = "../internal/service/recovering.microgen.go"
   stack = true
 
 [[generate]]
@@ -45,19 +45,21 @@ plugin = "go-kit-transport"
   [generate.params]
 
     [generate.params.exchanges]
+    path = "../internal/transport/exchanges/exchanges.go"
     easyjson = true
     style = "camel"
 
     [generate.params.endpoints]
+    path = "../internal/transport/endpoints.go"
     latency = true
 
 [[generate]]
 plugin = "go-kit-grpc"
 
   [generate.params]
-  protobuf = "github.com/devimteam/microgen/examples/usersvc/pb"
-  transportpkg = "transport"
+  protobuf = "github.com/devimteam/microgen/examples/clientsvc/pb"
+  transportpkg = "../internal/transport"
   [generate.params.proto]
   gen = true
   package = "devimteam.proto"
-  path = "../../pb/api.proto"
+  path = "../pb/service.proto"
