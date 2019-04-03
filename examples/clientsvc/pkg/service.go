@@ -3,7 +3,7 @@ package pkg
 import (
 	"context"
 
-	"github.com/devimteam/microgen/examples/clientsvc/pkg/entity"
+	"github.com/cv21/microgen/examples/clientsvc/pkg/entity"
 )
 
 //go:generate microgen -v=15 ClientService

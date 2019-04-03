@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devimteam/microgen/logger"
+	"github.com/cv21/microgen/logger"
 
-	"github.com/devimteam/microgen/pkg/microgen"
+	"github.com/cv21/microgen/pkg/microgen"
 	"github.com/pkg/errors"
 )
 
@@ -64,7 +64,7 @@ func mainFunc(plugins []string, iface microgen.Interface, currentPkg string) ([]
 	var b lnBuilder
 	b.L("import (")
 	b.L(`// List of imported plugins`)
-	b.L(`_ "github.com/devimteam/microgen/pkg/plugins"`)
+	b.L(`_ "github.com/cv21/microgen/pkg/plugins"`)
 	for i := range plugins {
 		b.L(fmt.Sprintf(`_ "%s"`, plugins[i]))
 	}
@@ -73,7 +73,7 @@ func mainFunc(plugins []string, iface microgen.Interface, currentPkg string) ([]
 	}
 	b.L(strconv.Quote("reflect"))
 	b.L(`pkg `, strconv.Quote(currentPkg))
-	b.L(`microgen "github.com/devimteam/microgen/pkg/microgen"`)
+	b.L(`microgen "github.com/cv21/microgen/pkg/microgen"`)
 	b.L(")")
 	b.L("func main() {")
 	b.L("microgen.RegisterPackage(", strconv.Quote(currentPkg), ")")

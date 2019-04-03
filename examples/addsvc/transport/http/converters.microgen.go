@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	transport "github.com/devimteam/microgen/examples/addsvc/transport"
+	transport "github.com/cv21/microgen/examples/addsvc/transport"
 	"io/ioutil"
 	"net/http"
 	"path"

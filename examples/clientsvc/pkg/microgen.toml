@@ -1,5 +1,5 @@
 import = [
-  "github.com/devimteam/microgen/pkg/plugins/protobufext"
+  "github.com/cv21/microgen/pkg/plugins/protobufext"
 ]
 
 [vars]
@@ -57,7 +57,7 @@ plugin = "go-kit-transport"
 plugin = "go-kit-grpc"
 
   [generate.params]
-  protobuf = "github.com/devimteam/microgen/examples/clientsvc/pb"
+  protobuf = "github.com/cv21/microgen/examples/clientsvc/pb"
   transportpkg = "../internal/transport"
   [generate.params.proto]
   gen = true

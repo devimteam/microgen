@@ -3,8 +3,8 @@ package microgen
 import (
 	"sync"
 
-	"github.com/devimteam/microgen/logger"
-	lg "github.com/devimteam/microgen/logger"
+	"github.com/cv21/microgen/logger"
+	lg "github.com/cv21/microgen/logger"
 )
 
 var (

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/devimteam/microgen/examples/usersvc/pb;pb";
+option go_package = "github.com/cv21/microgen/examples/usersvc/pb;pb";
 
 package devimteam.proto;
 

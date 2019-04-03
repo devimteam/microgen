@@ -1,11 +1,11 @@
-module github.com/devimteam/microgen
+module github.com/cv21/microgen
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
+	github.com/cv21/go-case v1.0.0
+	github.com/dave/jennifer v1.3.0
 	github.com/davecgh/go-spew v1.1.0 // indirect
-	github.com/devimteam/go-case v1.0.0
-	github.com/devimteam/jennifer v0.0.0-20190213173732-6d03eae719c0
 	github.com/go-kit/kit v0.7.0
 	github.com/go-logfmt/logfmt v0.3.0 // indirect
 	github.com/go-stack/stack v1.7.0 // indirect

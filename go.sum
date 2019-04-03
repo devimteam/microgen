@@ -2,12 +2,12 @@ github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/VividCortex/gohistogram v1.0.0 h1:6+hBz+qvs0JOrrNhhmR7lFxo5sINxBCGXrdtl/UvroE=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
+github.com/cv21/go-case v1.0.0 h1:kGRJlUw7mq8yi8ars5UillejwtR95nyZl8Kooxujeng=
+github.com/cv21/go-case v1.0.0/go.mod h1:GU/KSZ7B7TGsod/o7sCzhhFEs2AwncRm4MZ0CVM2ogI=
+github.com/dave/jennifer v1.3.0 h1:p3tl41zjjCZTNBytMwrUuiAnherNUZktlhPTKoF/sEk=
+github.com/dave/jennifer v1.3.0/go.mod h1:fIb+770HOpJ2fmN9EPPKOqm1vMGhB+TwXKMZhrIygKg=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/devimteam/go-case v1.0.0 h1:S8acEN9TxwPruPkXKdWkWO2vrggqRMKFVDjB07fswwU=
-github.com/devimteam/go-case v1.0.0/go.mod h1:THXAlsohtcbheuPsqQAQAkijV4xFZNBkn6vpJ3rcI6E=
-github.com/devimteam/jennifer v0.0.0-20190213173732-6d03eae719c0 h1:gpH0IdPzUcNwQFRoeaPbnWYgLO9GAb+Rld+aaEWX7lM=
-github.com/devimteam/jennifer v0.0.0-20190213173732-6d03eae719c0/go.mod h1:33WNnylFE+sF3KcoRdnj3ZyqP9RDjLk9c5nDnhj6Rmw=
 github.com/go-kit/kit v0.7.0 h1:ApufNmWF1H6/wUbAG81hZOHmqwd0zRf8mNfLjYj/064=
 github.com/go-kit/kit v0.7.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 github.com/go-logfmt/logfmt v0.3.0 h1:8HUsc87TaSWLKwrnumgC8/YconD2fJQsRJAsWaPg2ic=

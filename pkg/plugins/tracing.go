@@ -3,13 +3,13 @@ package plugins
 import (
 	"bytes"
 
-	"github.com/devimteam/microgen/internal/pkgpath"
+	"github.com/cv21/microgen/internal/pkgpath"
 
-	. "github.com/devimteam/jennifer/jen"
-	"github.com/devimteam/microgen/internal"
-	ms "github.com/devimteam/microgen/internal/strings"
-	"github.com/devimteam/microgen/pkg/microgen"
-	"github.com/devimteam/microgen/pkg/plugins/pkg"
+	"github.com/cv21/microgen/internal"
+	ms "github.com/cv21/microgen/internal/strings"
+	"github.com/cv21/microgen/pkg/microgen"
+	"github.com/cv21/microgen/pkg/plugins/pkg"
+	. "github.com/dave/jennifer/jen"
 	toml "github.com/pelletier/go-toml"
 )
 

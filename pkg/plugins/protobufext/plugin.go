@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/devimteam/microgen/pkg/plugins"
+	"github.com/cv21/microgen/pkg/plugins"
 )
 
 func init() {
@@ -27,7 +27,7 @@ const (
 	importGoogleProtobufWrappers  = importGoogleProtobuf + "wrappers.proto"
 	importGoogleProtobufTimestamp = importGoogleProtobuf + "timestamp.proto"
 
-	currentPackageImport = "github.com/devimteam/microgen/pkg/plugins/protobufext"
+	currentPackageImport = "github.com/cv21/microgen/pkg/plugins/protobufext"
 )
 
 type protoext struct{}

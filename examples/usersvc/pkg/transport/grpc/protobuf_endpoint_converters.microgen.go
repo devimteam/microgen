@@ -7,8 +7,8 @@ import (
 	"context"
 	"errors"
 
-	pb "github.com/devimteam/microgen/examples/protobuf"
-	transport "github.com/devimteam/microgen/examples/usersvc/pkg/transport"
+	pb "github.com/cv21/microgen/examples/protobuf"
+	transport "github.com/cv21/microgen/examples/usersvc/pkg/transport"
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 

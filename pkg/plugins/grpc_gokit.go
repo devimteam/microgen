@@ -12,12 +12,12 @@ import (
 
 	"github.com/gogo/protobuf/types"
 
-	. "github.com/devimteam/jennifer/jen"
-	"github.com/devimteam/microgen/internal"
-	"github.com/devimteam/microgen/internal/pkgpath"
-	mstrings "github.com/devimteam/microgen/internal/strings"
-	"github.com/devimteam/microgen/pkg/microgen"
-	"github.com/devimteam/microgen/pkg/plugins/pkg"
+	"github.com/cv21/microgen/internal"
+	"github.com/cv21/microgen/internal/pkgpath"
+	mstrings "github.com/cv21/microgen/internal/strings"
+	"github.com/cv21/microgen/pkg/microgen"
+	"github.com/cv21/microgen/pkg/plugins/pkg"
+	. "github.com/dave/jennifer/jen"
 	toml "github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 )

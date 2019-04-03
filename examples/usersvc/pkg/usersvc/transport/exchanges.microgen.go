@@ -2,7 +2,7 @@
 
 package transport
 
-import service "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc"
+import service "github.com/cv21/microgen/examples/usersvc/pkg/usersvc"
 
 //go:generate easyjson -all exchanges.microgen.go
 

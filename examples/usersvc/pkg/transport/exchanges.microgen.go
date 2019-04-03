@@ -2,7 +2,7 @@
 
 package transport
 
-import usersvc "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc"
+import usersvc "github.com/cv21/microgen/examples/usersvc/pkg/usersvc"
 
 type (
 	CreateUserRequest struct {

@@ -9,12 +9,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/devimteam/microgen/internal"
+	"github.com/cv21/microgen/internal"
 
-	"github.com/devimteam/microgen/internal/pkgpath"
+	"github.com/cv21/microgen/internal/pkgpath"
 
-	"github.com/devimteam/microgen/internal/bootstrap"
-	lg "github.com/devimteam/microgen/logger"
+	"github.com/cv21/microgen/internal/bootstrap"
+	lg "github.com/cv21/microgen/logger"
 	toml "github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 )
@@ -25,7 +25,6 @@ var (
 	flagConfig  = flag.String("config", "microgen.toml", "path to configuration file")
 	flagDry     = flag.Bool("dry", false, "Do everything except writing files.")
 	flagKeep    = flag.Bool("keep", false, "Keeps bootstrapped file after execution.")
-	flagForce   = flag.Bool("force", false, "Forcing microgen to overwrite files, that was marked as 'edited manually'")
 )
 
 func init() {

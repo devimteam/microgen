@@ -3,8 +3,8 @@
 package grpc
 
 import (
-	pb "github.com/devimteam/microgen/examples/usersvc/pb"
-	transport "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc/transport"
+	pb "github.com/cv21/microgen/examples/usersvc/pb"
+	transport "github.com/cv21/microgen/examples/usersvc/pkg/usersvc/transport"
 	log "github.com/go-kit/kit/log"
 	opentracing "github.com/go-kit/kit/tracing/opentracing"
 	grpckit "github.com/go-kit/kit/transport/grpc"

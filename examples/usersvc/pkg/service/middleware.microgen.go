@@ -2,7 +2,7 @@
 
 package service
 
-import service "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc"
+import service "github.com/cv21/microgen/examples/usersvc/pkg/usersvc"
 
 // Service middleware (closure).
 type Middleware func(service.UserService) service.UserService

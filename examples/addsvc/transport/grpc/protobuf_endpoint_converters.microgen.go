@@ -6,8 +6,8 @@ package transportgrpc
 import (
 	"context"
 	"errors"
-	transport "github.com/devimteam/microgen/examples/addsvc/transport"
-	pb "github.com/devimteam/microgen/examples/protobuf"
+	transport "github.com/cv21/microgen/examples/addsvc/transport"
+	pb "github.com/cv21/microgen/examples/protobuf"
 )
 
 func _Encode_Sum_Request(ctx context.Context, request interface{}) (interface{}, error) {

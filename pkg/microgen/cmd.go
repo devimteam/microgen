@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devimteam/microgen/internal/pkgpath"
+	"github.com/cv21/microgen/internal/pkgpath"
 
-	"github.com/devimteam/microgen/logger"
-	lg "github.com/devimteam/microgen/logger"
+	"github.com/cv21/microgen/logger"
+	lg "github.com/cv21/microgen/logger"
 	toml "github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 	"github.com/vetcher/go-astra/types"

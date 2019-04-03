@@ -1,6 +1,6 @@
 package plugins
 
-import "github.com/devimteam/microgen/pkg/microgen"
+import "github.com/cv21/microgen/pkg/microgen"
 
 func init() {
 	microgen.RegisterPlugin(LoggingPlugin, &loggingMiddlewarePlugin{})

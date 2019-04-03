@@ -17,7 +17,7 @@ import (
 	"strconv"
 	"strings"
 
-	lg "github.com/devimteam/microgen/logger"
+	lg "github.com/cv21/microgen/logger"
 	"github.com/pkg/errors"
 )
 

@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/devimteam/jennifer/jen"
-	mstrings "github.com/devimteam/microgen/internal/strings"
-	"github.com/devimteam/microgen/pkg/microgen"
+	mstrings "github.com/cv21/microgen/internal/strings"
+	"github.com/cv21/microgen/pkg/microgen"
+	"github.com/dave/jennifer/jen"
 	"github.com/pkg/errors"
 )
 

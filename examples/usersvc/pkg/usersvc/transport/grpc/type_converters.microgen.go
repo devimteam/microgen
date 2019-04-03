@@ -4,10 +4,10 @@ package grpc
 
 import (
 	"context"
-	pb "github.com/devimteam/microgen/examples/usersvc/pb"
-	service "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc"
-	transport "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc/transport"
-	protobufext "github.com/devimteam/microgen/pkg/plugins/protobufext"
+	pb "github.com/cv21/microgen/examples/usersvc/pb"
+	service "github.com/cv21/microgen/examples/usersvc/pkg/usersvc"
+	transport "github.com/cv21/microgen/examples/usersvc/pkg/usersvc/transport"
+	protobufext "github.com/cv21/microgen/pkg/plugins/protobufext"
 )
 
 func __CreateComment_Request_ToProtobuf(ctx context.Context, value transport.CreateComment_Request) (pb.CreateComment_Request, error) {

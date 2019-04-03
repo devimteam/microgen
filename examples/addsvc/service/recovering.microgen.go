@@ -5,7 +5,7 @@ package service
 import (
 	"context"
 	"fmt"
-	service "github.com/devimteam/microgen/examples/addsvc/addsvc"
+	service "github.com/cv21/microgen/examples/addsvc/addsvc"
 	log "github.com/go-kit/kit/log"
 )
 

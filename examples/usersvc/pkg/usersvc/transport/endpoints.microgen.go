@@ -4,7 +4,7 @@ package transport
 
 import (
 	"context"
-	service "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc"
+	service "github.com/cv21/microgen/examples/usersvc/pkg/usersvc"
 	endpoint "github.com/go-kit/kit/endpoint"
 	metrics "github.com/go-kit/kit/metrics"
 	"strconv"

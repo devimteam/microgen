@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/devimteam/microgen/example/protobuf;protobuf";
+option go_package = "github.com/cv21/microgen/example/protobuf;protobuf";
 
 package service.string;
 

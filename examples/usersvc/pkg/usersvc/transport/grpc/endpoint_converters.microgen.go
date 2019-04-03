@@ -4,8 +4,8 @@ package grpc
 
 import (
 	"context"
-	pb "github.com/devimteam/microgen/examples/usersvc/pb"
-	transport "github.com/devimteam/microgen/examples/usersvc/pkg/usersvc/transport"
+	pb "github.com/cv21/microgen/examples/usersvc/pb"
+	transport "github.com/cv21/microgen/examples/usersvc/pkg/usersvc/transport"
 	empty "github.com/golang/protobuf/ptypes/empty"
 )
 
